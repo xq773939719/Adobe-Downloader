@@ -1,0 +1,228 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "(%lld/%lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "(%1$lld/%2$lld)"
+          }
+        }
+      }
+    },
+    "/" : {
+
+    },
+    "%@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
+    "%@ 安装完成" : {
+
+    },
+    "%lld" : {
+
+    },
+    "%lld%%" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        }
+      }
+    },
+    "About" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
+          }
+        }
+      }
+    },
+    "Adobe Downloader" : {
+
+    },
+    "By X1a0He. ❤️ Love from China. ❤️" : {
+
+    },
+    "General" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通用"
+          }
+        }
+      }
+    },
+    "Released under GPLv3." : {
+
+    },
+    "Welcome to Adobe Downloader" : {
+
+    },
+    "下载" : {
+
+    },
+    "下载中" : {
+
+    },
+    "下载已取消" : {
+      "comment" : "Download cancelled"
+    },
+    "下载管理" : {
+
+    },
+    "下载设置" : {
+
+    },
+    "下载错误" : {
+
+    },
+    "使用默认目录" : {
+
+    },
+    "使用默认语言" : {
+
+    },
+    "全部暂停" : {
+
+    },
+    "全部继续" : {
+
+    },
+    "关闭" : {
+
+    },
+    "删除" : {
+
+    },
+    "加载失败" : {
+
+    },
+    "包列表 (%lld)" : {
+
+    },
+    "取消" : {
+
+    },
+    "可用版本: %lld" : {
+
+    },
+    "安装" : {
+
+    },
+    "尝试使用不同的搜索关键词" : {
+
+    },
+    "已完成" : {
+
+    },
+    "已暂停" : {
+      "comment" : "Download status paused"
+    },
+    "当前目录：%@" : {
+
+    },
+    "当前语言：%@" : {
+
+    },
+    "搜索应用" : {
+
+    },
+    "是否要安装 %@?" : {
+
+    },
+    "暂停" : {
+
+    },
+    "服务器响应无效" : {
+      "comment" : "Invalid response"
+    },
+    "正在下载 %@ (%d/%d)" : {
+      "comment" : "Download status downloading",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "正在下载 %1$@ (%2$d/%3$d)"
+          }
+        }
+      }
+    },
+    "正在加载..." : {
+
+    },
+    "正在安装 %@" : {
+
+    },
+    "没有找到产品" : {
+
+    },
+    "没有网络连接" : {
+      "comment" : "Network error"
+    },
+    "清理已完成" : {
+
+    },
+    "目录:" : {
+
+    },
+    "确定" : {
+
+    },
+    "移除" : {
+
+    },
+    "等待中" : {
+      "comment" : "Download status waiting"
+    },
+    "系统休眠" : {
+      "comment" : "Download status system sleep"
+    },
+    "继续" : {
+
+    },
+    "网络中断" : {
+      "comment" : "Download status network paused"
+    },
+    "语言:" : {
+
+    },
+    "选择" : {
+
+    },
+    "选择安装语言" : {
+
+    },
+    "选择版本" : {
+
+    },
+    "重试" : {
+
+    },
+    "重试中 (%d/%d)" : {
+      "comment" : "Download status retrying",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "重试中 (%1$d/%2$d)"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

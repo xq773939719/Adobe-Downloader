@@ -66,7 +66,13 @@
         }
       }
     },
+    "Github: Adobe Downloader" : {
+
+    },
     "Released under GPLv3." : {
+
+    },
+    "Thanks Drovosek01: adobe-packager" : {
 
     },
     "Welcome to Adobe Downloader" : {
@@ -126,6 +132,12 @@
     "尝试使用不同的搜索关键词" : {
 
     },
+    "尝试其他搜索关键词" : {
+
+    },
+    "已下载" : {
+
+    },
     "已完成" : {
 
     },
@@ -133,6 +145,9 @@
       "comment" : "Download status paused"
     },
     "搜索应用" : {
+
+    },
+    "搜索语言" : {
 
     },
     "是否要安装 %@?" : {
@@ -143,6 +158,9 @@
     },
     "服务器响应无效" : {
       "comment" : "Invalid response"
+    },
+    "未找到语言" : {
+
     },
     "正在下载 %@ (%d/%d)" : {
       "comment" : "Download status downloading",

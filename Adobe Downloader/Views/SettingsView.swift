@@ -18,7 +18,6 @@ struct SettingsView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // 语言设置
             HStack(spacing: 4) {
                 Toggle(isOn: $useDefaultLanguage) {
                     Text("语言:")
@@ -40,7 +39,6 @@ struct SettingsView: View {
             Divider()
                 .frame(height: 16)
             
-            // 目录设置
             HStack(spacing: 4) {
                 Toggle(isOn: $useDefaultDirectory) {
                     Text("目录:")

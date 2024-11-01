@@ -29,36 +29,34 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 20) {
-                HStack {
-                    Text("Adobe Downloader")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                }
-                .frame(minWidth: 200)
-                HStack {
-                    SettingsView(
-                        useDefaultLanguage: $useDefaultLanguage,
-                        useDefaultDirectory: $useDefaultDirectory,
-                        onSelectLanguage: selectLanguage,
-                        onSelectDirectory: selectDirectory
-                    )
-                }
+            HStack(spacing: 16) {
+                Text("Adobe Downloader")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .frame(width: 180)
+                
+                SettingsView(
+                    useDefaultLanguage: $useDefaultLanguage,
+                    useDefaultDirectory: $useDefaultDirectory,
+                    onSelectLanguage: selectLanguage,
+                    onSelectDirectory: selectDirectory
+                )
                 .frame(maxWidth: .infinity)
+                
                 HStack(spacing: 8) {
                     SearchField(text: $searchText)
-                        .frame(width: 160)
+                        .frame(width: 140)
 
                     Button(action: refreshData) {
                         Image(systemName: "arrow.clockwise")
-                            .imageScale(.large)
+                            .imageScale(.medium)
                     }
                     .disabled(isRefreshing)
                     .buttonStyle(.borderless)
                     
                     Button(action: { showDownloadManager.toggle() }) {
                         Image(systemName: "arrow.down.circle")
-                            .imageScale(.large)
+                            .imageScale(.medium)
                     }
                     .buttonStyle(.borderless)
                     .overlay(
@@ -66,18 +64,18 @@ struct ContentView: View {
                             if !networkManager.downloadTasks.isEmpty {
                                 Text("\(networkManager.downloadTasks.count)")
                                     .font(.caption2)
-                                    .padding(4)
+                                    .padding(3)
                                     .background(Color.blue)
                                     .clipShape(Circle())
                                     .foregroundColor(.white)
-                                    .offset(x: 10, y: -10)
+                                    .offset(x: 8, y: -8)
                             }
                         }
                     )
                 }
-                .frame(width: 220)
+                .frame(width: 200)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor))
 

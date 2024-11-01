@@ -13,14 +13,12 @@ struct AboutView: View {
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
-            
+
             AboutAppView()
                 .tabItem {
                     Label("About", systemImage: "info.circle")
                 }
         }
-        .frame(width: 375, height: 150)
-        .padding()
     }
 }
 
@@ -33,25 +31,25 @@ struct GeneralSettingsView: View {
     
     var body: some View {
         Form {
-            GroupBox(label: Text("下载设置")) {
+            GroupBox(label: Text("下载设置").padding(.bottom, 8)) {
                 VStack(alignment: .leading, spacing: 12) {
-                    // 语言设置
                     HStack {
                         Toggle("使用默认语言", isOn: $useDefaultLanguage)
+                            .padding(.leading, 5)
                         Spacer()
                         Text(getLanguageName(code: defaultLanguage))
                             .foregroundColor(.secondary)
                         Button("选择") {
                             showLanguagePicker = true
                         }
+                        .padding(.trailing, 5)
                         .buttonStyle(.borderless)
                     }
                     
                     Divider()
-                    
-                    // 目录设置
                     HStack {
                         Toggle("使用默认目录", isOn: $useDefaultDirectory)
+                            .padding(.leading, 5)
                         Spacer()
                         Text(formatPath(defaultDirectory))
                             .foregroundColor(.secondary)
@@ -60,6 +58,7 @@ struct GeneralSettingsView: View {
                         Button("选择") {
                             selectDirectory()
                         }
+                        .padding(.trailing, 5)
                         .buttonStyle(.borderless)
                     }
                 }
@@ -67,6 +66,7 @@ struct GeneralSettingsView: View {
             }
         }
         .padding()
+        .frame(maxHeight: .infinity, alignment: .top)
         .sheet(isPresented: $showLanguagePicker) {
             LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
                 defaultLanguage = language
@@ -112,13 +112,23 @@ struct AboutAppView: View {
             Text("By X1a0He. ❤️ Love from China. ❤️")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+
+            Link("Github: Adobe Downloader",
+                 destination: URL(string: "https://github.com/X1a0He/Adobe-Downloader")!)
+                .font(.caption)
+                .foregroundColor(.blue)
+            
+            Link("Thanks Drovosek01: adobe-packager",
+                 destination: URL(string: "https://github.com/Drovosek01/adobe-packager")!)
+                .font(.caption)
+                .foregroundColor(.blue)
             
             Text("Released under GPLv3.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .fixedSize(horizontal: true, vertical: true)
     }
 }
 

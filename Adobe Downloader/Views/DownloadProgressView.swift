@@ -166,28 +166,48 @@ struct DownloadProgressView: View {
                     InstallProgressView(
                         productName: task.productName,
                         progress: progress,
-                        status: status
-                    ) {
-                        networkManager.cancelInstallation()
-                        isInstalling = false
-                    }
+                        status: status,
+                        onCancel: {
+                            networkManager.cancelInstallation()
+                            isInstalling = false
+                        },
+                        onRetry: nil
+                    )
                 } else if case .completed = networkManager.installationState {
                     InstallProgressView(
                         productName: task.productName,
                         progress: 1.0,
-                        status: "安装完成"
-                    ) {
-                        isInstalling = false
-                    }
+                        status: "安装完成",
+                        onCancel: {
+                            isInstalling = false
+                        },
+                        onRetry: nil
+                    )
+                } else if case .failed(let error) = networkManager.installationState {
+                    InstallProgressView(
+                        productName: task.productName,
+                        progress: 0,
+                        status: "安装失败: \(error.localizedDescription)",
+                        onCancel: {
+                            isInstalling = false
+                        },
+                        onRetry: {
+                            Task {
+                                await networkManager.retryInstallation(at: task.destinationURL)
+                            }
+                        }
+                    )
                 } else {
                     InstallProgressView(
                         productName: task.productName,
                         progress: 0,
-                        status: "准备安装..."
-                    ) {
-                        networkManager.cancelInstallation()
-                        isInstalling = false
-                    }
+                        status: "准备安装...",
+                        onCancel: {
+                            networkManager.cancelInstallation()
+                            isInstalling = false
+                        },
+                        onRetry: nil
+                    )
                 }
             }
             .frame(minWidth: 400, minHeight: 200)
@@ -392,67 +412,26 @@ struct PackageProgressView: View {
     }
 }
 
-#Preview {
+#Preview("下载中") {
     DownloadProgressView(
         task: DownloadTask(
             sapCode: "PHSP",
-            version: "24.0",
+            version: "25.0.0",
             language: "zh_CN",
-            productName: "Adobe Photoshop",
+            productName: "Photoshop",
             status: .downloading(DownloadTask.DownloadStatus.DownloadInfo(
-                fileName: "PhotoshopSupport.dmg",
-                currentPackageIndex: 1,
-                totalPackages: 4,
+                fileName: "package1.zip",
+                currentPackageIndex: 0,
+                totalPackages: 3,
                 startTime: Date(),
                 estimatedTimeRemaining: nil
             )),
-            progress: 0.45,
-            downloadedSize: 1024 * 1024 * 450,
-            totalSize: 1024 * 1024 * 1000,
-            speed: 1024 * 1024 * 2,
-            currentFileName: "PhotoshopSupport.dmg",
-            destinationURL: URL(fileURLWithPath: "/tmp"),
-            packages: [
-                .init(
-                    name: "PhotoshopCore.dmg",
-                    Path: "/path/to/core",
-                    size: 1024 * 1024 * 300,
-                    downloadedSize: 1024 * 1024 * 300,
-                    progress: 1.0,
-                    speed: 0,
-                    status: .completed,
-                    type: "core",
-                    downloaded: true,
-                    lastUpdated: Date(),
-                    lastRecordedSize: 1024 * 1024 * 300
-                ),
-                .init(
-                    name: "PhotoshopSupport.dmg",
-                    Path: "/path/to/support",
-                    size: 1024 * 1024 * 400,
-                    downloadedSize: 1024 * 1024 * 150,
-                    progress: 0.375,
-                    speed: 1024 * 1024 * 2,
-                    status: .downloading,
-                    type: "support",
-                    downloaded: false,
-                    lastUpdated: Date(),
-                    lastRecordedSize: 1024 * 1024 * 150
-                ),
-                .init(
-                    name: "PhotoshopOptional.dmg",
-                    Path: "/path/to/optional",
-                    size: 1024 * 1024 * 200,
-                    downloadedSize: 0,
-                    progress: 0,
-                    speed: 0,
-                    status: .waiting,
-                    type: "optional",
-                    downloaded: false,
-                    lastUpdated: Date(),
-                    lastRecordedSize: 0
-                )
-            ]
+            progress: 0.3,
+            downloadedSize: 100_000_000,
+            totalSize: 300_000_000,
+            speed: 1_000_000,
+            currentFileName: "package1.zip",
+            destinationURL: URL(fileURLWithPath: "/Downloads/Adobe/Photoshop")
         ),
         onCancel: {},
         onPause: {},
@@ -460,7 +439,88 @@ struct PackageProgressView: View {
         onRetry: {},
         onRemove: {}
     )
-    .environmentObject(NetworkManager())
-    .padding()
-    .frame(width: 500)
+}
+
+#Preview("准备下载") {
+    DownloadProgressView(
+        task: DownloadTask(
+            sapCode: "PHSP",
+            version: "25.0.0",
+            language: "zh_CN",
+            productName: "Photoshop",
+            status: .preparing(DownloadTask.DownloadStatus.PrepareInfo(
+                message: "正在准备下载...",
+                timestamp: Date(),
+                stage: .initializing
+            )),
+            progress: 0.0,
+            downloadedSize: 0,
+            totalSize: 300_000_000,
+            speed: 0,
+            currentFileName: "",
+            destinationURL: URL(fileURLWithPath: "/Downloads/Adobe/Photoshop")
+        ),
+        onCancel: {},
+        onPause: {},
+        onResume: {},
+        onRetry: {},
+        onRemove: {}
+    )
+}
+
+#Preview("下载完成") {
+    DownloadProgressView(
+        task: DownloadTask(
+            sapCode: "PHSP",
+            version: "25.0.0",
+            language: "zh_CN",
+            productName: "Photoshop",
+            status: .completed(DownloadTask.DownloadStatus.CompletionInfo(
+                timestamp: Date(),
+                totalTime: 120,
+                totalSize: 300_000_000
+            )),
+            progress: 1.0,
+            downloadedSize: 300_000_000,
+            totalSize: 300_000_000,
+            speed: 0,
+            currentFileName: "",
+            destinationURL: URL(fileURLWithPath: "/Downloads/Adobe/Photoshop")
+        ),
+        onCancel: {},
+        onPause: {},
+        onResume: {},
+        onRetry: {},
+        onRemove: {}
+    )
+}
+
+#Preview("深色模式") {
+    DownloadProgressView(
+        task: DownloadTask(
+            sapCode: "PHSP",
+            version: "25.0.0",
+            language: "zh_CN",
+            productName: "Photoshop",
+            status: .downloading(DownloadTask.DownloadStatus.DownloadInfo(
+                fileName: "package1.zip",
+                currentPackageIndex: 0,
+                totalPackages: 3,
+                startTime: Date(),
+                estimatedTimeRemaining: nil
+            )),
+            progress: 0.3,
+            downloadedSize: 100_000_000,
+            totalSize: 300_000_000,
+            speed: 1_000_000,
+            currentFileName: "package1.zip",
+            destinationURL: URL(fileURLWithPath: "/Downloads/Adobe/Photoshop")
+        ),
+        onCancel: {},
+        onPause: {},
+        onResume: {},
+        onRetry: {},
+        onRemove: {}
+    )
+    .preferredColorScheme(.dark)
 }

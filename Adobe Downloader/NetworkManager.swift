@@ -583,15 +583,7 @@ class NetworkManager: ObservableObject {
         
         do {
             try await installManager.install(at: path) { progress, status in
-                Task { @MainActor in
-                    if status.contains("完成") || status.contains("成功") {
-                        self.installationState = .completed
-                    } else if progress >= 1.0 {
-                        self.installationState = .completed
-                    } else {
-                        self.installationState = .installing(progress: progress, status: status)
-                    }
-                }
+                // 移除这里的状态更新，让错误直接通过 catch 块处理
             }
 
             await MainActor.run {
@@ -599,7 +591,17 @@ class NetworkManager: ObservableObject {
             }
         } catch {
             await MainActor.run {
-                installationState = .failed(error)
+                // 直接设置错误状态，不要通过 progressHandler 更新
+                if let installError = error as? InstallManager.InstallError {
+                    switch installError {
+                    case .installationFailed(let message):
+                        installationState = .failed(InstallManager.InstallError.installationFailed(message))
+                    default:
+                        installationState = .failed(error)
+                    }
+                } else {
+                    installationState = .failed(error)
+                }
             }
         }
     }
@@ -607,6 +609,44 @@ class NetworkManager: ObservableObject {
     func cancelInstallation() {
         Task {
             await installManager.cancel()
+        }
+    }
+
+    func retryInstallation(at path: URL) async {
+        await MainActor.run {
+            installationState = .installing(progress: 0, status: "正在重试安装...")
+        }
+        
+        do {
+            // 先尝试使用 retry 方法（利用 sudo 缓存）
+            try await installManager.retry(at: path) { progress, status in
+                Task { @MainActor in
+                    if status.contains("完成") || status.contains("成功") {
+                        self.installationState = .completed
+                    } else {
+                        self.installationState = .installing(progress: progress, status: status)
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                installationState = .completed
+            }
+        } catch {
+            if case InstallManager.InstallError.installationFailed(let message) = error,
+               message.contains("需要重新输入密码") {
+                // 如果是因为需要重新输入密码而失败，则回退到正常安装流程
+                await installProduct(at: path)
+            } else {
+                // 其他错误直接显示
+                await MainActor.run {
+                    if let installError = error as? InstallManager.InstallError {
+                        installationState = .failed(installError)
+                    } else {
+                        installationState = .failed(error)
+                    }
+                }
+            }
         }
     }
 }

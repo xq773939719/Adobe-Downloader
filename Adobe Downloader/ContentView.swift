@@ -6,8 +6,8 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showDownloadManager = false
     @State private var searchText = ""
-    @State private var useDefaultLanguage = true
-    @State private var useDefaultDirectory = true
+    @AppStorage("useDefaultLanguage") private var useDefaultLanguage = true
+    @AppStorage("useDefaultDirectory") private var useDefaultDirectory = true
     @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
     @State private var showLanguagePicker = false
@@ -187,6 +187,7 @@ struct ContentView: View {
         
         if panel.runModal() == .OK {
             defaultDirectory = panel.url?.path ?? ""
+            useDefaultDirectory = false
         }
     }
 }

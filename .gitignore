@@ -3,3 +3,4 @@ Adobe-Downloader.xcodeproj
 Adobe-Downloader.xcodeproj/*.workspace
 .DS_Store
 *.DS_Store
+project.xcworkspace

@@ -18,20 +18,20 @@ struct SettingsView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Toggle(isOn: $useDefaultLanguage) {
-                HStack(spacing: 4) {
+            // 语言设置
+            HStack(spacing: 4) {
+                Toggle(isOn: $useDefaultLanguage) {
                     Text("语言:")
                         .fixedSize()
-                    Text(getLanguageName(code: defaultLanguage))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .frame(width: 80, alignment: .leading)
                 }
-            }
-            .toggleStyle(.checkbox)
-            .fixedSize()
-            
-            if !useDefaultLanguage {
+                .toggleStyle(.checkbox)
+                .fixedSize()
+                
+                Text(getLanguageName(code: defaultLanguage))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .frame(width: 80, alignment: .leading)
+                
                 Button("选择", action: onSelectLanguage)
                     .buttonStyle(.borderless)
                     .fixedSize()
@@ -40,20 +40,20 @@ struct SettingsView: View {
             Divider()
                 .frame(height: 16)
             
-            Toggle(isOn: $useDefaultDirectory) {
-                HStack(spacing: 4) {
+            // 目录设置
+            HStack(spacing: 4) {
+                Toggle(isOn: $useDefaultDirectory) {
                     Text("目录:")
                         .fixedSize()
-                    Text(formatPath(defaultDirectory.isEmpty ? "未设置" : defaultDirectory))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .frame(width: 120, alignment: .leading)
                 }
-            }
-            .toggleStyle(.checkbox)
-            .fixedSize()
-            
-            if !useDefaultDirectory {
+                .toggleStyle(.checkbox)
+                .fixedSize()
+                
+                Text(formatPath(defaultDirectory.isEmpty ? "未设置" : defaultDirectory))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .frame(width: 120, alignment: .leading)
+                
                 Button("选择", action: onSelectDirectory)
                     .buttonStyle(.borderless)
                     .fixedSize()

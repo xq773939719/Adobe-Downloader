@@ -9,7 +9,7 @@ struct LanguagePickerView: View {
     let languages: [(code: String, name: String)]
     let onLanguageSelected: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedLanguage: String = "zh_CN"
+    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
     
     var body: some View {
         VStack(spacing: 0) {
@@ -32,7 +32,7 @@ struct LanguagePickerView: View {
                 ) {
                     ForEach(languages, id: \.code) { language in
                         Button(action: {
-                            selectedLanguage = language.code
+                            defaultLanguage = language.code
                             onLanguageSelected(language.code)
                             dismiss()
                         }) {
@@ -40,7 +40,7 @@ struct LanguagePickerView: View {
                                 Text(language.name)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 
-                                if selectedLanguage == language.code {
+                                if defaultLanguage == language.code {
                                     Image(systemName: "checkmark")
                                         .foregroundColor(.blue)
                                 }
@@ -52,7 +52,7 @@ struct LanguagePickerView: View {
                         .buttonStyle(.plain)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(selectedLanguage == language.code ? Color.blue.opacity(0.1) : Color.clear)
+                                .fill(defaultLanguage == language.code ? Color.blue.opacity(0.1) : Color.clear)
                         )
                     }
                 }
@@ -65,11 +65,7 @@ struct LanguagePickerView: View {
 
 #Preview {
     LanguagePickerView(
-        languages: [
-            ("zh_CN", "简体中文"),
-            ("en_US", "English (US)"),
-            ("ja_JP", "日本語")
-        ],
+        languages: AppStatics.supportedLanguages,
         onLanguageSelected: { _ in }
     )
 }

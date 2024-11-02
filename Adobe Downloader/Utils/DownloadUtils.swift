@@ -24,6 +24,8 @@ class DownloadUtils {
         var progressHandler: ((Int64, Int64, Int64) -> Void)?
         var destinationDirectory: URL
         var fileName: String
+        private var hasCompleted = false
+        private let completionLock = NSLock()
         
         init(destinationDirectory: URL,
              fileName: String,
@@ -37,6 +39,12 @@ class DownloadUtils {
         }
         
         func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+            completionLock.lock()
+            defer { completionLock.unlock() }
+            
+            guard !hasCompleted else { return }
+            hasCompleted = true
+            
             do {
                 if !FileManager.default.fileExists(atPath: destinationDirectory.path) {
                     try FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
@@ -49,17 +57,19 @@ class DownloadUtils {
                 }
 
                 try FileManager.default.moveItem(at: location, to: destinationURL)
-
-                Thread.sleep(forTimeInterval: 0.5)
-
-                if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    let fileSize = try FileManager.default.attributesOfItem(atPath: destinationURL.path)[.size] as? Int64 ?? 0
-                    print("File size verification - Expected: \(downloadTask.countOfBytesExpectedToReceive), Actual: \(fileSize)")
-
-                    completionHandler(destinationURL, downloadTask.response, nil)
-                } else {
-                    completionHandler(nil, downloadTask.response, NetworkError.fileSystemError("文件移动后不存在", nil))
+                
+                let expectedSize = downloadTask.countOfBytesExpectedToReceive
+                if expectedSize > 0,
+                   let fileSize = try? FileManager.default.attributesOfItem(atPath: destinationURL.path)[.size] as? Int64 {
+                    print("File size verification - Expected: \(expectedSize), Actual: \(fileSize)")
+                    
+                    if fileSize != expectedSize {
+                        print("Warning: File size mismatch - Expected: \(expectedSize), Actual: \(fileSize)")
+                    }
                 }
+                
+                completionHandler(destinationURL, downloadTask.response, nil)
+                
             } catch {
                 print("File operation error in delegate: \(error.localizedDescription)")
                 completionHandler(nil, downloadTask.response, error)
@@ -67,17 +77,23 @@ class DownloadUtils {
         }
         
         func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-            guard let error = error else { return }
+            completionLock.lock()
+            defer { completionLock.unlock() }
             
-            switch (error as NSError).code {
-            case NSURLErrorCancelled:
-                return
-            case NSURLErrorTimedOut:
-                completionHandler(nil, task.response, NetworkError.downloadError("下载超时", error))
-            case NSURLErrorNotConnectedToInternet:
-                completionHandler(nil, task.response, NetworkError.noConnection)
-            default:
-                completionHandler(nil, task.response, error)
+            guard !hasCompleted else { return }
+            hasCompleted = true
+            
+            if let error = error {
+                switch (error as NSError).code {
+                case NSURLErrorCancelled:
+                    return
+                case NSURLErrorTimedOut:
+                    completionHandler(nil, task.response, NetworkError.downloadError("下载超时", error))
+                case NSURLErrorNotConnectedToInternet:
+                    completionHandler(nil, task.response, NetworkError.noConnection)
+                default:
+                    completionHandler(nil, task.response, error)
+                }
             }
         }
         
@@ -90,178 +106,51 @@ class DownloadUtils {
             
             progressHandler?(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
         }
+        
+        func cleanup() {
+            completionHandler = { _, _, _ in }
+            progressHandler = nil
+        }
     }
 
-    func pauseDownloadTask(taskId: UUID, reason: DownloadTask.DownloadStatus.PauseInfo.PauseReason = .userRequested) async {
-        await cancelTracker.pause(taskId)
-        await networkManager?.setTaskStatus(taskId, .paused(DownloadTask.DownloadStatus.PauseInfo(
-            reason: reason,
-            timestamp: Date(),
-            resumable: true
-        )))
+    func pauseDownloadTask(taskId: UUID, reason: DownloadStatus.PauseInfo.PauseReason) async {
+        if let task = await networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
+            task.setStatus(.paused(DownloadStatus.PauseInfo(
+                reason: reason,
+                timestamp: Date(),
+                resumable: true
+            )))
+            await cancelTracker.pause(taskId)
+        }
     }
     
     func resumeDownloadTask(taskId: UUID) async {
-        guard let networkManager = networkManager,
-              let task = await networkManager.getTasks().first(where: { $0.id == taskId }) else { return }
-
-        if let activeId = await networkManager.getActiveTaskId(), activeId != taskId {
-            await cancelTracker.cancel(activeId)
-        }
-
-        guard let packageIndex = task.packages.firstIndex(where: { !$0.downloaded }) else {
-            await networkManager.setTaskStatus(taskId, .completed(DownloadTask.DownloadStatus.CompletionInfo(
-                timestamp: Date(),
-                totalTime: Date().timeIntervalSince(task.startTime),
-                totalSize: task.totalSize
+        if let task = await networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
+            task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                fileName: task.currentPackage?.fullPackageName ?? "",
+                currentPackageIndex: 0,
+                totalPackages: task.productsToDownload.reduce(0) { $0 + $1.packages.count },
+                startTime: Date(),
+                estimatedTimeRemaining: nil
             )))
-            return
+            // 实现下载逻辑
+            await startDownloadProcess(task: task)
         }
-
-        let package = task.packages[packageIndex]
-
-        let delegate = DownloadDelegate(
-            destinationDirectory: task.destinationURL.appendingPathComponent("Contents/Resources/products/\(task.sapCode)"),
-            fileName: package.Path.components(separatedBy: "/").last ?? "",
-            completionHandler: { [weak networkManager] localURL, response, error in
-                guard let networkManager = networkManager else { return }
-                
-                Task {
-                    if let error = error {
-                        await networkManager.handleError(taskId, error)
-                        return
-                    }
-                    
-                    if let localURL = localURL {
-                        do {
-                            let fileSize = try FileManager.default.attributesOfItem(atPath: localURL.path)[.size] as? Int64 ?? 0
-                            guard fileSize >= package.size else {
-                                throw NetworkError.dataValidationError("文件大小不正确")
-                            }
-
-                            await networkManager.handleDownloadCompletion(taskId: taskId, packageIndex: packageIndex)
-                        } catch {
-                            print("File validation error: \(error.localizedDescription)")
-                            await networkManager.handleError(taskId, error)
-                        }
-                    }
-                }
-            },
-            progressHandler: { [weak networkManager] bytesWritten, totalBytesWritten, totalBytesExpectedToWrite in
-                guard let networkManager = networkManager else { return }
-                
-                Task { @MainActor in
-                    networkManager.updateDownloadProgress(for: taskId, progress: (
-                        bytesWritten: bytesWritten,
-                        totalWritten: totalBytesWritten,
-                        expectedToWrite: totalBytesExpectedToWrite
-                    ))
-                }
-            }
-        )
-
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForResource = NetworkConstants.downloadTimeout
-        config.timeoutIntervalForRequest = NetworkConstants.downloadTimeout
-
-        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-        var downloadTask: URLSessionDownloadTask
-
-        if let resumeData = await cancelTracker.getResumeData(taskId) {
-            downloadTask = session.downloadTask(withResumeData: resumeData)
-        } else {
-            let downloadURL: String
-            if task.sapCode == "APRO" {
-                downloadURL = await package.Path.hasPrefix("https://") ? package.Path : networkManager.cdn + package.Path
-            } else {
-                downloadURL = await networkManager.cdn + package.Path
-            }
-
-            guard let url = URL(string: downloadURL) else {
-                await networkManager.handleError(taskId, NetworkError.invalidURL(downloadURL))
-                return
-            }
-            
-            var request = URLRequest(url: url)
-            NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-
-            downloadTask = session.downloadTask(with: request)
-        }
-        
-        await cancelTracker.registerTask(taskId, task: downloadTask, session: session)
-
-        await networkManager.setTaskStatus(taskId, .downloading(DownloadTask.DownloadStatus.DownloadInfo(
-            fileName: package.name,
-            currentPackageIndex: packageIndex,
-            totalPackages: task.packages.count,
-            startTime: Date(),
-            estimatedTimeRemaining: nil
-        )))
-        
-        downloadTask.resume()
     }
     
     func cancelDownloadTask(taskId: UUID, removeFiles: Bool = false) async {
         await cancelTracker.cancel(taskId)
-
-        if removeFiles {
-            if let task = await networkManager?.getTasks().first(where: { $0.id == taskId }) {
-                try? FileManager.default.removeItem(at: task.destinationURL)
+        if let task = await networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
+            if removeFiles {
+                try? FileManager.default.removeItem(at: task.directory)
             }
+            task.setStatus(.failed(DownloadStatus.FailureInfo(
+                message: "下载已取消",
+                error: NetworkError.downloadCancelled,
+                timestamp: Date(),
+                recoverable: false
+            )))
         }
-        
-        await networkManager?.setTaskStatus(taskId, .failed(DownloadTask.DownloadStatus.FailureInfo(
-            message: "下载已取消",
-            error: NetworkError.downloadCancelled,
-            timestamp: Date(),
-            recoverable: false
-        )))
-    }
-    
-    func downloadAPRO(task: DownloadTask, productInfo: Product.ProductVersion) async throws {
-        guard let networkManager = networkManager else { return }
-
-        let manifestURL = await networkManager.cdnUrl + productInfo.buildGuid
-        print("Manifest URL:", manifestURL)
-        guard let url = URL(string: manifestURL) else {
-            throw NetworkError.invalidURL(manifestURL)
-        }
-
-        var request = URLRequest(url: url)
-        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-
-        let (manifestData, _) = try await URLSession.shared.data(for: request)
-
-        let manifestXML = try XMLDocument(data: manifestData)
-
-        guard let downloadPath = try manifestXML.nodes(forXPath: "//asset_list/asset/asset_path").first?.stringValue,
-              let assetSizeStr = try manifestXML.nodes(forXPath: "//asset_list/asset/asset_size").first?.stringValue,
-              let assetSize = Int64(assetSizeStr) else {
-            throw NetworkError.invalidData("无法从manifest中获取下载信息")
-        }
-
-        await MainActor.run {
-            if let index = networkManager.downloadTasks.firstIndex(where: { $0.id == task.id }) {
-                networkManager.downloadTasks[index].packages = [
-                    DownloadTask.Package(
-                        name: "Acrobat_DC_Web_WWMUI.dmg",
-                        Path: downloadPath,
-                        size: assetSize,
-                        downloadedSize: 0,
-                        progress: 0,
-                        speed: 0,
-                        status: .waiting,
-                        type: "core",
-                        downloaded: false,
-                        lastUpdated: Date(),
-                        lastRecordedSize: 0
-                    )
-                ]
-                networkManager.downloadTasks[index].totalSize = assetSize
-            }
-        }
-
-        await networkManager.resumeDownload(taskId: task.id)
     }
     
     func signApp(at url: URL) async throws {
@@ -329,8 +218,7 @@ class DownloadUtils {
         )
     }
     
-    func generateDriverXML(sapCode: String, version: String, language: String,
-                         productInfo: Product.ProductVersion, displayName: String) -> String {
+    func generateDriverXML(sapCode: String, version: String, language: String, productInfo: Sap.Versions, displayName: String) -> String {
         let dependencies = productInfo.dependencies.map { dependency in
             """
                 <Dependency>
@@ -389,6 +277,191 @@ class DownloadUtils {
             print("Successfully cleared extended attributes for \(url.path)")
         } catch {
             print("Error executing xattr command:", error.localizedDescription)
+        }
+    }
+
+    internal func startDownloadProcess(task: NewDownloadTask) async {
+        // 在开始下载前更新状态
+        await MainActor.run {
+            let totalPackages = task.productsToDownload.reduce(0) { $0 + $1.packages.count }
+            task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                fileName: task.currentPackage?.fullPackageName ?? "",
+                currentPackageIndex: 0,
+                totalPackages: totalPackages,
+                startTime: Date(),
+                estimatedTimeRemaining: nil
+            )))
+            task.objectWillChange.send()
+        }
+        
+        var currentPackageIndex = 0
+        let totalPackages = task.productsToDownload.reduce(0) { $0 + $1.packages.count }
+        
+        for product in task.productsToDownload {
+            for package in product.packages where !package.downloaded {
+                await MainActor.run {
+                    task.currentPackage = package
+                    task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                        fileName: package.fullPackageName,
+                        currentPackageIndex: currentPackageIndex,
+                        totalPackages: totalPackages,
+                        startTime: Date(),
+                        estimatedTimeRemaining: nil
+                    )))
+                }
+                currentPackageIndex += 1
+                
+                // 验证包信息
+                guard !package.fullPackageName.isEmpty,
+                      !package.downloadURL.isEmpty,
+                      package.downloadSize > 0 else {
+                    print("Warning: Skipping invalid package in \(product.sapCode)")
+                    continue
+                }
+                
+                // 构建下载 URL
+                let cdn = await networkManager?.cdn ?? ""
+                let cleanCdn = cdn.hasSuffix("/") ? String(cdn.dropLast()) : cdn
+                let cleanPath = package.downloadURL.hasPrefix("/") ? package.downloadURL : "/\(package.downloadURL)"
+                let downloadURL = cleanCdn + cleanPath
+                
+                guard let url = URL(string: downloadURL) else {
+                    print("Error: Invalid download URL: \(downloadURL)")
+                    continue
+                }
+                
+                print("Starting download for \(package.fullPackageName) from \(downloadURL)")
+                
+                // 使用 async/await 等待每个下载完成
+                do {
+                    try await downloadPackage(package: package, task: task, product: product, url: url)
+                    print("Completed download for \(package.fullPackageName)")
+                } catch {
+                    print("Error downloading \(package.fullPackageName): \(error.localizedDescription)")
+                    await networkManager?.handleError(task.id, error)
+                    return
+                }
+            }
+        }
+        
+        // 检查是否所有包都已下载完成
+        let allPackagesDownloaded = task.productsToDownload.allSatisfy { product in
+            product.packages.allSatisfy { $0.downloaded }
+        }
+        
+        if allPackagesDownloaded {
+            task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                timestamp: Date(),
+                totalTime: Date().timeIntervalSince(task.createAt),
+                totalSize: task.totalSize
+            )))
+        }
+    }
+
+    // 新增一个方法来处理单个包的下载
+    private func downloadPackage(package: Package, task: NewDownloadTask, product: ProductsToDownload, url: URL) async throws {
+        var lastUpdateTime = Date()
+        var lastBytes: Int64 = 0
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let delegate = DownloadDelegate(
+                destinationDirectory: task.directory.appendingPathComponent("Contents/Resources/products/\(product.sapCode)"),
+                fileName: package.fullPackageName,
+                completionHandler: { [weak networkManager] localURL, response, error in
+                    Task { @MainActor in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        
+                        package.downloaded = true
+                        package.progress = 1.0
+                        package.status = .completed
+                        package.speed = 0
+                        
+                        // 更新总进度
+                        let totalDownloaded = task.productsToDownload.reduce(0) { sum, product in
+                            sum + product.packages.reduce(0) { sum, pkg in
+                                sum + (pkg.downloaded ? pkg.downloadSize : 0)
+                            }
+                        }
+                        task.totalDownloadedSize = totalDownloaded
+                        task.totalProgress = Double(totalDownloaded) / Double(task.totalSize)
+                        task.totalSpeed = 0
+                        
+                        task.objectWillChange.send()
+                        networkManager?.objectWillChange.send()
+                        
+                        continuation.resume()
+                    }
+                },
+                progressHandler: { [weak networkManager] bytesWritten, totalBytesWritten, totalBytesExpectedToWrite in
+                    Task { @MainActor in
+                        let now = Date()
+                        let timeDiff = now.timeIntervalSince(lastUpdateTime)
+                        
+                        // 每秒更新一次进度
+                        if timeDiff >= 1.0 {
+                            // 计算速度 (bytes/s)
+                            let bytesDiff = totalBytesWritten - lastBytes
+                            let speed = Double(bytesDiff) / timeDiff
+                            
+                            // 更新包进度
+                            package.downloadedSize = totalBytesWritten
+                            package.progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+                            package.speed = speed
+                            package.status = .downloading
+                            
+                            // 更新产品总进度
+                            let productTotalSize = product.packages.reduce(Int64(0)) { $0 + $1.downloadSize }
+                            let productDownloaded = product.packages.reduce(Int64(0)) { sum, pkg in
+                                if pkg.downloaded {
+                                    return sum + pkg.downloadSize
+                                } else if pkg.id == package.id {
+                                    return sum + totalBytesWritten
+                                }
+                                return sum
+                            }
+                            
+                            // 更新任务总进度
+                            let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
+                                if prod.sapCode == product.sapCode {
+                                    return sum + productDownloaded
+                                } else {
+                                    return sum + prod.packages.reduce(Int64(0)) { sum, pkg in
+                                        sum + (pkg.downloaded ? pkg.downloadSize : 0)
+                                    }
+                                }
+                            }
+                            
+                            task.totalDownloadedSize = totalDownloaded
+                            task.totalProgress = Double(totalDownloaded) / Double(task.totalSize)
+                            task.totalSpeed = speed
+                            
+                            // 更新时间和字节数
+                            lastUpdateTime = now
+                            lastBytes = totalBytesWritten
+                            
+                            // 触发 UI 更新
+                            package.objectWillChange.send()
+                            task.objectWillChange.send()
+                            networkManager?.objectWillChange.send()
+                        }
+                    }
+                }
+            )
+            
+            var request = URLRequest(url: url)
+            NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+            
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let downloadTask = session.downloadTask(with: request)
+            
+            Task {
+                await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
+            }
+            
+            downloadTask.resume()
         }
     }
 }

@@ -1,16 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "(%lld/%lld)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "(%1$lld/%2$lld)"
-          }
-        }
-      }
-    },
     "/" : {
 
     },
@@ -20,6 +10,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@"
+          }
+        }
+      }
+    },
+    "%@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@)"
           }
         }
       }
@@ -42,6 +42,9 @@
           }
         }
       }
+    },
+    "|" : {
+
     },
     "About" : {
       "localizations" : {
@@ -90,6 +93,9 @@
     "下载已取消" : {
       "comment" : "Download cancelled"
     },
+    "下载此版本" : {
+
+    },
     "下载管理" : {
 
     },
@@ -99,10 +105,19 @@
     "下载错误" : {
 
     },
+    "产品和包列表" : {
+
+    },
     "使用默认目录" : {
 
     },
     "使用默认语言" : {
+
+    },
+    "依赖包:" : {
+
+    },
+    "依赖包: %lld" : {
 
     },
     "全部暂停" : {
@@ -118,9 +133,6 @@
 
     },
     "加载失败" : {
-
-    },
-    "包列表 (%lld)" : {
 
     },
     "取消" : {

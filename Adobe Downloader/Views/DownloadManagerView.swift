@@ -26,18 +26,23 @@ struct DownloadManagerView: View {
         }
     }
     
-    private func removeTask(_ task: DownloadTask) {
-        networkManager.removeTask(taskId: task.id)
+    private func removeTask(_ task: NewDownloadTask) {
+        networkManager.downloadTasks.removeAll { $0.id == task.id }
+        networkManager.updateDockBadge()
     }
 
-    private func sortTasks(_ tasks: [DownloadTask]) -> [DownloadTask] {
+    private func sortTasks(_ tasks: [NewDownloadTask]) -> [NewDownloadTask] {
         switch sortOrder {
         case .addTime:
             return tasks
         case .name:
-            return tasks.sorted { $0.productName < $1.productName }
+            return tasks.sorted { task1, task2 in
+                task1.displayName < task2.displayName
+            }
         case .status:
-            return tasks.sorted { $0.status.sortOrder < $1.status.sortOrder }
+            return tasks.sorted { task1, task2 in
+                task1.status.sortOrder < task2.status.sortOrder
+            }
         }
     }
     
@@ -71,9 +76,13 @@ struct DownloadManagerView: View {
                 Button("全部暂停", action: {})
                 Button("全部继续", action: {})
                 Button("清理已完成", action: {
-                    Task {
-                        networkManager.clearCompletedTasks()
+                    networkManager.downloadTasks.removeAll { task in
+                        if case .completed = task.status {
+                            return true
+                        }
+                        return false
                     }
+                    networkManager.updateDockBadge()
                 })
                 
                 Button("关闭") {
@@ -112,7 +121,7 @@ struct DownloadManagerView: View {
                 .padding(.horizontal)
             }
         }
-        .frame(width: 600, height: 400)
+        .frame(width: 600, height: 500)
     }
 }
 

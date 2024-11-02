@@ -13,15 +13,15 @@ extension FileManager {
     }
 }
 
-extension Product.ProductVersion {
+extension Sap.Versions {
     var size: Int64 {
         return 0
     }
 }
 
-extension DownloadTask {
+extension NewDownloadTask {
     var startTime: Date {
-        switch status {
+        switch totalStatus {
         case .downloading(let info):
             return info.startTime
         case .completed(let info):
@@ -36,164 +36,13 @@ extension DownloadTask {
             return info.timestamp
         case .waiting:
             return Date()
+        case .none:
+            return createAt
         }
     }
 }
 
 extension NetworkManager {
-    func handleDownloadCompletion(taskId: UUID, packageIndex: Int) async {
-        await MainActor.run {
-            guard let taskIndex = downloadTasks.firstIndex(where: { $0.id == taskId }) else { return }
-
-            downloadTasks[taskIndex].packages[packageIndex].downloaded = true
-            downloadTasks[taskIndex].packages[packageIndex].progress = 1.0
-            downloadTasks[taskIndex].packages[packageIndex].status = .completed
-
-            if let nextPackageIndex = downloadTasks[taskIndex].packages.firstIndex(where: { !$0.downloaded }) {
-                downloadTasks[taskIndex].status = .downloading(DownloadTask.DownloadStatus.DownloadInfo(
-                    fileName: downloadTasks[taskIndex].packages[nextPackageIndex].name,
-                    currentPackageIndex: nextPackageIndex,
-                    totalPackages: downloadTasks[taskIndex].packages.count,
-                    startTime: Date(),
-                    estimatedTimeRemaining: nil
-                ))
-                Task {
-                    await resumeDownload(taskId: taskId)
-                }
-            } else {
-                let startTime = downloadTasks[taskIndex].startTime
-                let totalTime = Date().timeIntervalSince(startTime)
-                
-                downloadTasks[taskIndex].status = .completed(DownloadTask.DownloadStatus.CompletionInfo(
-                    timestamp: Date(),
-                    totalTime: totalTime,
-                    totalSize: downloadTasks[taskIndex].totalSize
-                ))
-                downloadTasks[taskIndex].progress = 1.0
-                progressObservers[taskId]?.invalidate()
-                progressObservers.removeValue(forKey: taskId)
-                
-                if activeDownloadTaskId == taskId {
-                    activeDownloadTaskId = nil
-                }
-
-                updateDockBadge()
-                objectWillChange.send()
-                Task {
-                    do {
-                        try await downloadUtils.clearExtendedAttributes(at: downloadTasks[taskIndex].destinationURL)
-                        print("Successfully cleared extended attributes for \(downloadTasks[taskIndex].destinationURL.path)")
-                    } catch {
-                        print("Failed to clear extended attributes: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
-    }
-}
-
-extension NetworkManager {
-    func getApplicationInfo(buildGuid: String) async throws -> ApplicationInfo {
-        guard let url = URL(string: NetworkConstants.applicationJsonURL) else {
-            throw NetworkError.invalidURL(NetworkConstants.applicationJsonURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        
-        var headers = NetworkConstants.adobeRequestHeaders
-        headers["x-adobe-build-guid"] = buildGuid
-        headers["Accept"] = "application/json"
-        headers["Connection"] = "keep-alive"
-        headers["Cookie"] = generateCookie()
-        
-        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            let applicationInfo: ApplicationInfo = try decoder.decode(ApplicationInfo.self, from: data)
-            return applicationInfo
-        } catch {
-            throw NetworkError.parsingError(error, "Failed to parse application info")
-        }
-    }
-    
-    func fetchProductsData() async throws -> ([String: Product], String) {
-        var components = URLComponents(string: NetworkConstants.productsXmlURL)
-        components?.queryItems = [
-            URLQueryItem(name: "_type", value: "xml"),
-            URLQueryItem(name: "channel", value: "ccm"),
-            URLQueryItem(name: "channel", value: "sti"),
-            URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
-            URLQueryItem(name: "productType", value: "Desktop")
-        ]
-        
-        guard let url = components?.url else {
-            throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(httpResponse.statusCode, nil)
-        }
-        
-        guard let xmlString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidData("无法解码XML数据")
-        }
-
-        let result: ([String: Product], String) = try await Task.detached(priority: .userInitiated) {
-            let parseResult = try XHXMLParser.parse(
-                xmlString: xmlString,
-                urlVersion: 6,
-                allowedPlatforms: Set(["osx10-64", "osx10", "macuniversal", "macarm64"])
-            )
-            return (parseResult.products, parseResult.cdn)
-        }.value
-        
-        return result
-    }
-    
-    func getDownloadPath(for fileName: String) async throws -> URL {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                let panel = NSOpenPanel()
-                panel.title = "选择保存位置"
-                panel.canCreateDirectories = true
-                panel.canChooseDirectories = true
-                panel.canChooseFiles = false
-                panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-                
-                if panel.runModal() == .OK {
-                    if let baseURL = panel.url {
-                        continuation.resume(returning: baseURL)
-                    } else {
-                        continuation.resume(throwing: NetworkError.fileSystemError("未选择保存位置", nil))
-                    }
-                } else {
-                    continuation.resume(throwing: NetworkError.fileSystemError("用户取消了操作", nil))
-                }
-            }
-        }
-    }
     func configureNetworkMonitor() {
         monitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
@@ -202,18 +51,20 @@ extension NetworkManager {
                 self.isConnected = path.status == .satisfied
 
                 if !wasConnected && self.isConnected {
-                    for task in self.downloadTasks where task.status.isPaused {
-                        if case .paused(let info) = task.status, 
+                    for task in self.downloadTasks {
+                        if case .paused(let info) = task.status,
                            info.reason == .networkIssue {
                             await self.resumeDownload(taskId: task.id)
                         }
                     }
                 } else if wasConnected && !self.isConnected {
-                    for task in self.downloadTasks where task.status.isActive {
-                        await self.downloadUtils.pauseDownloadTask(
-                            taskId: task.id, 
-                            reason: DownloadTask.DownloadStatus.PauseInfo.PauseReason.networkIssue
-                        )
+                    for task in self.downloadTasks {
+                        if case .downloading = task.status {
+                            await self.downloadUtils.pauseDownloadTask(
+                                taskId: task.id,
+                                reason: .networkIssue
+                            )
+                        }
                     }
                 }
             }
@@ -228,7 +79,13 @@ extension NetworkManager {
     }
     
     func updateDockBadge() {
-        let activeCount = downloadTasks.filter { $0.status.isActive }.count
+        let activeCount = downloadTasks.filter { task in
+            if case .downloading = task.status {
+                return true
+            }
+            return false
+        }.count
+        
         if activeCount > 0 {
             NSApplication.shared.dockTile.badgeLabel = "\(activeCount)"
         } else {

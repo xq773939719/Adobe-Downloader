@@ -12,8 +12,8 @@ struct ContentView: View {
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
     @State private var showLanguagePicker = false
     
-    private var filteredProducts: [Product] {
-        let products = networkManager.products.values
+    private var filteredProducts: [Sap] {
+        let products = networkManager.saps.values
             .filter { !$0.hidden && !$0.versions.isEmpty }
             .sorted { $0.displayName < $1.displayName }
         
@@ -133,8 +133,8 @@ struct ContentView: View {
                                 columns: [GridItem(.adaptive(minimum: 250))],
                                 spacing: 20
                             ) {
-                                ForEach(filteredProducts) { product in
-                                    AppCardView(product: product)
+                                ForEach(filteredProducts, id: \.sapCode) { sap in
+                                    AppCardView(sap: sap)
                                 }
                             }
                             .padding()
@@ -154,7 +154,8 @@ struct ContentView: View {
                 .environmentObject(networkManager)
         }
         .onAppear {
-            if networkManager.products.isEmpty {
+
+            if networkManager.saps.isEmpty {
                 refreshData()
             }
         }
@@ -215,80 +216,6 @@ struct SearchField: View {
 
 #Preview {
     let networkManager = NetworkManager()
-
-    let mockProducts: [String: Product] = [
-        "PHSP": Product(
-            id: "PHSP",
-            hidden: false,
-            displayName: "Photoshop",
-            sapCode: "PHSP",
-            versions: [
-                "25.0.0": Product.ProductVersion(
-                    sapCode: "PHSP",
-                    baseVersion: "25.0.0",
-                    productVersion: "25.0.0",
-                    apPlatform: "macuniversal",
-                    dependencies: [],
-                    buildGuid: ""
-                )
-            ],
-            icons: [
-                Product.ProductIcon(
-                    size: "192x192",
-                    url: "https://ffc-static-cdn.oobesaas.adobe.com/icons/PHSP/25.0.0/192x192.png"
-                )
-            ]
-        ),
-        "ILST": Product(
-            id: "ILST",
-            hidden: false,
-            displayName: "Illustrator",
-            sapCode: "ILST",
-            versions: [
-                "28.0.0": Product.ProductVersion(
-                    sapCode: "ILST",
-                    baseVersion: "28.0.0",
-                    productVersion: "28.0.0",
-                    apPlatform: "macuniversal",
-                    dependencies: [],
-                    buildGuid: ""
-                )
-            ],
-            icons: [
-                Product.ProductIcon(
-                    size: "192x192",
-                    url: "https://ffc-static-cdn.oobesaas.adobe.com/icons/ILST/28.0.0/192x192.png"
-                )
-            ]
-        ),
-        "AEFT": Product(
-            id: "AEFT",
-            hidden: false,
-            displayName: "After Effects",
-            sapCode: "AEFT",
-            versions: [
-                "24.0.0": Product.ProductVersion(
-                    sapCode: "AEFT",
-                    baseVersion: "24.0.0",
-                    productVersion: "24.0.0",
-                    apPlatform: "macuniversal",
-                    dependencies: [],
-                    buildGuid: ""
-                )
-            ],
-            icons: [
-                Product.ProductIcon(
-                    size: "192x192",
-                    url: "https://ffc-static-cdn.oobesaas.adobe.com/icons/AEFT/24.0.0/192x192.png"
-                )
-            ]
-        )
-    ]
-    
-    Task { @MainActor in
-        networkManager.products = mockProducts
-        networkManager.loadingState = .success
-    }
     
     return ContentView()
         .environmentObject(networkManager)

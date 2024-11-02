@@ -92,6 +92,9 @@ actor InstallManager {
             let installProcess = Process()
             installProcess.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
             installProcess.arguments = ["-S", setupPath, "--install=1", "--driverXML=\(driverPath)"]
+
+            print("执行安装命令: \(installProcess.executableURL!.path) \(installProcess.arguments!.joined(separator: " "))")
+
             let inputPipe = Pipe()
             let outputPipe = Pipe()
             installProcess.standardInput = inputPipe
@@ -217,6 +220,9 @@ actor InstallManager {
         let installProcess = Process()
         installProcess.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
         installProcess.arguments = [setupPath, "--install=1", "--driverXML=\(driverPath)"]
+
+        print("执行重试命令: \(installProcess.executableURL!.path) \(installProcess.arguments!.joined(separator: " "))")
+
         let outputPipe = Pipe()
         installProcess.standardOutput = outputPipe
         installProcess.standardError = outputPipe

@@ -4,6 +4,23 @@
 //  Created by X1a0He on 2024/10/30.
 //
 import Foundation
+enum PackageStatus {
+    case waiting
+    case downloading
+    case paused
+    case completed
+    case failed(String)
+
+    var description: String {
+        switch self {
+        case .waiting: return "等待中"
+        case .downloading: return "下载中"
+        case .paused: return "已暂停"
+        case .completed: return "已完成"
+        case .failed(let message): return "失败: \(message)"
+        }
+    }
+}
 
 enum NetworkError: Error, LocalizedError {
     case noConnection

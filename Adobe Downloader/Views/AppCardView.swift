@@ -165,9 +165,11 @@ struct AppCardView: View {
         Task {
             do {
                 let destinationURL: URL
+                let platform = sap.versions[version]?.apPlatform ?? "unknown"
+                
                 if useDefaultDirectory && !defaultDirectory.isEmpty {
                     destinationURL = URL(fileURLWithPath: defaultDirectory)
-                        .appendingPathComponent("Install \(sap.displayName)_\(version)-\(language).app")
+                        .appendingPathComponent("Install \(sap.displayName)_\(version)-\(language)-\(platform).app")
                 } else {
                     let panel = NSOpenPanel()
                     panel.title = "选择保存位置"
@@ -181,7 +183,7 @@ struct AppCardView: View {
                         return
                     }
                     destinationURL = selectedURL
-                        .appendingPathComponent("Install \(sap.displayName)_\(version)-\(language).app")
+                        .appendingPathComponent("Install \(sap.displayName)_\(version)-\(language)-\(platform).app")
                 }
                 try await networkManager.startDownload(
                     sap: sap,
@@ -199,7 +201,6 @@ struct AppCardView: View {
     }
 }
 
-// 子视图
 private struct IconView: View {
     let iconImage: NSImage?
     let loadIcon: () -> Void

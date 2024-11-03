@@ -10,7 +10,7 @@ struct InstallProgressView: View {
     let progress: Double
     let status: String
     let onCancel: () -> Void
-    let onRetry: (() -> Void)?  // 重试回调
+    let onRetry: (() -> Void)?
     
     private var isCompleted: Bool {
         progress >= 1.0 || status == "安装完成"
@@ -66,7 +66,7 @@ struct InstallProgressView: View {
                         Text(status)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .textSelection(.enabled)  // 允许用户选择和复制错误信息
+                            .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(8)
                             .background(Color.secondary.opacity(0.1))
@@ -85,10 +85,8 @@ struct InstallProgressView: View {
                 }
             }
 
-            // 根据状态显示不同的按钮
             HStack(spacing: 12) {
                 if isFailed {
-                    // 当安装失败时显示重试按钮
                     if let onRetry = onRetry {
                         Button(action: onRetry) {
                             Label("重试", systemImage: "arrow.clockwise.circle.fill")

@@ -31,6 +31,7 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
     var productsToDownload: [ProductsToDownload]
     var retryCount: Int
     let createAt: Date
+    var displayInstallButton: Bool
     @Published var totalStatus: DownloadStatus?
     @Published var totalProgress: Double
     @Published var totalDownloadedSize: Int64
@@ -99,6 +100,7 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
         self.totalSize = totalSize
         self.totalSpeed = totalSpeed
         self.currentPackage = currentPackage
+        self.displayInstallButton = sapCode != "APRO"
     }
 
     static func == (lhs: NewDownloadTask, rhs: NewDownloadTask) -> Bool {

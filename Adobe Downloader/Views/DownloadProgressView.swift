@@ -17,6 +17,7 @@ struct DownloadProgressView: View {
     @State private var showInstallPrompt = false
     @State private var isInstalling = false
     @State private var isPackageListExpanded: Bool = false
+    @State private var expandedProducts: Set<String> = []
     
     private var statusLabel: some View {
         Text(task.status.description)
@@ -112,11 +113,13 @@ struct DownloadProgressView: View {
                 
             case .completed:
                 HStack(spacing: 8) {
-                    Button(action: { showInstallPrompt = true }) {
-                        Label("安装", systemImage: "square.and.arrow.down.on.square")
+                    if task.displayInstallButton {
+                        Button(action: { showInstallPrompt = true }) {
+                            Label("安装", systemImage: "square.and.arrow.down.on.square")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
                     
                     Button(action: onRemove) {
                         Label("删除", systemImage: "trash")
@@ -135,28 +138,30 @@ struct DownloadProgressView: View {
         }
         .controlSize(.small)
         .sheet(isPresented: $showInstallPrompt) {
-            VStack(spacing: 20) {
-                Text("是否要安装 \(task.displayName)?")
-                    .font(.headline)
-                
-                HStack(spacing: 16) {
-                    Button("取消") {
-                        showInstallPrompt = false
-                    }
-                    .buttonStyle(.bordered)
+            if task.displayInstallButton {
+                VStack(spacing: 20) {
+                    Text("是否要安装 \(task.displayName)?")
+                        .font(.headline)
                     
-                    Button("安装") {
-                        showInstallPrompt = false
-                        isInstalling = true
-                        Task {
-                            await networkManager.installProduct(at: task.directory)
+                    HStack(spacing: 16) {
+                        Button("取消") {
+                            showInstallPrompt = false
                         }
+                        .buttonStyle(.bordered)
+                        
+                        Button("安装") {
+                            showInstallPrompt = false
+                            isInstalling = true
+                            Task {
+                                await networkManager.installProduct(at: task.directory)
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
                 }
+                .padding()
+                .frame(width: 300)
             }
-            .padding()
-            .frame(width: 300)
         }
         .sheet(isPresented: $isInstalling) {
             Group {
@@ -254,8 +259,7 @@ struct DownloadProgressView: View {
                 Text(task.version)
                     .foregroundColor(.secondary)
             }
-            
-            // 下载目录
+
             Text(task.directory.path)
                 .font(.caption)
                 .foregroundColor(.blue)
@@ -264,12 +268,10 @@ struct DownloadProgressView: View {
                 .onTapGesture {
                     openInFinder(task.directory)
                 }
-            
-            // 状态标签（移到目录下方）
+
             statusLabel
                 .padding(.vertical, 2)
-            
-            // 进度信息
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     HStack(spacing: 4) {
@@ -324,25 +326,14 @@ struct DownloadProgressView: View {
                     
                     if isPackageListExpanded {
                         ScrollView {
-                            ForEach(task.productsToDownload, id: \.sapCode) { product in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Image(systemName: "cube.box")
-                                            .foregroundColor(.blue)
-                                        Text("\(product.sapCode) (\(product.version))")
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                    }
-                                    .padding(.vertical, 2)
-                                    
-                                    ForEach(product.packages) { package in
-                                        PackageRow(
-                                            package: package,
-                                            isCurrentPackage: task.currentPackage?.id == package.id
-                                        )
-                                    }
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(task.productsToDownload, id: \.sapCode) { product in
+                                    ProductRow(
+                                        product: product,
+                                        isCurrentProduct: task.currentPackage?.id == product.packages.first?.id,
+                                        expandedProducts: $expandedProducts
+                                    )
                                 }
-                                .padding(.leading, 4)
                             }
                         }
                         .frame(maxHeight: 200)
@@ -366,19 +357,82 @@ struct DownloadProgressView: View {
     }
 }
 
+struct ProductRow: View {
+    @ObservedObject var product: ProductsToDownload
+    let isCurrentProduct: Bool
+    @Binding var expandedProducts: Set<String>
+    
+    private var completedPackages: Int {
+        product.packages.filter { $0.status == .completed }.count
+    }
+    
+    private var totalPackages: Int {
+        product.packages.count
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                withAnimation {
+                    if expandedProducts.contains(product.sapCode) {
+                        expandedProducts.remove(product.sapCode)
+                    } else {
+                        expandedProducts.insert(product.sapCode)
+                    }
+                }
+            }) {
+                HStack {
+                    Image(systemName: "cube.box")
+                        .foregroundColor(.blue)
+                    Text("\(product.sapCode) (\(product.version))")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                    
+                    Spacer()
+                    
+                    Text("\(completedPackages)/\(totalPackages)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Image(systemName: expandedProducts.contains(product.sapCode) ? "chevron.down" : "chevron.right")
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            
+            if expandedProducts.contains(product.sapCode) {
+                VStack(spacing: 8) {
+                    ForEach(product.packages) { package in
+                        PackageRow(package: package)
+                            .padding(.horizontal)
+                            .background(Color(NSColor.controlBackgroundColor))
+                            .cornerRadius(8)
+                    }
+                }
+                .padding(.leading, 24)
+            }
+        }
+    }
+}
+
 struct PackageRow: View {
     @ObservedObject var package: Package
-    let isCurrentPackage: Bool
+    
+    private func formatSpeed(_ bytesPerSecond: Double) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.includesUnit = true
+        formatter.isAdaptive = true
+        return formatter.string(fromByteCount: Int64(bytesPerSecond)) + "/s"
+    }
     
     var body: some View {
         VStack(spacing: 4) {
-            // 第一行：包名和类型标签
             HStack {
-                // 添加缩进
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: 20)
-                
                 Text(package.fullPackageName)
                     .font(.caption)
                     .foregroundColor(.primary)
@@ -392,397 +446,33 @@ struct PackageRow: View {
                 
                 Spacer()
                 
-                // 非下载状态只显示状态文本
-                if !isCurrentPackage || package.status != .downloading {
+                if package.status == .downloading {
+                    Text("\(Int(package.progress * 100))%")
+                        .font(.caption)
+                } else {
                     Text(package.status.description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
-            // 如果是当前下载的包，显示进度信息
-            if isCurrentPackage && package.status == .downloading {
+
+            if package.status == .downloading {
                 VStack(spacing: 2) {
-                    // 进度信息也需要缩进对齐
-                    HStack {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(width: 20)
-                        
-                        ProgressView(value: package.progress)
-                            .progressViewStyle(.linear)
-                        
-                        Text("\(Int(package.progress * 100))% \(package.formattedSpeed)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
+                    ProgressView(value: package.progress)
+                        .progressViewStyle(.linear)
                     
-                    // 已下载大小和总大小也需要缩进对齐
                     HStack {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(width: 20)
-                        
                         Text("\(package.formattedDownloadedSize) / \(package.formattedSize)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
                         Spacer()
+                        if package.speed > 0 {
+                            Text(formatSpeed(package.speed))
+                        }
                     }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 }
             }
         }
-        .padding(.vertical, 2)
-        .padding(.horizontal, 4)
-        .background(isCurrentPackage ? Color.blue.opacity(0.05) : Color.clear)
-        .cornerRadius(4)
+        .padding(.vertical, 8)
     }
-}
-
-// 在文件末尾添加预览
-#Preview("下载中") {
-    struct PreviewWrapper: View {
-        @StateObject private var task: NewDownloadTask
-        
-        init() {
-            let task = NewDownloadTask(
-                sapCode: "PHSP",
-                version: "26.0.0",
-                language: "zh_CN",
-                displayName: "Adobe Photoshop",
-                directory: URL(fileURLWithPath: "/Users/Downloads/Install PHSP_26.0-zh_CN-macuniversal.app"),
-                productsToDownload: [
-                    ProductsToDownload(
-                        sapCode: "PHSP",
-                        version: "26.0.0",
-                        buildGuid: "123",
-                        applicationJson: ""
-                    ),
-                    ProductsToDownload(
-                        sapCode: "ACR",
-                        version: "9.6.0",
-                        buildGuid: "456",
-                        applicationJson: ""
-                    )
-                ],
-                retryCount: 0,
-                createAt: Date(),
-                totalStatus: .downloading(DownloadStatus.DownloadInfo(
-                    fileName: "AdobePhotoshop26-Core.zip",
-                    currentPackageIndex: 0,
-                    totalPackages: 8,
-                    startTime: Date(),
-                    estimatedTimeRemaining: nil
-                )),
-                totalProgress: 0.35,
-                totalDownloadedSize: 738_197_504,
-                totalSize: 2_147_483_648,
-                totalSpeed: 1_048_576
-            )
-            
-            // PHSP 包
-            let phspPackages = [
-                // 正在下载的包
-                Package(
-                    type: "core",
-                    fullPackageName: "AdobePhotoshop26-Core.zip",
-                    downloadSize: 2_112_950_169,
-                    downloadURL: "/products/PHSP/AdobePhotoshop26-Core.zip"
-                ),
-                // 等待下载的包
-                Package(
-                    type: "core",
-                    fullPackageName: "AdobePhotoshop26-Core_stripped.zip",
-                    downloadSize: 1_874_257_058,
-                    downloadURL: "/products/PHSP/AdobePhotoshop26-Core_stripped.zip"
-                ),
-                // 已完成的包
-                Package(
-                    type: "core",
-                    fullPackageName: "AdobePhotoshop26-nl_NL.zip",
-                    downloadSize: 490_628,
-                    downloadURL: "/products/PHSP/AdobePhotoshop26-nl_NL.zip"
-                )
-            ]
-            
-            // ACR 包
-            let acrPackages = [
-                // 等待下载的包
-                Package(
-                    type: "core",
-                    fullPackageName: "AdobeCameraRaw8.0All.zip",
-                    downloadSize: 255_223_665,
-                    downloadURL: "/products/ACR/AdobeCameraRaw8.0All.zip"
-                ),
-                // 失败的包
-                Package(
-                    type: "core",
-                    fullPackageName: "AdobeCameraRaw8.0-support.zip",
-                    downloadSize: 76_896_003,
-                    downloadURL: "/products/ACR/AdobeCameraRaw8.0-support.zip"
-                )
-            ]
-            
-            // 设置包的状态
-            phspPackages[0].status = .downloading
-            phspPackages[0].downloadedSize = 738_197_504
-            phspPackages[0].progress = 0.35
-            phspPackages[0].speed = 1_048_576
-            
-            phspPackages[1].status = .waiting
-            
-            phspPackages[2].status = .completed
-            phspPackages[2].downloaded = true
-            phspPackages[2].progress = 1.0
-            
-            acrPackages[0].status = .waiting
-            
-            acrPackages[1].status = .failed("下载失败")
-            
-            task.productsToDownload[0].packages = phspPackages
-            task.productsToDownload[1].packages = acrPackages
-            
-            // 设置当前包
-            task.currentPackage = phspPackages[0]
-            
-            self._task = StateObject(wrappedValue: task)
-        }
-        
-        var body: some View {
-            DownloadProgressView(
-                task: task,
-                onCancel: {},
-                onPause: {},
-                onResume: {},
-                onRetry: {},
-                onRemove: {}
-            )
-            .environmentObject(NetworkManager())
-            .padding()
-            .frame(width: 600)
-        }
-    }
-    
-    return PreviewWrapper()
-}
-
-// 添加一个新的预览，默认展开包列表
-#Preview("下载中(展开包列表)") {
-    struct PreviewWrapper: View {
-        @State private var isExpanded = true
-        let task: NewDownloadTask
-        
-        var body: some View {
-            DownloadProgressView(
-                task: task,
-                onCancel: {},
-                onPause: {},
-                onResume: {},
-                onRetry: {},
-                onRemove: {}
-            )
-            .environmentObject(NetworkManager())
-            .padding()
-            .frame(width: 600)
-        }
-    }
-    
-    let task = NewDownloadTask(
-        sapCode: "PHSP",
-        version: "26.0.0",
-        language: "zh_CN",
-        displayName: "Adobe Photoshop",
-        directory: URL(fileURLWithPath: "/Users/Downloads/Install Photoshop_26.0-zh_CN.app"),
-        productsToDownload: [
-            ProductsToDownload(
-                sapCode: "PHSP",
-                version: "26.0.0",
-                buildGuid: "123",
-                applicationJson: ""
-            ),
-            ProductsToDownload(
-                sapCode: "ACR",
-                version: "9.6.0",
-                buildGuid: "456",
-                applicationJson: ""
-            )
-        ],
-        retryCount: 0,
-        createAt: Date(),
-        totalStatus: .downloading(DownloadStatus.DownloadInfo(
-            fileName: "AdobePhotoshop26-Core.zip",
-            currentPackageIndex: 0,
-            totalPackages: 8,
-            startTime: Date(),
-            estimatedTimeRemaining: nil
-        )),
-        totalProgress: 0.35,
-        totalDownloadedSize: 738_197_504,
-        totalSize: 2_147_483_648,
-        totalSpeed: 1_048_576
-    )
-    
-    // 添加包
-    task.productsToDownload[0].packages = [
-        Package(
-            type: "core",
-            fullPackageName: "AdobePhotoshop26-Core.zip",
-            downloadSize: 1_073_741_824,
-            downloadURL: "/products/PHSP/AdobePhotoshop26-Core.zip"
-        ),
-        Package(
-            type: "non-core",
-            fullPackageName: "AdobePhotoshop26-Support.zip",
-            downloadSize: 536_870_912,
-            downloadURL: "/products/PHSP/AdobePhotoshop26-Support.zip"
-        )
-    ]
-    
-    task.productsToDownload[1].packages = [
-        Package(
-            type: "core",
-            fullPackageName: "ACR-Core.zip",
-            downloadSize: 268_435_456,
-            downloadURL: "/products/ACR/ACR-Core.zip"
-        )
-    ]
-    
-    // 设置当前包和进度
-    task.currentPackage = task.productsToDownload[0].packages[0]
-    task.currentPackage?.downloadedSize = 738_197_504
-    task.currentPackage?.progress = 0.35
-    task.currentPackage?.speed = 1_048_576
-    task.currentPackage?.status = .downloading
-    
-    return PreviewWrapper(task: task)
-}
-
-#Preview("准备中") {
-    let task = NewDownloadTask(
-        sapCode: "PHSP",
-        version: "26.0.0",
-        language: "zh_CN",
-        displayName: "Adobe Photoshop",
-        directory: URL(fileURLWithPath: "/Users/Downloads/Install Photoshop_26.0-zh_CN.app"),
-        productsToDownload: [],
-        retryCount: 0,
-        createAt: Date(),
-        totalStatus: .preparing(DownloadStatus.PrepareInfo(
-            message: "正在准备下载...",
-            timestamp: Date(),
-            stage: .initializing
-        )),
-        totalProgress: 0,
-        totalDownloadedSize: 0,
-        totalSize: 2_147_483_648,
-        totalSpeed: 0
-    )
-    
-    return DownloadProgressView(
-        task: task,
-        onCancel: {},
-        onPause: {},
-        onResume: {},
-        onRetry: {},
-        onRemove: {}
-    )
-    .environmentObject(NetworkManager())
-    .padding()
-    .frame(width: 600)
-}
-
-#Preview("已完成") {
-    let task = NewDownloadTask(
-        sapCode: "PHSP",
-        version: "26.0.0",
-        language: "zh_CN",
-        displayName: "Adobe Photoshop",
-        directory: URL(fileURLWithPath: "/Users/Downloads/Install Photoshop_26.0-zh_CN.app"),
-        productsToDownload: [
-            ProductsToDownload(
-                sapCode: "PHSP",
-                version: "26.0.0",
-                buildGuid: "123",
-                applicationJson: ""
-            )
-        ],
-        retryCount: 0,
-        createAt: Date().addingTimeInterval(-3600),
-        totalStatus: .completed(DownloadStatus.CompletionInfo(
-            timestamp: Date(),
-            totalTime: 3600,
-            totalSize: 2_147_483_648
-        )),
-        totalProgress: 1.0,
-        totalDownloadedSize: 2_147_483_648,
-        totalSize: 2_147_483_648,
-        totalSpeed: 0
-    )
-    
-    // 添加已完成的包
-    task.productsToDownload[0].packages = [
-        Package(
-            type: "core",
-            fullPackageName: "AdobePhotoshop26-Core.zip",
-            downloadSize: 1_073_741_824,
-            downloadURL: "/products/PHSP/AdobePhotoshop26-Core.zip"
-        )
-    ]
-    task.productsToDownload[0].packages[0].downloaded = true
-    task.productsToDownload[0].packages[0].progress = 1.0
-    task.productsToDownload[0].packages[0].status = .completed
-    
-    return DownloadProgressView(
-        task: task,
-        onCancel: {},
-        onPause: {},
-        onResume: {},
-        onRetry: {},
-        onRemove: {}
-    )
-    .environmentObject(NetworkManager())
-    .padding()
-    .frame(width: 600)
-}
-
-#Preview("失败") {
-    let task = NewDownloadTask(
-        sapCode: "PHSP",
-        version: "26.0.0",
-        language: "zh_CN",
-        displayName: "Adobe Photoshop",
-        directory: URL(fileURLWithPath: "/Users/Downloads/Install Photoshop_26.0-zh_CN.app"),
-        productsToDownload: [
-            ProductsToDownload(
-                sapCode: "PHSP",
-                version: "26.0.0",
-                buildGuid: "123",
-                applicationJson: ""
-            )
-        ],
-        retryCount: 3,
-        createAt: Date(),
-        totalStatus: .failed(DownloadStatus.FailureInfo(
-            message: "网络连接已断开",
-            error: NetworkError.noConnection,
-            timestamp: Date(),
-            recoverable: true
-        )),
-        totalProgress: 0.5,
-        totalDownloadedSize: 1_073_741_824,
-        totalSize: 2_147_483_648,
-        totalSpeed: 0
-    )
-    
-    return DownloadProgressView(
-        task: task,
-        onCancel: {},
-        onPause: {},
-        onResume: {},
-        onRetry: {},
-        onRemove: {}
-    )
-    .environmentObject(NetworkManager())
-    .padding()
-    .frame(width: 600)
 }

@@ -133,7 +133,6 @@ class DownloadUtils {
                 startTime: Date(),
                 estimatedTimeRemaining: nil
             )))
-            // 实现下载逻辑
             await startDownloadProcess(task: task)
         }
     }
@@ -163,6 +162,7 @@ class DownloadUtils {
     
     func createInstallerApp(for sapCode: String, version: String, language: String, at destinationURL: URL) throws {
         let parentDirectory = destinationURL.deletingLastPathComponent()
+        print(parentDirectory)
         if !FileManager.default.fileExists(atPath: parentDirectory.path) {
             try FileManager.default.createDirectory(at: parentDirectory, withIntermediateDirectories: true)
         }
@@ -281,7 +281,20 @@ class DownloadUtils {
     }
 
     internal func startDownloadProcess(task: NewDownloadTask) async {
-        // 在开始下载前更新状态
+        actor DownloadProgress {
+            var currentPackageIndex: Int = 0
+            
+            func increment() {
+                currentPackageIndex += 1
+            }
+            
+            func get() -> Int {
+                return currentPackageIndex
+            }
+        }
+        
+        let progress = DownloadProgress()
+        
         await MainActor.run {
             let totalPackages = task.productsToDownload.reduce(0) { $0 + $1.packages.count }
             task.setStatus(.downloading(DownloadStatus.DownloadInfo(
@@ -293,34 +306,31 @@ class DownloadUtils {
             )))
             task.objectWillChange.send()
         }
-        
-        var currentPackageIndex = 0
-        let totalPackages = task.productsToDownload.reduce(0) { $0 + $1.packages.count }
-        
-        // 直接遍历所有未下载的包
+
         for product in task.productsToDownload {
             for package in product.packages where !package.downloaded {
+                let currentIndex = await progress.get()
+                
                 await MainActor.run {
                     task.currentPackage = package
                     task.setStatus(.downloading(DownloadStatus.DownloadInfo(
                         fileName: package.fullPackageName,
-                        currentPackageIndex: currentPackageIndex,
-                        totalPackages: totalPackages,
+                        currentPackageIndex: currentIndex,
+                        totalPackages: task.productsToDownload.reduce(0) { $0 + $1.packages.count },
                         startTime: Date(),
                         estimatedTimeRemaining: nil
                     )))
                 }
-                currentPackageIndex += 1
                 
-                // 验证包信息
+                await progress.increment()
+                
                 guard !package.fullPackageName.isEmpty,
                       !package.downloadURL.isEmpty,
                       package.downloadSize > 0 else {
                     print("Warning: Skipping invalid package in \(product.sapCode)")
                     continue
                 }
-                
-                // 构建下载 URL
+
                 let cdn = await networkManager?.cdn ?? ""
                 let cleanCdn = cdn.hasSuffix("/") ? String(cdn.dropLast()) : cdn
                 let cleanPath = package.downloadURL.hasPrefix("/") ? package.downloadURL : "/\(package.downloadURL)"
@@ -331,12 +341,11 @@ class DownloadUtils {
                     continue
                 }
                 
-                print("Starting download for \(package.fullPackageName) from \(downloadURL)")
-                
-                // 下载包
+                // print("Starting download for \(package.fullPackageName) from \(downloadURL)")
+
                 do {
                     try await downloadPackage(package: package, task: task, product: product, url: url)
-                    print("Completed download for \(package.fullPackageName)")
+                    // print("Completed download for \(package.fullPackageName)")
                 } catch {
                     print("Error downloading \(package.fullPackageName): \(error.localizedDescription)")
                     await networkManager?.handleError(task.id, error)
@@ -344,24 +353,52 @@ class DownloadUtils {
                 }
             }
         }
-        
-        // 检查是否所有包都已下载完成
+
         let allPackagesDownloaded = task.productsToDownload.allSatisfy { product in
             product.packages.allSatisfy { $0.downloaded }
         }
         
         if allPackagesDownloaded {
-            await MainActor.run {
-                task.setStatus(.completed(DownloadStatus.CompletionInfo(
-                    timestamp: Date(),
-                    totalTime: Date().timeIntervalSince(task.createAt),
-                    totalSize: task.totalSize
-                )))
+            if let productInfo = await networkManager?.saps[task.sapCode]?.versions[task.version] {
+                let driverXml = generateDriverXML(
+                    sapCode: task.sapCode,
+                    version: task.version,
+                    language: task.language,
+                    productInfo: productInfo,
+                    displayName: task.displayName
+                )
+                
+                do {
+                    let driverPath = task.directory
+                        .appendingPathComponent("Contents/Resources/products/driver.xml")
+                    try driverXml.write(
+                        to: driverPath,
+                        atomically: true,
+                        encoding: .utf8
+                    )
+                    
+                    await MainActor.run {
+                        task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                            timestamp: Date(),
+                            totalTime: Date().timeIntervalSince(task.createAt),
+                            totalSize: task.totalSize
+                        )))
+                    }
+                } catch {
+                    print("Error generating driver.xml:", error.localizedDescription)
+                    await MainActor.run {
+                        task.setStatus(.failed(DownloadStatus.FailureInfo(
+                            message: "生成 driver.xml 失败: \(error.localizedDescription)",
+                            error: error,
+                            timestamp: Date(),
+                            recoverable: false
+                        )))
+                    }
+                }
             }
         }
     }
 
-    // 新增一个方法来处理单个包的下载
     private func downloadPackage(package: Package, task: NewDownloadTask, product: ProductsToDownload, url: URL) async throws {
         var lastUpdateTime = Date()
         var lastBytes: Int64 = 0
@@ -382,8 +419,7 @@ class DownloadUtils {
                     
                     Task { @MainActor in
                         package.markAsCompleted()
-                        
-                        // 更新总进度
+
                         let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
                             sum + prod.packages.reduce(Int64(0)) { sum, pkg in
                                 sum + (pkg.downloaded ? pkg.downloadSize : 0)
@@ -403,8 +439,7 @@ class DownloadUtils {
                     Task { @MainActor in
                         let now = Date()
                         let timeDiff = now.timeIntervalSince(lastUpdateTime)
-                        
-                        // 每秒更新一次总进度和速度
+
                         if timeDiff >= 1.0 {
                             let bytesDiff = totalBytesWritten - lastBytes
                             let speed = Double(bytesDiff) / timeDiff
@@ -412,7 +447,6 @@ class DownloadUtils {
                                 downloadedSize: totalBytesWritten,
                                 speed: speed
                             )
-                            // 更新任务总进度
                             let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
                                 sum + prod.packages.reduce(Int64(0)) { sum, pkg in
                                     if pkg.downloaded {
@@ -432,7 +466,6 @@ class DownloadUtils {
                             lastBytes = totalBytesWritten
                             
                         }
-                        // 触发 UI 更新
                         task.objectWillChange.send()
                         networkManager?.objectWillChange.send()
                     }
@@ -443,8 +476,7 @@ class DownloadUtils {
             NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
             
             let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
-            
-            // 检查是否有恢复数据
+
             Task {
                 if let resumeData = await cancelTracker.getResumeData(task.id) {
                     let downloadTask = session.downloadTask(withResumeData: resumeData)
@@ -456,6 +488,24 @@ class DownloadUtils {
                     await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
                     downloadTask.resume()
                 }
+            }
+        }
+    }
+
+    func retryPackage(task: NewDownloadTask, package: Package) async throws {
+        guard package.canRetry else { return }
+        
+        package.prepareForRetry()
+
+        if let product = task.productsToDownload.first(where: { $0.packages.contains(where: { $0.id == package.id }) }) {
+            await MainActor.run {
+                task.currentPackage = package
+            }
+
+            if let cdn = await networkManager?.cdnUrl {
+                try await downloadPackage(package: package, task: task, product: product, url: URL(string: cdn + package.downloadURL)!)
+            } else {
+                throw NetworkError.invalidData("无法获取 CDN 地址")
             }
         }
     }

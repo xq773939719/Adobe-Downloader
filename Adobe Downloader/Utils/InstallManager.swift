@@ -206,7 +206,6 @@ actor InstallManager {
         return nil
     }
 
-    // 添加新的重试方法
     func retry(at appPath: URL, progressHandler: @escaping (Double, String) -> Void) async throws {
         self.progressHandler = progressHandler
         
@@ -269,7 +268,6 @@ actor InstallManager {
                     if installProcess.terminationStatus == 0 {
                         continuation.resume()
                     } else {
-                        // 如果重试失败，抛出错误让外层处理
                         throw InstallError.installationFailed(
                             "重试失败，需要重新输入密码"
                         )

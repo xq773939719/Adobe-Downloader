@@ -5,7 +5,6 @@ struct Adobe_DownloaderApp: App {
     @StateObject private var networkManager = NetworkManager()
     
     init() {
-        // 设置默认值（如果没有设置过）
         if UserDefaults.standard.object(forKey: "useDefaultLanguage") == nil {
             UserDefaults.standard.set(true, forKey: "useDefaultLanguage")
         }

@@ -5,7 +5,6 @@
 
     },
     "%@" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -44,22 +43,22 @@
     "%lld" : {
 
     },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
     "%lld%%" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld%%"
-          }
-        }
-      }
-    },
-    "%lld%% %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld%% %2$@"
           }
         }
       }
@@ -171,7 +170,7 @@
     "尝试其他搜索关键词" : {
 
     },
-    "已下载" : {
+    "已存在" : {
 
     },
     "已暂停" : {

@@ -26,6 +26,34 @@ class Package: Identifiable, ObservableObject {
     
     var lastUpdated: Date = Date()
     var lastRecordedSize: Int64 = 0
+    var retryCount: Int = 0
+    var lastError: Error?
+    
+    var canRetry: Bool {
+        if case .failed = status {
+            return retryCount < 3
+        }
+        return false
+    }
+    
+    func markAsFailed(_ error: Error) {
+        Task { @MainActor in
+            self.lastError = error
+            self.status = .failed(error.localizedDescription)
+            objectWillChange.send()
+        }
+    }
+    
+    func prepareForRetry() {
+        Task { @MainActor in
+            self.retryCount += 1
+            self.status = .waiting
+            self.progress = 0
+            self.speed = 0
+            self.downloadedSize = 0
+            objectWillChange.send()
+        }
+    }
 
     init(type: String, fullPackageName: String, downloadSize: Int64, downloadURL: String) {
         self.type = type
@@ -70,12 +98,12 @@ class Package: Identifiable, ObservableObject {
         downloadSize > 0
     }
 }
-class ProductsToDownload {
+class ProductsToDownload: ObservableObject {
     var sapCode: String
     var version: String
     var buildGuid: String
     var applicationJson: String?
-    var packages: [Package] = []
+    @Published var packages: [Package] = []
 
     init(sapCode: String, version: String, buildGuid: String, applicationJson: String = "") {
         self.sapCode = sapCode

@@ -324,52 +324,25 @@ struct DownloadProgressView: View {
                     
                     if isPackageListExpanded {
                         ScrollView {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(task.productsToDownload.indices, id: \.self) { productIndex in
-                                    let product = task.productsToDownload[productIndex]
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        // 产品标题
-                                        HStack {
-                                            Image(systemName: "cube.box")
-                                                .foregroundColor(.blue)
-                                            Text("\(product.sapCode) (\(product.version))")
-                                                .font(.caption)
-                                                .fontWeight(.medium)
-                                            
-                                            Spacer()
-                                            
-                                            // 显示产品下载进度
-                                            let productProgress = product.packages.reduce(0.0) { sum, pkg in
-                                                sum + (pkg.downloaded ? 1.0 : pkg.progress)
-                                            } / Double(product.packages.count)
-                                            
-                                            Text("\(Int(productProgress * 100))%")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        .padding(.horizontal, 8)
-                                        
-                                        // 包列表
-                                        ForEach(product.packages.indices, id: \.self) { packageIndex in
-                                            let package = product.packages[packageIndex]
-                                            PackageProgressView(
-                                                package: package,
-                                                index: packageIndex + 1,
-                                                total: product.packages.count,
-                                                isCurrentPackage: task.currentPackage?.id == package.id
-                                            )
-                                            .padding(.leading, 24)
-                                        }
+                            ForEach(task.productsToDownload, id: \.sapCode) { product in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Image(systemName: "cube.box")
+                                            .foregroundColor(.blue)
+                                        Text("\(product.sapCode) (\(product.version))")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
                                     }
-                                    .padding(.vertical, 4)
-                                    .background(Color.primary.opacity(0.03))
-                                    .cornerRadius(6)
+                                    .padding(.vertical, 2)
                                     
-                                    if productIndex < task.productsToDownload.count - 1 {
-                                        Divider()
-                                            .padding(.vertical, 4)
+                                    ForEach(product.packages) { package in
+                                        PackageRow(
+                                            package: package,
+                                            isCurrentPackage: task.currentPackage?.id == package.id
+                                        )
                                     }
                                 }
+                                .padding(.leading, 4)
                             }
                         }
                         .frame(maxHeight: 200)
@@ -393,63 +366,70 @@ struct DownloadProgressView: View {
     }
 }
 
-struct PackageProgressView: View {
-    let package: Package
-    let index: Int
-    let total: Int
+struct PackageRow: View {
+    @ObservedObject var package: Package
     let isCurrentPackage: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: 4) {
+            // 第一行：包名和类型标签
             HStack {
-                // 包名和类型标签
-                HStack(spacing: 4) {
-                    Text("\(package.fullPackageName)")
-                        .font(.caption)
-                        .foregroundColor(package.downloaded ? .secondary : (isCurrentPackage ? .blue : .primary))
-                    
-                    Text(package.type)
-                        .font(.caption2)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(package.type == "core" ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.1))
-                        .cornerRadius(4)
-                        .foregroundColor(package.type == "core" ? .blue : .secondary)
-                }
+                // 添加缩进
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 20)
+                
+                Text(package.fullPackageName)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+                
+                Text(package.type)
+                    .font(.caption2)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(2)
                 
                 Spacer()
                 
-                // 状态和进度
-                if package.downloaded {
-                    Text("已完成")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                } else if package.downloadedSize > 0 {
-                    HStack(spacing: 4) {
-                        Text("\(Int(package.progress * 100))%")
-                        Text(formatSpeed(package.speed))
-                    }
-                    .font(.caption)
-                    .foregroundColor(isCurrentPackage ? .blue : .secondary)
-                } else {
-                    Text("等待中")
+                // 非下载状态只显示状态文本
+                if !isCurrentPackage || package.status != .downloading {
+                    Text(package.status.description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            if !package.downloaded && package.downloadedSize > 0 {
-                ProgressView(value: package.progress)
-                    .scaleEffect(x: 1, y: 0.5, anchor: .center)
-                    .tint(isCurrentPackage ? .blue : .gray)
-                
-                HStack {
-                    Text(formatFileSize(package.downloadedSize))
-                    Text("/")
-                    Text(formatFileSize(package.downloadSize))
+            // 如果是当前下载的包，显示进度信息
+            if isCurrentPackage && package.status == .downloading {
+                VStack(spacing: 2) {
+                    // 进度信息也需要缩进对齐
+                    HStack {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: 20)
+                        
+                        ProgressView(value: package.progress)
+                            .progressViewStyle(.linear)
+                        
+                        Text("\(Int(package.progress * 100))% \(package.formattedSpeed)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // 已下载大小和总大小也需要缩进对齐
+                    HStack {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: 20)
+                        
+                        Text("\(package.formattedDownloadedSize) / \(package.formattedSize)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
                 }
-                .font(.caption2)
-                .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 2)
@@ -457,107 +437,133 @@ struct PackageProgressView: View {
         .background(isCurrentPackage ? Color.blue.opacity(0.05) : Color.clear)
         .cornerRadius(4)
     }
-    
-    private func formatFileSize(_ size: Int64) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: size)
-    }
-    
-    private func formatSpeed(_ bytesPerSecond: Double) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        formatter.includesUnit = true
-        formatter.isAdaptive = true
-        return formatter.string(fromByteCount: Int64(bytesPerSecond)) + "/s"
-    }
 }
 
 // 在文件末尾添加预览
 #Preview("下载中") {
-    let task = NewDownloadTask(
-        sapCode: "PHSP",
-        version: "26.0.0",
-        language: "zh_CN",
-        displayName: "Adobe Photoshop",
-        directory: URL(fileURLWithPath: "/Users/Downloads/Install Photoshop_26.0-zh_CN.app"),
-        productsToDownload: [
-            ProductsToDownload(
+    struct PreviewWrapper: View {
+        @StateObject private var task: NewDownloadTask
+        
+        init() {
+            let task = NewDownloadTask(
                 sapCode: "PHSP",
                 version: "26.0.0",
-                buildGuid: "123",
-                applicationJson: ""
-            ),
-            ProductsToDownload(
-                sapCode: "ACR",
-                version: "9.6.0",
-                buildGuid: "456",
-                applicationJson: ""
+                language: "zh_CN",
+                displayName: "Adobe Photoshop",
+                directory: URL(fileURLWithPath: "/Users/Downloads/Install PHSP_26.0-zh_CN-macuniversal.app"),
+                productsToDownload: [
+                    ProductsToDownload(
+                        sapCode: "PHSP",
+                        version: "26.0.0",
+                        buildGuid: "123",
+                        applicationJson: ""
+                    ),
+                    ProductsToDownload(
+                        sapCode: "ACR",
+                        version: "9.6.0",
+                        buildGuid: "456",
+                        applicationJson: ""
+                    )
+                ],
+                retryCount: 0,
+                createAt: Date(),
+                totalStatus: .downloading(DownloadStatus.DownloadInfo(
+                    fileName: "AdobePhotoshop26-Core.zip",
+                    currentPackageIndex: 0,
+                    totalPackages: 8,
+                    startTime: Date(),
+                    estimatedTimeRemaining: nil
+                )),
+                totalProgress: 0.35,
+                totalDownloadedSize: 738_197_504,
+                totalSize: 2_147_483_648,
+                totalSpeed: 1_048_576
             )
-        ],
-        retryCount: 0,
-        createAt: Date(),
-        totalStatus: .downloading(DownloadStatus.DownloadInfo(
-            fileName: "AdobePhotoshop26-Core.zip",
-            currentPackageIndex: 0,
-            totalPackages: 8,
-            startTime: Date(),
-            estimatedTimeRemaining: nil
-        )),
-        totalProgress: 0.35,
-        totalDownloadedSize: 738_197_504,
-        totalSize: 2_147_483_648,
-        totalSpeed: 1_048_576
-    )
-    
-    // 添加一些包
-    task.productsToDownload[0].packages = [
-        Package(
-            type: "core",
-            fullPackageName: "AdobePhotoshop26-Core.zip",
-            downloadSize: 1_073_741_824,
-            downloadURL: "/products/PHSP/AdobePhotoshop26-Core.zip"
-        ),
-        Package(
-            type: "non-core",
-            fullPackageName: "AdobePhotoshop26-Support.zip",
-            downloadSize: 536_870_912,
-            downloadURL: "/products/PHSP/AdobePhotoshop26-Support.zip"
-        )
-    ]
-    
-    task.productsToDownload[1].packages = [
-        Package(
-            type: "core",
-            fullPackageName: "ACR-Core.zip",
-            downloadSize: 268_435_456,
-            downloadURL: "/products/ACR/ACR-Core.zip"
-        )
-    ]
-    
-    // 设置当前包和进度
-    task.currentPackage = task.productsToDownload[0].packages[0]
-    task.currentPackage?.downloadedSize = 738_197_504
-    task.currentPackage?.progress = 0.35
-    task.currentPackage?.speed = 1_048_576
-    task.currentPackage?.status = .downloading
-    
-    return DownloadProgressView(
-        task: task,
-        onCancel: {},
-        onPause: {},
-        onResume: {},
-        onRetry: {},
-        onRemove: {}
-    )
-    .environmentObject(NetworkManager())
-    .padding()
-    .frame(width: 600)
-    // 添加一个修饰器来模拟用户点击展开包列表
-    .onAppear {
-        // 注意：这种方式在预览中可能不会立即生效，因为 @State 属性在预览中的行为可能不太一致
-        // 作为替代方案，我们可以创建一个新的初始化方法来设置初始状态
+            
+            // PHSP 包
+            let phspPackages = [
+                // 正在下载的包
+                Package(
+                    type: "core",
+                    fullPackageName: "AdobePhotoshop26-Core.zip",
+                    downloadSize: 2_112_950_169,
+                    downloadURL: "/products/PHSP/AdobePhotoshop26-Core.zip"
+                ),
+                // 等待下载的包
+                Package(
+                    type: "core",
+                    fullPackageName: "AdobePhotoshop26-Core_stripped.zip",
+                    downloadSize: 1_874_257_058,
+                    downloadURL: "/products/PHSP/AdobePhotoshop26-Core_stripped.zip"
+                ),
+                // 已完成的包
+                Package(
+                    type: "core",
+                    fullPackageName: "AdobePhotoshop26-nl_NL.zip",
+                    downloadSize: 490_628,
+                    downloadURL: "/products/PHSP/AdobePhotoshop26-nl_NL.zip"
+                )
+            ]
+            
+            // ACR 包
+            let acrPackages = [
+                // 等待下载的包
+                Package(
+                    type: "core",
+                    fullPackageName: "AdobeCameraRaw8.0All.zip",
+                    downloadSize: 255_223_665,
+                    downloadURL: "/products/ACR/AdobeCameraRaw8.0All.zip"
+                ),
+                // 失败的包
+                Package(
+                    type: "core",
+                    fullPackageName: "AdobeCameraRaw8.0-support.zip",
+                    downloadSize: 76_896_003,
+                    downloadURL: "/products/ACR/AdobeCameraRaw8.0-support.zip"
+                )
+            ]
+            
+            // 设置包的状态
+            phspPackages[0].status = .downloading
+            phspPackages[0].downloadedSize = 738_197_504
+            phspPackages[0].progress = 0.35
+            phspPackages[0].speed = 1_048_576
+            
+            phspPackages[1].status = .waiting
+            
+            phspPackages[2].status = .completed
+            phspPackages[2].downloaded = true
+            phspPackages[2].progress = 1.0
+            
+            acrPackages[0].status = .waiting
+            
+            acrPackages[1].status = .failed("下载失败")
+            
+            task.productsToDownload[0].packages = phspPackages
+            task.productsToDownload[1].packages = acrPackages
+            
+            // 设置当前包
+            task.currentPackage = phspPackages[0]
+            
+            self._task = StateObject(wrappedValue: task)
+        }
+        
+        var body: some View {
+            DownloadProgressView(
+                task: task,
+                onCancel: {},
+                onPause: {},
+                onResume: {},
+                onRetry: {},
+                onRemove: {}
+            )
+            .environmentObject(NetworkManager())
+            .padding()
+            .frame(width: 600)
+        }
     }
+    
+    return PreviewWrapper()
 }
 
 // 添加一个新的预览，默认展开包列表

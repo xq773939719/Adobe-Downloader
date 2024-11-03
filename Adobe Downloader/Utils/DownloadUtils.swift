@@ -297,6 +297,7 @@ class DownloadUtils {
         var currentPackageIndex = 0
         let totalPackages = task.productsToDownload.reduce(0) { $0 + $1.packages.count }
         
+        // 直接遍历所有未下载的包
         for product in task.productsToDownload {
             for package in product.packages where !package.downloaded {
                 await MainActor.run {
@@ -332,7 +333,7 @@ class DownloadUtils {
                 
                 print("Starting download for \(package.fullPackageName) from \(downloadURL)")
                 
-                // 使用 async/await 等待每个下载完成
+                // 下载包
                 do {
                     try await downloadPackage(package: package, task: task, product: product, url: url)
                     print("Completed download for \(package.fullPackageName)")
@@ -350,11 +351,13 @@ class DownloadUtils {
         }
         
         if allPackagesDownloaded {
-            task.setStatus(.completed(DownloadStatus.CompletionInfo(
-                timestamp: Date(),
-                totalTime: Date().timeIntervalSince(task.createAt),
-                totalSize: task.totalSize
-            )))
+            await MainActor.run {
+                task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                    timestamp: Date(),
+                    totalTime: Date().timeIntervalSince(task.createAt),
+                    totalSize: task.totalSize
+                )))
+            }
         }
     }
 
@@ -368,20 +371,21 @@ class DownloadUtils {
                 destinationDirectory: task.directory.appendingPathComponent("Contents/Resources/products/\(product.sapCode)"),
                 fileName: package.fullPackageName,
                 completionHandler: { [weak networkManager] localURL, response, error in
-                    Task { @MainActor in
-                        if let error = error {
+                    if let error = error {
+                        if (error as NSError).code == NSURLErrorCancelled {
+                            continuation.resume()
+                        } else {
                             continuation.resume(throwing: error)
-                            return
                         }
-                        
-                        package.downloaded = true
-                        package.progress = 1.0
-                        package.status = .completed
-                        package.speed = 0
+                        return
+                    }
+                    
+                    Task { @MainActor in
+                        package.markAsCompleted()
                         
                         // 更新总进度
-                        let totalDownloaded = task.productsToDownload.reduce(0) { sum, product in
-                            sum + product.packages.reduce(0) { sum, pkg in
+                        let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
+                            sum + prod.packages.reduce(Int64(0)) { sum, pkg in
                                 sum + (pkg.downloaded ? pkg.downloadSize : 0)
                             }
                         }
@@ -391,46 +395,32 @@ class DownloadUtils {
                         
                         task.objectWillChange.send()
                         networkManager?.objectWillChange.send()
-                        
-                        continuation.resume()
                     }
+                    
+                    continuation.resume()
                 },
                 progressHandler: { [weak networkManager] bytesWritten, totalBytesWritten, totalBytesExpectedToWrite in
                     Task { @MainActor in
                         let now = Date()
                         let timeDiff = now.timeIntervalSince(lastUpdateTime)
                         
-                        // 每秒更新一次进度
+                        // 每秒更新一次总进度和速度
                         if timeDiff >= 1.0 {
-                            // 计算速度 (bytes/s)
                             let bytesDiff = totalBytesWritten - lastBytes
                             let speed = Double(bytesDiff) / timeDiff
-                            
-                            // 更新包进度
-                            package.downloadedSize = totalBytesWritten
-                            package.progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-                            package.speed = speed
-                            package.status = .downloading
-                            
-                            // 更新产品总进度
-                            let productTotalSize = product.packages.reduce(Int64(0)) { $0 + $1.downloadSize }
-                            let productDownloaded = product.packages.reduce(Int64(0)) { sum, pkg in
-                                if pkg.downloaded {
-                                    return sum + pkg.downloadSize
-                                } else if pkg.id == package.id {
-                                    return sum + totalBytesWritten
-                                }
-                                return sum
-                            }
-                            
+                            package.updateProgress(
+                                downloadedSize: totalBytesWritten,
+                                speed: speed
+                            )
                             // 更新任务总进度
                             let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
-                                if prod.sapCode == product.sapCode {
-                                    return sum + productDownloaded
-                                } else {
-                                    return sum + prod.packages.reduce(Int64(0)) { sum, pkg in
-                                        sum + (pkg.downloaded ? pkg.downloadSize : 0)
+                                sum + prod.packages.reduce(Int64(0)) { sum, pkg in
+                                    if pkg.downloaded {
+                                        return sum + pkg.downloadSize
+                                    } else if pkg.id == package.id {
+                                        return sum + totalBytesWritten
                                     }
+                                    return sum
                                 }
                             }
                             
@@ -438,15 +428,13 @@ class DownloadUtils {
                             task.totalProgress = Double(totalDownloaded) / Double(task.totalSize)
                             task.totalSpeed = speed
                             
-                            // 更新时间和字节数
                             lastUpdateTime = now
                             lastBytes = totalBytesWritten
                             
-                            // 触发 UI 更新
-                            package.objectWillChange.send()
-                            task.objectWillChange.send()
-                            networkManager?.objectWillChange.send()
                         }
+                        // 触发 UI 更新
+                        task.objectWillChange.send()
+                        networkManager?.objectWillChange.send()
                     }
                 }
             )
@@ -455,13 +443,20 @@ class DownloadUtils {
             NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
             
             let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
-            let downloadTask = session.downloadTask(with: request)
             
+            // 检查是否有恢复数据
             Task {
-                await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
+                if let resumeData = await cancelTracker.getResumeData(task.id) {
+                    let downloadTask = session.downloadTask(withResumeData: resumeData)
+                    await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
+                    await cancelTracker.clearResumeData(task.id)
+                    downloadTask.resume()
+                } else {
+                    let downloadTask = session.downloadTask(with: request)
+                    await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
+                    downloadTask.resume()
+                }
             }
-            
-            downloadTask.resume()
         }
     }
 }

@@ -17,17 +17,13 @@ actor CancelTracker {
         sessions[id] = session
     }
     
-    func cancel(_ id: UUID) async {
+    func cancel(_ id: UUID) {
         cancelledIds.insert(id)
         pausedIds.remove(id)
         resumeData.removeValue(forKey: id)
         
         if let task = downloadTasks[id] {
-            await withCheckedContinuation { continuation in
-                task.cancel { _ in
-                    continuation.resume()
-                }
-            }
+            task.cancel()
             downloadTasks.removeValue(forKey: id)
         }
         
@@ -57,23 +53,15 @@ actor CancelTracker {
         return resumeData[id]
     }
     
-    func resume(_ id: UUID) async {
-        pausedIds.remove(id)
-    }
-    
-    func isPaused(_ id: UUID) async -> Bool {
-        pausedIds.contains(id)
-    }
-    
-    func isCancelled(_ id: UUID) async -> Bool {
-        cancelledIds.contains(id)
-    }
-    
-    func clearTask(_ id: UUID) {
-        cancelledIds.remove(id)
-        pausedIds.remove(id)
-        downloadTasks.removeValue(forKey: id)
-        sessions.removeValue(forKey: id)
+    func clearResumeData(_ id: UUID) {
         resumeData.removeValue(forKey: id)
+    }
+    
+    func isCancelled(_ id: UUID) -> Bool {
+        return cancelledIds.contains(id)
+    }
+    
+    func isPaused(_ id: UUID) -> Bool {
+        return pausedIds.contains(id)
     }
 } 

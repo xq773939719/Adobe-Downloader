@@ -11,6 +11,7 @@ class Package: Identifiable, ObservableObject {
     var fullPackageName: String
     var downloadSize: Int64
     var downloadURL: String
+    
     @Published var downloadedSize: Int64 = 0 {
         didSet {
             if downloadSize > 0 {
@@ -19,17 +20,10 @@ class Package: Identifiable, ObservableObject {
         }
     }
     @Published var progress: Double = 0
-    @Published var speed: Double = 0 {
-        didSet {
-            objectWillChange.send()
-        }
-    }
-    @Published var status: PackageStatus = .waiting {
-        didSet {
-            objectWillChange.send()
-        }
-    }
+    @Published var speed: Double = 0
+    @Published var status: PackageStatus = .waiting
     @Published var downloaded: Bool = false
+    
     var lastUpdated: Date = Date()
     var lastRecordedSize: Int64 = 0
 
@@ -40,12 +34,38 @@ class Package: Identifiable, ObservableObject {
         self.downloadURL = downloadURL
     }
 
-    // 添加格式化的大小显示
+    func updateProgress(downloadedSize: Int64, speed: Double) {
+        Task { @MainActor in
+            self.downloadedSize = downloadedSize
+            self.speed = speed
+            self.status = .downloading
+            objectWillChange.send()
+        }
+    }
+
+    func markAsCompleted() {
+        Task { @MainActor in
+            self.downloaded = true
+            self.progress = 1.0
+            self.speed = 0
+            self.status = .completed
+            self.downloadedSize = downloadSize
+            objectWillChange.send()
+        }
+    }
+
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: downloadSize, countStyle: .file)
     }
 
-    // 添加有效大小检查
+    var formattedDownloadedSize: String {
+        ByteCountFormatter.string(fromByteCount: downloadedSize, countStyle: .file)
+    }
+
+    var formattedSpeed: String {
+        ByteCountFormatter.string(fromByteCount: Int64(speed), countStyle: .file) + "/s"
+    }
+
     var hasValidSize: Bool {
         downloadSize > 0
     }

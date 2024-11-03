@@ -182,27 +182,36 @@ class NetworkManager: ObservableObject {
             
             // 4. 为每个产品创建目录并下载 application.json
             for product in productsToDownload {
-                task.setStatus(.preparing(DownloadStatus.PrepareInfo(
-                    message: "正在处理 \(product.sapCode) 的产品信息...",
-                    timestamp: Date(),
-                    stage: .fetchingInfo
-                )))
+                await MainActor.run {
+                    task.setStatus(.preparing(DownloadStatus.PrepareInfo(
+                        message: "正在处理 \(product.sapCode) 的产品信息...",
+                        timestamp: Date(),
+                        stage: .fetchingInfo
+                    )))
+                    objectWillChange.send()
+                }
                 
                 // 创建产品目录
                 let productDir = task.directory.appendingPathComponent("Contents/Resources/products/\(product.sapCode)")
-                // print("Creating product directory: \(productDir.path)")
-
                 if !FileManager.default.fileExists(atPath: productDir.path) {
                     try FileManager.default.createDirectory(at: productDir, withIntermediateDirectories: true)
                 }
                 
                 // 下载 application.json
-                // print("Downloading application.json for \(product.sapCode)")
+                await MainActor.run {
+                    task.setStatus(.preparing(DownloadStatus.PrepareInfo(
+                        message: "正在下载 \(product.sapCode) 的产品信息...",
+                        timestamp: Date(),
+                        stage: .fetchingInfo
+                    )))
+                    objectWillChange.send()
+                }
+                
                 let jsonString = try await getApplicationInfo(buildGuid: product.buildGuid)
                 
                 // 保存 application.json
                 let jsonURL = productDir.appendingPathComponent("application.json")
-                // print("Saving application.json to: \(jsonURL.path)")
+                print("Saving application.json to: \(jsonURL.path)")
                 try jsonString.write(to: jsonURL, atomically: true, encoding: .utf8)
                 
                 // 解析包信息
@@ -276,13 +285,15 @@ class NetworkManager: ObservableObject {
             await downloadUtils.startDownloadProcess(task: task)
             
         } catch {
-            print("Error during download preparation: \(error.localizedDescription)")
-            task.setStatus(.failed(DownloadStatus.FailureInfo(
-                message: error.localizedDescription,
-                error: error,
-                timestamp: Date(),
-                recoverable: true
-            )))
+            await MainActor.run {
+                task.setStatus(.failed(DownloadStatus.FailureInfo(
+                    message: error.localizedDescription,
+                    error: error,
+                    timestamp: Date(),
+                    recoverable: true
+                )))
+                objectWillChange.send()
+            }
             throw error
         }
     }
@@ -479,14 +490,19 @@ class NetworkManager: ObservableObject {
     
    func resumeDownload(taskId: UUID) async {
        if let task = downloadTasks.first(where: { $0.id == taskId }) {
-           task.setStatus(.downloading(DownloadStatus.DownloadInfo(
-               fileName: task.currentPackage?.fullPackageName ?? "",
-               currentPackageIndex: 0,
-               totalPackages: task.productsToDownload.reduce(0) { $0 + $1.packages.count },
-               startTime: Date(),
-               estimatedTimeRemaining: nil
-           )))
-           // ... 实现下载逻辑 ...
+           await MainActor.run {
+               task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                   fileName: task.currentPackage?.fullPackageName ?? "",
+                   currentPackageIndex: 0,
+                   totalPackages: task.productsToDownload.reduce(0) { $0 + $1.packages.count },
+                   startTime: Date(),
+                   estimatedTimeRemaining: nil
+               )))
+               objectWillChange.send()
+           }
+           
+           // 重新开始下载过程
+           await downloadUtils.startDownloadProcess(task: task)
        }
    }
    
@@ -611,52 +627,46 @@ class NetworkManager: ObservableObject {
        
        let now = Date()
        let timeDiff = now.timeIntervalSince(currentPackage.lastUpdated)
-       guard timeDiff >= NetworkConstants.progressUpdateInterval else { return }
        
-       // 更当前包的进度
-       currentPackage.downloadedSize = progress.totalWritten
-       currentPackage.progress = clampProgress(Double(progress.totalWritten) / Double(progress.expectedToWrite))
-       
-       // 更新速度
-       let byteDiff = progress.totalWritten - currentPackage.lastRecordedSize
-       if byteDiff > 0 {
-           let speed = Double(byteDiff) / timeDiff
-           currentPackage.speed = speed
-           task.totalSpeed = speed
-       }
-       
-       // 计算总下载进度
-       var totalDownloaded: Int64 = 0
-       var totalSize: Int64 = 0
-       
-       for product in task.productsToDownload {
-           for package in product.packages {
-               if package.downloaded {
-                   totalDownloaded += package.downloadSize
-               } else if package.id == currentPackage.id {
-                   totalDownloaded += progress.totalWritten
+       // 每秒更新一次进度
+       if timeDiff >= NetworkConstants.progressUpdateInterval {
+           Task { @MainActor in
+               // 使用 Package 的 updateProgress 方法更新包进度
+               currentPackage.updateProgress(
+                   downloadedSize: progress.totalWritten,
+                   speed: Double(progress.bytesWritten)
+               )
+               
+               // 更新任务总进度
+               let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
+                   sum + prod.packages.reduce(Int64(0)) { sum, pkg in
+                       if pkg.downloaded {
+                           return sum + pkg.downloadSize
+                       } else if pkg.id == currentPackage.id {
+                           return sum + progress.totalWritten
+                       }
+                       return sum
+                   }
                }
-               totalSize += package.downloadSize
+               
+               task.totalDownloadedSize = totalDownloaded
+               task.totalProgress = Double(totalDownloaded) / Double(task.totalSize)
+               task.totalSpeed = currentPackage.speed
+               
+               // 更新包的记录
+               currentPackage.lastRecordedSize = progress.totalWritten
+               currentPackage.lastUpdated = now
+               
+               // 检查当前包是否下载完成
+               if progress.totalWritten >= progress.expectedToWrite {
+                   currentPackage.markAsCompleted()
+               }
+               
+               // 触发 UI 更新
+               task.objectWillChange.send()
+               objectWillChange.send()
            }
        }
-       
-       // 更新任务总进度
-       task.totalDownloadedSize = totalDownloaded
-       task.totalProgress = clampProgress(Double(totalDownloaded) / Double(totalSize))
-       
-       // 检查当前包是否下载完成
-       if progress.totalWritten >= progress.expectedToWrite {
-           currentPackage.downloaded = true
-           currentPackage.downloadedSize = currentPackage.downloadSize
-           currentPackage.progress = 1.0
-           currentPackage.speed = 0
-       }
-       
-       // 更新包的记录
-       currentPackage.lastRecordedSize = progress.totalWritten
-       currentPackage.lastUpdated = now
-       
-       objectWillChange.send()
    }
 
    private func updateTaskStatus(_ taskId: UUID, _ status: DownloadStatus) async {

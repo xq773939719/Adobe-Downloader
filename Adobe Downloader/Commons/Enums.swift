@@ -4,7 +4,7 @@
 //  Created by X1a0He on 2024/10/30.
 //
 import Foundation
-enum PackageStatus {
+enum PackageStatus: Equatable {
     case waiting
     case downloading
     case paused
@@ -18,6 +18,23 @@ enum PackageStatus {
         case .paused: return "已暂停"
         case .completed: return "已完成"
         case .failed(let message): return "失败: \(message)"
+        }
+    }
+    
+    static func == (lhs: PackageStatus, rhs: PackageStatus) -> Bool {
+        switch (lhs, rhs) {
+        case (.waiting, .waiting):
+            return true
+        case (.downloading, .downloading):
+            return true
+        case (.paused, .paused):
+            return true
+        case (.completed, .completed):
+            return true
+        case (.failed(let lhsMessage), .failed(let rhsMessage)):
+            return lhsMessage == rhsMessage
+        default:
+            return false
         }
     }
 }

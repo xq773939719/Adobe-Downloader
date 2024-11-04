@@ -27,6 +27,7 @@ struct GeneralSettingsView: View {
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
     @AppStorage("useDefaultLanguage") private var useDefaultLanguage: Bool = true
     @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
+    @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
     @State private var showLanguagePicker = false
     
     var body: some View {
@@ -47,6 +48,7 @@ struct GeneralSettingsView: View {
                     }
                     
                     Divider()
+                    
                     HStack {
                         Toggle("使用默认目录", isOn: $useDefaultDirectory)
                             .padding(.leading, 5)
@@ -60,6 +62,14 @@ struct GeneralSettingsView: View {
                         }
                         .padding(.trailing, 5)
                         .buttonStyle(.borderless)
+                    }
+                    
+                    Divider()
+                    
+                    HStack {
+                        Toggle("重新下载时需要确认", isOn: $confirmRedownload)
+                            .padding(.leading, 5)
+                        Spacer()
                     }
                 }
                 .padding(.vertical, 4)
@@ -93,7 +103,7 @@ struct GeneralSettingsView: View {
         
         if panel.runModal() == .OK {
             defaultDirectory = panel.url?.path ?? ""
-            useDefaultDirectory = false
+            useDefaultDirectory = true
         }
     }
 }

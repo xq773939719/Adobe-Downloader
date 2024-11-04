@@ -19,7 +19,7 @@ class XHXMLParser {
         guard let cdn = try xml.nodes(forXPath: "//channels/channel/cdn/secure").first?.stringValue else {
             throw ParserError.missingCDN
         }
-        print("parseProductsXML - cdn: \(cdn)")
+        // print("parseProductsXML - cdn: \(cdn)")
 
         var products: [String: Sap] = [:]
 

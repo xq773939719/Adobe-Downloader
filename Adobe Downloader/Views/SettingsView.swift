@@ -17,46 +17,50 @@ struct SettingsView: View {
     private let languageMap: [(code: String, name: String)] = AppStatics.supportedLanguages
     
     var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 4) {
-                Toggle(isOn: $useDefaultLanguage) {
-                    Text("语言:")
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                HStack(spacing: 4) {
+                    Toggle(isOn: $useDefaultLanguage) {
+                        Text("语言:")
+                            .fixedSize()
+                    }
+                    .toggleStyle(.checkbox)
+                    .fixedSize()
+                    
+                    Text(getLanguageName(code: defaultLanguage))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .frame(width: 80, alignment: .leading)
+                    
+                    Button("选择", action: onSelectLanguage)
+                        .buttonStyle(.borderless)
                         .fixedSize()
                 }
-                .toggleStyle(.checkbox)
-                .fixedSize()
                 
-                Text(getLanguageName(code: defaultLanguage))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .frame(width: 80, alignment: .leading)
+                Divider()
+                    .frame(height: 16)
                 
-                Button("选择", action: onSelectLanguage)
-                    .buttonStyle(.borderless)
+                HStack(spacing: 4) {
+                    Toggle(isOn: $useDefaultDirectory) {
+                        Text("目录:")
+                            .fixedSize()
+                    }
+                    .toggleStyle(.checkbox)
                     .fixedSize()
-            }
-            
-            Divider()
-                .frame(height: 16)
-            
-            HStack(spacing: 4) {
-                Toggle(isOn: $useDefaultDirectory) {
-                    Text("目录:")
+                    
+                    Text(formatPath(defaultDirectory.isEmpty ? "未设置" : defaultDirectory))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .frame(width: 120, alignment: .leading)
+                    
+                    Button("选择", action: onSelectDirectory)
+                        .buttonStyle(.borderless)
                         .fixedSize()
                 }
-                .toggleStyle(.checkbox)
-                .fixedSize()
-                
-                Text(formatPath(defaultDirectory.isEmpty ? "未设置" : defaultDirectory))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .frame(width: 120, alignment: .leading)
-                
-                Button("选择", action: onSelectDirectory)
-                    .buttonStyle(.borderless)
-                    .fixedSize()
             }
         }
+        .padding()
+        .fixedSize()
     }
     
     private func getLanguageName(code: String) -> String {

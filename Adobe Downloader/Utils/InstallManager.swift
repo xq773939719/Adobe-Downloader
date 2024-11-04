@@ -6,7 +6,7 @@
 import Foundation
 
 actor InstallManager {
-    enum InstallError: LocalizedError {
+    enum InstallError: Error, LocalizedError {
         case setupNotFound
         case installationFailed(String)
         case cancelled
@@ -22,21 +22,6 @@ actor InstallManager {
                 return "安装已取消"
             case .permissionDenied:
                 return "权限被拒绝"
-            }
-        }
-        
-        static func == (lhs: InstallError, rhs: InstallError) -> Bool {
-            switch (lhs, rhs) {
-            case (.setupNotFound, .setupNotFound):
-                return true
-            case (.cancelled, .cancelled):
-                return true
-            case (.permissionDenied, .permissionDenied):
-                return true
-            case (.installationFailed(let lhsMessage), .installationFailed(let rhsMessage)):
-                return lhsMessage == rhsMessage
-            default:
-                return false
             }
         }
     }
@@ -92,9 +77,7 @@ actor InstallManager {
             let installProcess = Process()
             installProcess.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
             installProcess.arguments = ["-S", setupPath, "--install=1", "--driverXML=\(driverPath)"]
-
-            print("执行安装命令: \(installProcess.executableURL!.path) \(installProcess.arguments!.joined(separator: " "))")
-
+            
             let inputPipe = Pipe()
             let outputPipe = Pipe()
             installProcess.standardInput = inputPipe
@@ -202,10 +185,10 @@ actor InstallManager {
         } else if line.contains("Preparing") {
             return (0.0, "正在准备...")
         }
-        
+
         return nil
     }
-
+    
     func retry(at appPath: URL, progressHandler: @escaping (Double, String) -> Void) async throws {
         self.progressHandler = progressHandler
         

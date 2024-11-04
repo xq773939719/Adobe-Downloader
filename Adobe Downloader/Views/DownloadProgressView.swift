@@ -18,6 +18,7 @@ struct DownloadProgressView: View {
     @State private var isInstalling = false
     @State private var isPackageListExpanded: Bool = false
     @State private var expandedProducts: Set<String> = []
+    @State private var iconImage: NSImage? = nil
     
     private var statusLabel: some View {
         Text(task.status.description)
@@ -114,7 +115,13 @@ struct DownloadProgressView: View {
             case .completed:
                 HStack(spacing: 8) {
                     if task.displayInstallButton {
-                        Button(action: { showInstallPrompt = true }) {
+                        Button(action: { 
+                            showInstallPrompt = false
+                            isInstalling = true
+                            Task {
+                                await networkManager.installProduct(at: task.directory)
+                            }
+                        }) {
                             Label("安装", systemImage: "square.and.arrow.down.on.square")
                         }
                         .buttonStyle(.borderedProminent)
@@ -248,36 +255,110 @@ struct DownloadProgressView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
+    private func loadIcon() {
+        if let sap = networkManager.saps[task.sapCode],
+           let bestIcon = sap.getBestIcon(),
+           let iconURL = URL(string: bestIcon.url) {
+            
+            if let cachedImage = IconCache.shared.getIcon(for: bestIcon.url) {
+                self.iconImage = cachedImage
+                return
+            }
+            
+            Task {
+                do {
+                    var request = URLRequest(url: iconURL)
+                    request.timeoutInterval = 10
+                    
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    
+                    guard let httpResponse = response as? HTTPURLResponse,
+                          (200...299).contains(httpResponse.statusCode),
+                          let image = NSImage(data: data) else {
+                        throw URLError(.badServerResponse)
+                    }
+                    
+                    IconCache.shared.setIcon(image, for: bestIcon.url)
+                    
+                    await MainActor.run {
+                        self.iconImage = image
+                    }
+                } catch {
+                    if let localImage = NSImage(named: task.sapCode) {
+                        await MainActor.run {
+                            self.iconImage = localImage
+                        }
+                    }
+                }
+            }
+        } else if let localImage = NSImage(named: task.sapCode) {
+            self.iconImage = localImage
+        }
+    }
+
+    private func formatPath(_ path: String) -> String {
+        let url = URL(fileURLWithPath: path)
+        let components = url.pathComponents
+        
+        if components.count <= 4 {
+            return path
+        }
+
+        let lastComponents = components.suffix(2)
+        return ".../" + lastComponents.joined(separator: "/")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(task.displayName)
-                    .font(.headline)
-                
-                Spacer()
-                
-                Text(task.version)
-                    .foregroundColor(.secondary)
-            }
-
-            Text(task.directory.path)
-                .font(.caption)
-                .foregroundColor(.blue)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .onTapGesture {
-                    openInFinder(task.directory)
+            HStack(spacing: 12) {
+                Group {
+                    if let iconImage = iconImage {
+                        Image(nsImage: iconImage)
+                            .resizable()
+                            .interpolation(.high)
+                            .aspectRatio(contentMode: .fit)
+                    } else {
+                        Image(systemName: "app.fill")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .foregroundColor(.secondary)
+                    }
                 }
-
-            statusLabel
-                .padding(.vertical, 2)
+                .frame(width: 32, height: 32)
+                .onAppear(perform: loadIcon)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Text(task.displayName)
+                                .font(.headline)
+                            Text(task.version)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        statusLabel
+                        
+                        Spacer()
+                    }
+                    
+                    Text(formatPath(task.directory.path))
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .onTapGesture {
+                            openInFinder(task.directory)
+                        }
+                        .help(task.directory.path)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     HStack(spacing: 4) {
-                        Text(formatFileSize(task.totalDownloadedSize))
+                        Text(task.formattedDownloadedSize)
                         Text("/")
-                        Text(formatFileSize(task.totalSize))
+                        Text(task.formattedTotalSize)
                     }
                     
                     Spacer()
@@ -416,6 +497,9 @@ struct ProductRow: View {
                 .padding(.leading, 24)
             }
         }
+        .onChange(of: product.packages.map { $0.status }) { _ in
+            product.objectWillChange.send()
+        }
     }
 }
 
@@ -431,18 +515,24 @@ struct PackageRow: View {
     }
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             HStack {
                 Text(package.fullPackageName)
                     .font(.caption)
                     .foregroundColor(.primary)
                 
-                Text(package.type)
-                    .font(.caption2)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(2)
+                HStack(spacing: 4) {
+                    Text(package.type)
+                        .font(.caption2)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(2)
+
+                    Text(package.formattedSize)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
                 
                 Spacer()
                 
@@ -450,14 +540,24 @@ struct PackageRow: View {
                     Text("\(Int(package.progress * 100))%")
                         .font(.caption)
                 } else {
-                    Text(package.status.description)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if package.status == .waiting {
+                        Text("\(Image(systemName: "hourglass.circle.fill")) \(package.status.description)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else if package.status == .completed {
+                        Text("\(Image(systemName: "checkmark.circle.fill")) \(package.status.description)")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    } else {
+                        Text("\(package.status.description)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
 
             if package.status == .downloading {
-                VStack(spacing: 2) {
+                VStack() {
                     ProgressView(value: package.progress)
                         .progressViewStyle(.linear)
                     
@@ -473,6 +573,115 @@ struct PackageRow: View {
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(6)
     }
+}
+
+#Preview("下载中") {
+    DownloadProgressView(
+        task: NewDownloadTask(
+            sapCode: "AUDT",
+            version: "25.0",
+            language: "zh_CN",
+            displayName: "Adobe Audition",
+            directory: URL(fileURLWithPath: "/Users/username/Downloads/Install Audition_25.0-zh_CN-macuniversal.app"),
+            productsToDownload: [
+                ProductsToDownload(
+                    sapCode: "AUDT",
+                    version: "25.0",
+                    buildGuid: "123"
+                )
+            ],
+            createAt: Date(),
+            totalStatus: .downloading(DownloadStatus.DownloadInfo(
+                fileName: "AdobeAudition25All_stripped.zip",
+                currentPackageIndex: 0,
+                totalPackages: 2,
+                startTime: Date(),
+                estimatedTimeRemaining: nil
+            )),
+            totalProgress: 0.45,
+            totalDownloadedSize: 457424883,
+            totalSize: 878454797,
+            totalSpeed: 1024 * 1024 * 2
+        ),
+        onCancel: {},
+        onPause: {},
+        onResume: {},
+        onRetry: {},
+        onRemove: {}
+    )
+    .environmentObject(NetworkManager())
+}
+
+#Preview("已完成") {
+    DownloadProgressView(
+        task: NewDownloadTask(
+            sapCode: "AUDT",
+            version: "25.0",
+            language: "zh_CN",
+            displayName: "Adobe Audition",
+            directory: URL(fileURLWithPath: "/Users/username/Downloads/Install Audition_25.0-zh_CN-macuniversal.app"),
+            productsToDownload: [
+                ProductsToDownload(
+                    sapCode: "AUDT",
+                    version: "25.0",
+                    buildGuid: "123"
+                )
+            ],
+            createAt: Date(),
+            totalStatus: .completed(DownloadStatus.CompletionInfo(
+                timestamp: Date(),
+                totalTime: 120,
+                totalSize: 878454797
+            )),
+            totalProgress: 1.0,
+            totalDownloadedSize: 878454797,
+            totalSize: 878454797,
+            totalSpeed: 0
+        ),
+        onCancel: {},
+        onPause: {},
+        onResume: {},
+        onRetry: {},
+        onRemove: {}
+    )
+    .environmentObject(NetworkManager())
+}
+
+#Preview("暂停") {
+    DownloadProgressView(
+        task: NewDownloadTask(
+            sapCode: "AUDT",
+            version: "25.0",
+            language: "zh_CN",
+            displayName: "Adobe Audition",
+            directory: URL(fileURLWithPath: "/Users/username/Downloads/Install Audition_25.0-zh_CN-macuniversal.app"),
+            productsToDownload: [
+                ProductsToDownload(
+                    sapCode: "AUDT",
+                    version: "25.0",
+                    buildGuid: "123"
+                )
+            ],
+            createAt: Date(),
+            totalStatus: .paused(DownloadStatus.PauseInfo(
+                reason: .userRequested,
+                timestamp: Date(),
+                resumable: true
+            )),
+            totalProgress: 0.52,
+            totalDownloadedSize: 457424883,
+            totalSize: 878454797,
+            totalSpeed: 0
+        ),
+        onCancel: {},
+        onPause: {},
+        onResume: {},
+        onRetry: {},
+        onRemove: {}
+    )
+    .environmentObject(NetworkManager())
 }

@@ -134,6 +134,7 @@ class NetworkManager: ObservableObject {
         )
         
         downloadTasks.append(task)
+        updateDockBadge()
         
         do {
             // print("Creating installer app structure at: \(destinationURL.path)")
@@ -453,6 +454,7 @@ class NetworkManager: ObservableObject {
                        timestamp: Date(),
                        resumable: true
                    )))
+                   updateDockBadge()
                    objectWillChange.send()
                }
                await cancelTracker.pause(taskId)
@@ -470,6 +472,7 @@ class NetworkManager: ObservableObject {
                    startTime: Date(),
                    estimatedTimeRemaining: nil
                )))
+               updateDockBadge()
                objectWillChange.send()
            }
            
@@ -487,6 +490,7 @@ class NetworkManager: ObservableObject {
                        timestamp: Date(),
                        recoverable: false
                    )))
+                   updateDockBadge()
                    objectWillChange.send()
                }
                await cancelTracker.cancel(taskId)
@@ -504,7 +508,16 @@ class NetworkManager: ObservableObject {
                    try? FileManager.default.removeItem(at: task.directory)
                }
            }
-           await clearCompletedDownloadTasks()
+           await MainActor.run {
+               downloadTasks.removeAll { task in
+                   if case .completed = task.status {
+                       return true
+                   }
+                   return false
+               }
+               updateDockBadge()
+               objectWillChange.send()
+           }
        }
    }
 
@@ -628,10 +641,6 @@ class NetworkManager: ObservableObject {
 
                currentPackage.lastRecordedSize = progress.totalWritten
                currentPackage.lastUpdated = now
-
-               if progress.totalWritten >= progress.expectedToWrite {
-                   currentPackage.markAsCompleted()
-               }
 
                task.objectWillChange.send()
                objectWillChange.send()
@@ -765,18 +774,7 @@ class NetworkManager: ObservableObject {
            
            if let task = downloadTasks.first(where: { $0.id == taskId }) {
                if removeFiles {
-                   do {
-                       if FileManager.default.fileExists(atPath: task.directory.path) {
-                           try FileManager.default.removeItem(at: task.directory)
-                       }
-                       
-                       let productsPath = task.directory.appendingPathComponent("Contents/Resources/products/\(task.sapCode)")
-                       if FileManager.default.fileExists(atPath: productsPath.path) {
-                           try FileManager.default.removeItem(at: productsPath)
-                       }
-                   } catch {
-                       print("Error removing files for task \(taskId): \(error.localizedDescription)")
-                   }
+                   try? FileManager.default.removeItem(at: task.directory)
                }
                
                await MainActor.run {
@@ -843,6 +841,16 @@ class NetworkManager: ObservableObject {
         }
         
         do {
+            try await installManager.install(at: path) { progress, status in
+                Task { @MainActor in
+                    if status.contains("完成") || status.contains("成功") {
+                        self.installationState = .completed
+                    } else {
+                        self.installationState = .installing(progress: progress, status: status)
+                    }
+                }
+            }
+            
             await MainActor.run {
                 installationState = .completed
             }
@@ -851,12 +859,22 @@ class NetworkManager: ObservableObject {
                 if let installError = error as? InstallManager.InstallError {
                     switch installError {
                     case .installationFailed(let message):
-                        installationState = .failed(InstallManager.InstallError.installationFailed(message))
-                    default:
-                        installationState = .failed(error)
+                        if message.contains("需要重新输入密码") {
+                            Task {
+                                await installProduct(at: path)
+                            }
+                        } else {
+                            installationState = .failed(InstallManager.InstallError.installationFailed(message))
+                        }
+                    case .cancelled:
+                        installationState = .failed(InstallManager.InstallError.cancelled)
+                    case .setupNotFound:
+                        installationState = .failed(InstallManager.InstallError.setupNotFound)
+                    case .permissionDenied:
+                        installationState = .failed(InstallManager.InstallError.permissionDenied)
                     }
                 } else {
-                    installationState = .failed(error)
+                    installationState = .failed(InstallManager.InstallError.installationFailed(error.localizedDescription))
                 }
             }
         }
@@ -930,7 +948,7 @@ class NetworkManager: ObservableObject {
         }
         
         guard let jsonString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidData("无法将响应数据转换为字符串")
+            throw NetworkError.invalidData("无法将响应数据转换为json符串")
         }
         
         return jsonString

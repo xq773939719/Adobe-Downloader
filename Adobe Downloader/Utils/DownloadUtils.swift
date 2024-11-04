@@ -307,6 +307,39 @@ class DownloadUtils {
             task.objectWillChange.send()
         }
 
+        let driverPath = task.directory.appendingPathComponent("Contents/Resources/products/driver.xml")
+        if !FileManager.default.fileExists(atPath: driverPath.path) {
+            if let productInfo = await networkManager?.saps[task.sapCode]?.versions[task.version] {
+                let driverXml = generateDriverXML(
+                    sapCode: task.sapCode,
+                    version: task.version,
+                    language: task.language,
+                    productInfo: productInfo,
+                    displayName: task.displayName
+                )
+                
+                do {
+                    try driverXml.write(
+                        to: driverPath,
+                        atomically: true,
+                        encoding: .utf8
+                    )
+                    print("Generated driver.xml successfully")
+                } catch {
+                    print("Error generating driver.xml:", error.localizedDescription)
+                    await MainActor.run {
+                        task.setStatus(.failed(DownloadStatus.FailureInfo(
+                            message: "生成 driver.xml 失败: \(error.localizedDescription)",
+                            error: error,
+                            timestamp: Date(),
+                            recoverable: false
+                        )))
+                    }
+                    return
+                }
+            }
+        }
+
         for product in task.productsToDownload {
             for package in product.packages where !package.downloaded {
                 let currentIndex = await progress.get()
@@ -340,12 +373,9 @@ class DownloadUtils {
                     print("Error: Invalid download URL: \(downloadURL)")
                     continue
                 }
-                
-                // print("Starting download for \(package.fullPackageName) from \(downloadURL)")
 
                 do {
                     try await downloadPackage(package: package, task: task, product: product, url: url)
-                    // print("Completed download for \(package.fullPackageName)")
                 } catch {
                     print("Error downloading \(package.fullPackageName): \(error.localizedDescription)")
                     await networkManager?.handleError(task.id, error)
@@ -359,42 +389,12 @@ class DownloadUtils {
         }
         
         if allPackagesDownloaded {
-            if let productInfo = await networkManager?.saps[task.sapCode]?.versions[task.version] {
-                let driverXml = generateDriverXML(
-                    sapCode: task.sapCode,
-                    version: task.version,
-                    language: task.language,
-                    productInfo: productInfo,
-                    displayName: task.displayName
-                )
-                
-                do {
-                    let driverPath = task.directory
-                        .appendingPathComponent("Contents/Resources/products/driver.xml")
-                    try driverXml.write(
-                        to: driverPath,
-                        atomically: true,
-                        encoding: .utf8
-                    )
-                    
-                    await MainActor.run {
-                        task.setStatus(.completed(DownloadStatus.CompletionInfo(
-                            timestamp: Date(),
-                            totalTime: Date().timeIntervalSince(task.createAt),
-                            totalSize: task.totalSize
-                        )))
-                    }
-                } catch {
-                    print("Error generating driver.xml:", error.localizedDescription)
-                    await MainActor.run {
-                        task.setStatus(.failed(DownloadStatus.FailureInfo(
-                            message: "生成 driver.xml 失败: \(error.localizedDescription)",
-                            error: error,
-                            timestamp: Date(),
-                            recoverable: false
-                        )))
-                    }
-                }
+            await MainActor.run {
+                task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                    timestamp: Date(),
+                    totalTime: Date().timeIntervalSince(task.createAt),
+                    totalSize: task.totalSize
+                )))
             }
         }
     }
@@ -416,23 +416,62 @@ class DownloadUtils {
                         }
                         return
                     }
-                    
-                    Task { @MainActor in
-                        package.markAsCompleted()
 
-                        let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
-                            sum + prod.packages.reduce(Int64(0)) { sum, pkg in
-                                sum + (pkg.downloaded ? pkg.downloadSize : 0)
+                    Task { @MainActor in
+                        package.downloadedSize = package.downloadSize
+                        package.progress = 1.0
+                        package.status = .completed
+                        package.downloaded = true
+
+                        print("\nPackage completed: \(package.fullPackageName)")
+                        print("Package size: \(package.downloadSize)")
+                        print("Package downloaded size: \(package.downloadedSize)")
+                        print("Package status: \(package.status)")
+
+                        var totalDownloaded: Int64 = 0
+                        var totalSize: Int64 = 0
+
+                        for prod in task.productsToDownload {
+                            print("\nProduct: \(prod.sapCode)")
+                            for pkg in prod.packages {
+                                totalSize += pkg.downloadSize
+                                if pkg.downloaded {
+                                    totalDownloaded += pkg.downloadSize
+                                    print("- \(pkg.fullPackageName): \(pkg.downloadSize) (completed)")
+                                } else {
+                                    print("- \(pkg.fullPackageName): \(pkg.downloadSize) (pending)")
+                                }
                             }
                         }
+
+                        print("\nProgress Summary:")
+                        print("Total downloaded: \(totalDownloaded)")
+                        print("Total size: \(totalSize)")
+
+                        task.totalSize = totalSize
                         task.totalDownloadedSize = totalDownloaded
-                        task.totalProgress = Double(totalDownloaded) / Double(task.totalSize)
+                        task.totalProgress = Double(totalDownloaded) / Double(totalSize)
                         task.totalSpeed = 0
-                        
+
+                        let allCompleted = task.productsToDownload.allSatisfy { product in
+                            product.packages.allSatisfy { $0.downloaded }
+                        }
+
+                        print("All packages completed: \(allCompleted)")
+
+                        if allCompleted {
+                            task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                                timestamp: Date(),
+                                totalTime: Date().timeIntervalSince(task.createAt),
+                                totalSize: totalSize
+                            )))
+                            print("Task marked as completed")
+                        }
+
                         task.objectWillChange.send()
                         networkManager?.objectWillChange.send()
                     }
-                    
+
                     continuation.resume()
                 },
                 progressHandler: { [weak networkManager] bytesWritten, totalBytesWritten, totalBytesExpectedToWrite in
@@ -443,31 +482,37 @@ class DownloadUtils {
                         if timeDiff >= 1.0 {
                             let bytesDiff = totalBytesWritten - lastBytes
                             let speed = Double(bytesDiff) / timeDiff
+                            
                             package.updateProgress(
                                 downloadedSize: totalBytesWritten,
                                 speed: speed
                             )
-                            let totalDownloaded = task.productsToDownload.reduce(Int64(0)) { sum, prod in
-                                sum + prod.packages.reduce(Int64(0)) { sum, pkg in
+                            
+                            var completedSize: Int64 = 0
+                            var totalSize: Int64 = 0
+                            
+                            for prod in task.productsToDownload {
+                                for pkg in prod.packages {
+                                    totalSize += pkg.downloadSize
                                     if pkg.downloaded {
-                                        return sum + pkg.downloadSize
+                                        completedSize += pkg.downloadSize
                                     } else if pkg.id == package.id {
-                                        return sum + totalBytesWritten
+                                        completedSize += totalBytesWritten
                                     }
-                                    return sum
                                 }
                             }
                             
-                            task.totalDownloadedSize = totalDownloaded
-                            task.totalProgress = Double(totalDownloaded) / Double(task.totalSize)
+                            task.totalSize = totalSize
+                            task.totalDownloadedSize = completedSize
+                            task.totalProgress = Double(completedSize) / Double(totalSize)
                             task.totalSpeed = speed
                             
                             lastUpdateTime = now
                             lastBytes = totalBytesWritten
                             
+                            task.objectWillChange.send()
+                            networkManager?.objectWillChange.send()
                         }
-                        task.objectWillChange.send()
-                        networkManager?.objectWillChange.send()
                     }
                 }
             )

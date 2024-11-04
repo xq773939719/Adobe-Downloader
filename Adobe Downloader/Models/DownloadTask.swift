@@ -72,6 +72,9 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
         ByteCountFormatter.string(fromByteCount: totalDownloadedSize, countStyle: .file)
     }
 
+    @Published var completedPackages: Int = 0
+    @Published var totalPackages: Int = 0
+
     func setStatus(_ newStatus: DownloadStatus) {
         totalStatus = newStatus
         objectWillChange.send()

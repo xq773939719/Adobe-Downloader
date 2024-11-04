@@ -40,7 +40,6 @@ private class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
                 completionHandler(nil, downloadTask.response, NetworkError.fileSystemError("文件移动后不存在", nil))
             }
         } catch {
-            print("File operation error in delegate: \(error.localizedDescription)")
             completionHandler(nil, downloadTask.response, error)
         }
     }
@@ -85,6 +84,7 @@ class NetworkManager: ObservableObject {
     @Published var loadingState: LoadingState = .idle
     @Published var downloadTasks: [NewDownloadTask] = []
     @Published var installationState: InstallationState = .idle
+    @Published var installationLogs: [String] = []
     private let cancelTracker = CancelTracker()
     internal var downloadUtils: DownloadUtils!
     internal var progressObservers: [UUID: NSKeyValueObservation] = [:]
@@ -137,7 +137,6 @@ class NetworkManager: ObservableObject {
         updateDockBadge()
         
         do {
-            // print("Creating installer app structure at: \(destinationURL.path)")
             try downloadUtils.createInstallerApp(
                 for: task.sapCode,
                 version: task.version,
@@ -159,14 +158,20 @@ class NetworkManager: ObservableObject {
                         first.value.productVersion.compare(second.value.productVersion, options: .numeric) == .orderedDescending
                     }
                     
+                    var firstGuid = ""
                     var buildGuid = ""
+
                     for (_, versionInfo) in sortedVersions where versionInfo.baseVersion == dependency.version {
+                        if firstGuid.isEmpty { firstGuid = versionInfo.buildGuid }
+
                         if allowedPlatform.contains(versionInfo.apPlatform) {
                             buildGuid = versionInfo.buildGuid
                             break
                         }
                     }
-                    
+
+                    if buildGuid.isEmpty { buildGuid = firstGuid }
+
                     if !buildGuid.isEmpty {
                         productsToDownload.append(ProductsToDownload(
                             sapCode: dependency.sapCode,
@@ -200,11 +205,10 @@ class NetworkManager: ObservableObject {
                     )))
                     objectWillChange.send()
                 }
-                
+
                 let jsonString = try await getApplicationInfo(buildGuid: product.buildGuid)
 
                 let jsonURL = productDir.appendingPathComponent("application.json")
-                // print("Saving application.json to: \(jsonURL.path)")
                 try jsonString.write(to: jsonURL, atomically: true, encoding: .utf8)
 
                 guard let jsonData = jsonString.data(using: .utf8),
@@ -214,48 +218,73 @@ class NetworkManager: ObservableObject {
                     throw NetworkError.invalidData("无法解析产品信息")
                 }
 
+                let totalPackages = packageArray.count
+                task.totalPackages = totalPackages
+
+                await MainActor.run {
+                    task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                        fileName: task.currentPackage?.fullPackageName ?? "",
+                        currentPackageIndex: task.completedPackages,
+                        totalPackages: task.totalPackages,
+                        startTime: Date(),
+                        estimatedTimeRemaining: nil
+                    )))
+                    objectWillChange.send()
+                }
+                
                 for package in packageArray {
                     let fullPackageName: String
                     if let name = package["fullPackageName"] as? String, !name.isEmpty {
                         fullPackageName = name
                     } else if let name = package["PackageName"] as? String, !name.isEmpty {
-                        fullPackageName = name
-                        // print("Using PackageName instead of fullPackageName for package in \(product.sapCode): \(name)")
+                        fullPackageName = "\(name).zip"
                     } else {
-                        // print("Warning: Skipping package with empty name in \(product.sapCode)")
                         continue
                     }
                     
                     let packageType = package["Type"] as? String ?? "non-core"
 
-                    let downloadSize: Int64
-                    if let sizeNumber = package["DownloadSize"] as? NSNumber {
-                        downloadSize = sizeNumber.int64Value
-                    } else if let sizeString = package["DownloadSize"] as? String,
-                              let parsedSize = Int64(sizeString) {
-                        downloadSize = parsedSize
-                    } else if let sizeInt = package["DownloadSize"] as? Int {
-                        downloadSize = Int64(sizeInt)
+                    let isLanguageSuitable: Bool
+                    if packageType == "core" {
+                        isLanguageSuitable = true
                     } else {
-                        // print("Warning: Invalid download size for package: \(fullPackageName) in \(product.sapCode)")
-                        continue
+                        let condition = package["Condition"] as? String ?? ""
+                        let osLang = Locale.current.identifier
+                        isLanguageSuitable = (
+                            task.language == "ALL" ||
+                            condition.isEmpty ||
+                            !condition.contains("[installLanguage]") ||
+                            condition.contains("[installLanguage]==\(task.language)") ||
+                            condition.contains("[installLanguage]==\(osLang)")
+                        )
                     }
-                    
-                    guard let downloadURL = package["Path"] as? String,
-                          !downloadURL.isEmpty else {
-                        print("Warning: Missing download URL for package: \(fullPackageName) in \(product.sapCode)")
-                        continue
-                    }
-                    
-                    // print("Valid package found - Name: \(fullPackageName), Type: \(packageType), Size: \(downloadSize), URL: \(downloadURL)")
 
-                    let newPackage = Package(
-                        type: packageType,
-                        fullPackageName: fullPackageName,
-                        downloadSize: downloadSize,
-                        downloadURL: downloadURL
-                    )
-                    product.packages.append(newPackage)
+                    if isLanguageSuitable {
+                        let downloadSize: Int64
+                        if let sizeNumber = package["DownloadSize"] as? NSNumber {
+                            downloadSize = sizeNumber.int64Value
+                        } else if let sizeString = package["DownloadSize"] as? String,
+                                  let parsedSize = Int64(sizeString) {
+                            downloadSize = parsedSize
+                        } else if let sizeInt = package["DownloadSize"] as? Int {
+                            downloadSize = Int64(sizeInt)
+                        } else {
+                            continue
+                        }
+                        
+                        guard let downloadURL = package["Path"] as? String,
+                              !downloadURL.isEmpty else {
+                            continue
+                        }
+                        
+                        let newPackage = Package(
+                            type: packageType,
+                            fullPackageName: fullPackageName,
+                            downloadSize: downloadSize,
+                            downloadURL: downloadURL
+                        )
+                        product.packages.append(newPackage)
+                    }
                 }
             }
 
@@ -265,9 +294,6 @@ class NetworkManager: ObservableObject {
                     packageSum + (pkg.downloadSize > 0 ? pkg.downloadSize : 0)
                 }
             }
-            
-            // print("Total download size: \(task.totalSize) bytes")
-            // print("Starting download process...")
 
             await downloadUtils.startDownloadProcess(task: task)
             
@@ -304,7 +330,6 @@ class NetworkManager: ObservableObject {
 
         for product in task.productsToDownload {
             let sapCode = product.sapCode
-            let version = product.version
 
             let productDir = task.directory.appendingPathComponent("Contents/Resources/products/\(sapCode)")
             try? FileManager.default.createDirectory(at: productDir, withIntermediateDirectories: true)
@@ -407,7 +432,6 @@ class NetworkManager: ObservableObject {
        let productsDir = task.directory.appendingPathComponent("Contents/Resources/products")
        try FileManager.default.createDirectory(at: productsDir, withIntermediateDirectories: true)
 
-       print("\nPreparing...\n")
        for product in task.productsToDownload {
            let sapCode = product.sapCode
            let version = product.version
@@ -425,7 +449,6 @@ class NetworkManager: ObservableObject {
                               encoding: .utf8)
        }
 
-       print("\nGenerating driver.xml")
        if let productInfo = self.saps[task.sapCode]?.versions[task.version] {
            let driverXml = downloadUtils.generateDriverXML(
                sapCode: task.sapCode,
@@ -838,18 +861,27 @@ class NetworkManager: ObservableObject {
     func installProduct(at path: URL) async {
         await MainActor.run {
             installationState = .installing(progress: 0, status: "准备安装...")
+            installationLogs.removeAll()
         }
         
         do {
-            try await installManager.install(at: path) { progress, status in
-                Task { @MainActor in
-                    if status.contains("完成") || status.contains("成功") {
-                        self.installationState = .completed
-                    } else {
-                        self.installationState = .installing(progress: progress, status: status)
+            try await installManager.install(
+                at: path,
+                progressHandler: { progress, status in
+                    Task { @MainActor in
+                        if status.contains("完成") || status.contains("成功") {
+                            self.installationState = .completed
+                        } else {
+                            self.installationState = .installing(progress: progress, status: status)
+                        }
+                    }
+                },
+                logHandler: { log in
+                    Task { @MainActor in
+                        self.installationLogs.append(log)
                     }
                 }
-            }
+            )
             
             await MainActor.run {
                 installationState = .completed
@@ -892,15 +924,23 @@ class NetworkManager: ObservableObject {
         }
         
         do {
-            try await installManager.retry(at: path) { progress, status in
-                Task { @MainActor in
-                    if status.contains("完成") || status.contains("成功") {
-                        self.installationState = .completed
-                    } else {
-                        self.installationState = .installing(progress: progress, status: status)
+            try await installManager.retry(
+                at: path,
+                progressHandler: { progress, status in
+                    Task { @MainActor in
+                        if status.contains("完成") || status.contains("成功") {
+                            self.installationState = .completed
+                        } else {
+                            self.installationState = .installing(progress: progress, status: status)
+                        }
+                    }
+                },
+                logHandler: { log in
+                    Task { @MainActor in
+                        self.installationLogs.append(log)
                     }
                 }
-            }
+            )
             
             await MainActor.run {
                 installationState = .completed
@@ -931,12 +971,10 @@ class NetworkManager: ObservableObject {
         
         var headers = NetworkConstants.adobeRequestHeaders
         headers["x-adobe-build-guid"] = buildGuid
-        headers["Accept"] = "application/json"
-        headers["Connection"] = "keep-alive"
         headers["Cookie"] = generateCookie()
         
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -1024,7 +1062,7 @@ class NetworkManager: ObservableObject {
 
     func isVersionDownloaded(sap: Sap, version: String, language: String) -> URL? {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
-        let fileName = "Install \(sap.displayName)_\(version)-\(language)-\(platform).app"
+        let fileName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
 
         if !defaultDirectory.isEmpty {
             let defaultPath = URL(fileURLWithPath: defaultDirectory)

@@ -59,7 +59,7 @@ struct LanguagePickerView: View {
 
             Divider()
 
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(filteredLanguages.enumerated()), id: \.element.code) { index, language in
                         LanguageRow(

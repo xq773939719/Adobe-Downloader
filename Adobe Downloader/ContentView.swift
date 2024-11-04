@@ -128,7 +128,7 @@ struct ContentView: View {
                             description: Text("尝试使用不同的搜索关键词")
                         )
                     } else {
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             LazyVGrid(
                                 columns: [GridItem(.adaptive(minimum: 250))],
                                 spacing: 20

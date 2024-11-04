@@ -29,7 +29,9 @@ actor InstallManager {
     private var installationProcess: Process?
     private var progressHandler: ((Double, String) -> Void)?
     
-    func install(at appPath: URL, progressHandler: @escaping (Double, String) -> Void) async throws {
+    func install(at appPath: URL, 
+                progressHandler: @escaping (Double, String) -> Void,
+                logHandler: @escaping (String) -> Void) async throws {
         self.progressHandler = progressHandler
         
         let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
@@ -77,14 +79,14 @@ actor InstallManager {
             let installProcess = Process()
             installProcess.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
             installProcess.arguments = ["-S", setupPath, "--install=1", "--driverXML=\(driverPath)"]
-            
+            print(installProcess)
+
             let inputPipe = Pipe()
             let outputPipe = Pipe()
             installProcess.standardInput = inputPipe
             installProcess.standardOutput = outputPipe
             installProcess.standardError = outputPipe
 
-            var installationOutput = ""
             installationProcess = installProcess
 
             await MainActor.run {
@@ -99,8 +101,9 @@ actor InstallManager {
                 Task.detached {
                     do {
                         for try await line in outputPipe.fileHandleForReading.bytes.lines {
-                            print("Install output:", line)
-                            installationOutput += line + "\n"
+                            await MainActor.run {
+                                logHandler(line)
+                            }
                             
                             if line.contains("incorrect password") || line.contains("sudo: 1 incorrect password attempt") {
                                 installProcess.terminate()
@@ -189,7 +192,9 @@ actor InstallManager {
         return nil
     }
     
-    func retry(at appPath: URL, progressHandler: @escaping (Double, String) -> Void) async throws {
+    func retry(at appPath: URL, 
+              progressHandler: @escaping (Double, String) -> Void,
+              logHandler: @escaping (String) -> Void) async throws {
         self.progressHandler = progressHandler
         
         let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
@@ -209,7 +214,6 @@ actor InstallManager {
         installProcess.standardOutput = outputPipe
         installProcess.standardError = outputPipe
 
-        var installationOutput = ""
         installationProcess = installProcess
 
         await MainActor.run {
@@ -222,8 +226,9 @@ actor InstallManager {
             Task.detached {
                 do {
                     for try await line in outputPipe.fileHandleForReading.bytes.lines {
-                        print("Install output:", line)
-                        installationOutput += line + "\n"
+                        await MainActor.run {
+                            logHandler(line)
+                        }
                         
                         if let range = line.range(of: "Exit Code: (-?[0-9]+)", options: .regularExpression),
                            let codeStr = line[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),

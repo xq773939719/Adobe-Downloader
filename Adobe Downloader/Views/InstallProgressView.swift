@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct InstallProgressView: View {
+    @EnvironmentObject private var networkManager: NetworkManager
     let productName: String
     let progress: Double
     let status: String
@@ -41,6 +42,7 @@ struct InstallProgressView: View {
                      (status.contains("失败") ? "\(productName) 安装失败" : "正在安装 \(productName)"))
                     .font(.headline)
             }
+            .padding(.horizontal, 20)
 
             VStack(spacing: 4) {
                 if !status.contains("失败") {
@@ -54,9 +56,40 @@ struct InstallProgressView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
+            .padding(.horizontal, 20)
+            
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(Array(networkManager.installationLogs.enumerated()), id: \.offset) { index, log in
+                            Text(log)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .id(index)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                }
+                .frame(height: 150)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+                .onChange(of: networkManager.installationLogs) { oldValue, newValue in
+                    withAnimation {
+                        proxy.scrollTo(newValue.count - 1, anchor: .bottom)
+                    }
+                }
+            }
 
             if status.contains("失败") {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("错误详情:")
                             .font(.caption)
@@ -75,14 +108,7 @@ struct InstallProgressView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: 100)
-            } else {
-                HStack {
-                    Image(systemName: isCompleted ? "checkmark.circle" : "hourglass.circle")
-                        .foregroundColor(isCompleted ? .green : .secondary)
-                    Text(status)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                .padding(.horizontal, 20)
             }
 
             HStack(spacing: 12) {
@@ -114,9 +140,10 @@ struct InstallProgressView: View {
                     .tint(.red)
                 }
             }
+            .padding(.horizontal, 20)
         }
         .padding()
-        .frame(minWidth: 400, minHeight: 150)
+        .frame(minWidth: 500, minHeight: 300)
         .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(8)
     }
@@ -171,4 +198,118 @@ struct InstallProgressView: View {
         onRetry: nil
     )
     .preferredColorScheme(.dark)
+}
+
+#Preview("安装中带日志") {
+    let networkManager = NetworkManager()
+    return InstallProgressView(
+        productName: "Adobe Photoshop",
+        progress: 0.45,
+        status: "正在安装核心组件...",
+        onCancel: {},
+        onRetry: nil
+    )
+    .environmentObject(networkManager)
+    .onAppear {
+        let previewLogs = [
+            "正在准备安装...",
+            "Progress: 10%",
+            "Progress: 20%",
+            "Progress: 30%",
+            "Progress: 40%",
+            "Progress: 45%",
+            "正在安装核心组件...",
+        ]
+        
+        for (index, log) in previewLogs.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
+                networkManager.installationLogs.append(log)
+            }
+        }
+    }
+}
+
+#Preview("安装失败带日志") {
+    let networkManager = NetworkManager()
+    return InstallProgressView(
+        productName: "Adobe Photoshop",
+        progress: 0.0,
+        status: "安装失败: 权限被拒绝",
+        onCancel: {},
+        onRetry: {}
+    )
+    .environmentObject(networkManager)
+    .onAppear {
+        let previewLogs = [
+            "正在准备安装...",
+            "Progress: 10%",
+            "Progress: 20%",
+            "检查权限...",
+            "权限检查失败",
+            "安装失败: 权限被拒绝"
+        ]
+        
+        for (index, log) in previewLogs.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
+                networkManager.installationLogs.append(log)
+            }
+        }
+    }
+}
+
+#Preview("安装完成带日志") {
+    let networkManager = NetworkManager()
+    return InstallProgressView(
+        productName: "Adobe Photoshop",
+        progress: 1.0,
+        status: "安装完成",
+        onCancel: {},
+        onRetry: nil
+    )
+    .environmentObject(networkManager)
+    .onAppear {
+        let previewLogs = [
+            "正在准备安装...",
+            "Progress: 25%",
+            "Progress: 50%",
+            "Progress: 75%",
+            "Progress: 100%",
+            "正在完成安装...",
+            "安装完成"
+        ]
+        
+        for (index, log) in previewLogs.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
+                networkManager.installationLogs.append(log)
+            }
+        }
+    }
+}
+
+#Preview("在深色模式下带日志") {
+    let networkManager = NetworkManager()
+    return InstallProgressView(
+        productName: "Adobe Photoshop",
+        progress: 0.75,
+        status: "正在安装...",
+        onCancel: {},
+        onRetry: nil
+    )
+    .environmentObject(networkManager)
+    .preferredColorScheme(.dark)
+    .onAppear {
+        let previewLogs = [
+            "正在准备安装...",
+            "Progress: 25%",
+            "Progress: 50%",
+            "Progress: 75%",
+            "正在安装..."
+        ]
+        
+        for (index, log) in previewLogs.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
+                networkManager.installationLogs.append(log)
+            }
+        }
+    }
 }

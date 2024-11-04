@@ -19,6 +19,7 @@ struct AboutView: View {
                     Label("About", systemImage: "info.circle")
                 }
         }
+        .frame(width: 500, height: 400)
     }
 }
 
@@ -76,7 +77,7 @@ struct GeneralSettingsView: View {
             }
         }
         .padding()
-        .frame(maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .sheet(isPresented: $showLanguagePicker) {
             LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
                 defaultLanguage = language
@@ -138,7 +139,7 @@ struct AboutAppView: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-        .fixedSize(horizontal: true, vertical: true)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

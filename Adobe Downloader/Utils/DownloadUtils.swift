@@ -57,17 +57,6 @@ class DownloadUtils {
                 }
 
                 try FileManager.default.moveItem(at: location, to: destinationURL)
-                
-                let expectedSize = downloadTask.countOfBytesExpectedToReceive
-                if expectedSize > 0,
-                   let fileSize = try? FileManager.default.attributesOfItem(atPath: destinationURL.path)[.size] as? Int64 {
-                    print("File size verification - Expected: \(expectedSize), Actual: \(fileSize)")
-                    
-                    if fileSize != expectedSize {
-                        print("Warning: File size mismatch - Expected: \(expectedSize), Actual: \(fileSize)")
-                    }
-                }
-                
                 completionHandler(destinationURL, downloadTask.response, nil)
                 
             } catch {
@@ -273,8 +262,6 @@ class DownloadUtils {
                     print("xattr command output:", output)
                 }
             }
-            
-            print("Successfully cleared extended attributes for \(url.path)")
         } catch {
             print("Error executing xattr command:", error.localizedDescription)
         }
@@ -324,7 +311,6 @@ class DownloadUtils {
                         atomically: true,
                         encoding: .utf8
                     )
-                    print("Generated driver.xml successfully")
                 } catch {
                     print("Error generating driver.xml:", error.localizedDescription)
                     await MainActor.run {
@@ -360,7 +346,6 @@ class DownloadUtils {
                 guard !package.fullPackageName.isEmpty,
                       !package.downloadURL.isEmpty,
                       package.downloadSize > 0 else {
-                    print("Warning: Skipping invalid package in \(product.sapCode)")
                     continue
                 }
 
@@ -369,10 +354,7 @@ class DownloadUtils {
                 let cleanPath = package.downloadURL.hasPrefix("/") ? package.downloadURL : "/\(package.downloadURL)"
                 let downloadURL = cleanCdn + cleanPath
                 
-                guard let url = URL(string: downloadURL) else {
-                    print("Error: Invalid download URL: \(downloadURL)")
-                    continue
-                }
+                guard let url = URL(string: downloadURL) else { continue }
 
                 do {
                     try await downloadPackage(package: package, task: task, product: product, url: url)
@@ -423,30 +405,17 @@ class DownloadUtils {
                         package.status = .completed
                         package.downloaded = true
 
-                        print("\nPackage completed: \(package.fullPackageName)")
-                        print("Package size: \(package.downloadSize)")
-                        print("Package downloaded size: \(package.downloadedSize)")
-                        print("Package status: \(package.status)")
-
                         var totalDownloaded: Int64 = 0
                         var totalSize: Int64 = 0
 
                         for prod in task.productsToDownload {
-                            print("\nProduct: \(prod.sapCode)")
                             for pkg in prod.packages {
                                 totalSize += pkg.downloadSize
                                 if pkg.downloaded {
                                     totalDownloaded += pkg.downloadSize
-                                    print("- \(pkg.fullPackageName): \(pkg.downloadSize) (completed)")
-                                } else {
-                                    print("- \(pkg.fullPackageName): \(pkg.downloadSize) (pending)")
                                 }
                             }
                         }
-
-                        print("\nProgress Summary:")
-                        print("Total downloaded: \(totalDownloaded)")
-                        print("Total size: \(totalSize)")
 
                         task.totalSize = totalSize
                         task.totalDownloadedSize = totalDownloaded
@@ -457,15 +426,12 @@ class DownloadUtils {
                             product.packages.allSatisfy { $0.downloaded }
                         }
 
-                        print("All packages completed: \(allCompleted)")
-
                         if allCompleted {
                             task.setStatus(.completed(DownloadStatus.CompletionInfo(
                                 timestamp: Date(),
                                 totalTime: Date().timeIntervalSince(task.createAt),
                                 totalSize: totalSize
                             )))
-                            print("Task marked as completed")
                         }
 
                         task.objectWillChange.send()

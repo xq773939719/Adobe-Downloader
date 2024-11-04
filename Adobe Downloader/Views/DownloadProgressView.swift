@@ -7,7 +7,7 @@ import SwiftUI
 
 struct DownloadProgressView: View {
     @EnvironmentObject private var networkManager: NetworkManager
-    let task: NewDownloadTask
+    @ObservedObject var task: NewDownloadTask
     let onCancel: () -> Void
     let onPause: () -> Void
     let onResume: () -> Void
@@ -406,7 +406,7 @@ struct DownloadProgressView: View {
                     .buttonStyle(.plain)
                     
                     if isPackageListExpanded {
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             VStack(alignment: .leading, spacing: 8) {
                                 ForEach(task.productsToDownload, id: \.sapCode) { product in
                                     ProductRow(
@@ -443,14 +443,6 @@ struct ProductRow: View {
     let isCurrentProduct: Bool
     @Binding var expandedProducts: Set<String>
     
-    private var completedPackages: Int {
-        product.packages.filter { $0.status == .completed }.count
-    }
-    
-    private var totalPackages: Int {
-        product.packages.count
-    }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Button(action: {
@@ -465,13 +457,13 @@ struct ProductRow: View {
                 HStack {
                     Image(systemName: "cube.box")
                         .foregroundColor(.blue)
-                    Text("\(product.sapCode) (\(product.version))")
+                    Text("\(product.sapCode) (\(product.version)) \(product.buildGuid)")
                         .font(.caption)
                         .fontWeight(.medium)
                     
                     Spacer()
                     
-                    Text("\(completedPackages)/\(totalPackages)")
+                    Text("\(product.packages.filter(\.downloaded).count)/\(product.packages.count)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -496,9 +488,6 @@ struct ProductRow: View {
                 }
                 .padding(.leading, 24)
             }
-        }
-        .onChange(of: product.packages.map { $0.status }) { _ in
-            product.objectWillChange.send()
         }
     }
 }

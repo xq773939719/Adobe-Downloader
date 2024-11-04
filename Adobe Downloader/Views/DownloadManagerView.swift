@@ -91,7 +91,7 @@ struct DownloadManagerView: View {
             }
             .padding()
 
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 8) {
                     ForEach(sortTasks(networkManager.downloadTasks)) { task in
                         DownloadProgressView(

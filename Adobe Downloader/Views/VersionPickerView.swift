@@ -29,7 +29,7 @@ struct VersionPickerView: View {
             .padding()
             .background(Color(NSColor.windowBackgroundColor))
             
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 12) {
                     ForEach(Array(sap.versions.sorted { $0.key > $1.key }), id: \.key) { version, info in
                         if networkManager.allowedPlatform.contains(info.apPlatform) {
@@ -188,9 +188,7 @@ struct VersionPickerView: View {
                 )
             ]
         ),
-        onSelect: { version in
-            print("Selected version: \(version)")
-        }
+        onSelect: { version in }
     )
     .environmentObject(networkManager)
 }

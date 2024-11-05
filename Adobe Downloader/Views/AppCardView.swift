@@ -124,26 +124,28 @@ class AppCardViewModel: ObservableObject {
                     let (data, response) = try await URLSession.shared.data(for: request)
                     
                     guard let httpResponse = response as? HTTPURLResponse,
-                          (200...299).contains(httpResponse.statusCode),
-                          let image = NSImage(data: data) else {
+                          (200...299).contains(httpResponse.statusCode) else {
                         throw URLError(.badServerResponse)
                     }
                     
-                    IconCache.shared.setIcon(image, for: bestIcon.url)
-                    
                     await MainActor.run {
-                        self.iconImage = image
+                        if let image = NSImage(data: data) {
+                            IconCache.shared.setIcon(image, for: bestIcon.url)
+                            self.iconImage = image
+                        }
                     }
                 } catch {
-                    if let localImage = NSImage(named: sap.sapCode) {
-                        await MainActor.run {
+                    await MainActor.run {
+                        if let localImage = NSImage(named: sap.sapCode) {
                             self.iconImage = localImage
                         }
                     }
                 }
             }
-        } else if let localImage = NSImage(named: sap.sapCode) {
-            self.iconImage = localImage
+        } else {
+            if let localImage = NSImage(named: sap.sapCode) {
+                self.iconImage = localImage
+            }
         }
     }
 

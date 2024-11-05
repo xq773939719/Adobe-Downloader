@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -17,9 +17,9 @@ struct SettingsView: View {
     private let languageMap: [(code: String, name: String)] = AppStatics.supportedLanguages
     
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                HStack(spacing: 4) {
+        VStack() {
+            HStack() {
+                HStack() {
                     Toggle(isOn: $useDefaultLanguage) {
                         Text("语言:")
                             .fixedSize()
@@ -30,17 +30,16 @@ struct SettingsView: View {
                     Text(getLanguageName(code: defaultLanguage))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                        .frame(width: 80, alignment: .leading)
-                    
+                        .frame(alignment: .leading)
+                    Spacer()
                     Button("选择", action: onSelectLanguage)
-                        .buttonStyle(.borderless)
                         .fixedSize()
                 }
                 
                 Divider()
                     .frame(height: 16)
                 
-                HStack(spacing: 4) {
+                HStack() {
                     Toggle(isOn: $useDefaultDirectory) {
                         Text("目录:")
                             .fixedSize()
@@ -51,10 +50,9 @@ struct SettingsView: View {
                     Text(formatPath(defaultDirectory.isEmpty ? "未设置" : defaultDirectory))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                        .frame(width: 120, alignment: .leading)
-                    
+                        .frame(alignment: .leading)
+                    Spacer()
                     Button("选择", action: onSelectDirectory)
-                        .buttonStyle(.borderless)
                         .fixedSize()
                 }
             }

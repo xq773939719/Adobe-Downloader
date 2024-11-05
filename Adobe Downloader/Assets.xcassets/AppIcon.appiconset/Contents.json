@@ -1,61 +1,61 @@
 {
   "images" : [
     {
-      "filename" : "16.png",
+      "filename" : "16pt-1.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "16x16"
     },
     {
-      "filename" : "32 2x.png",
+      "filename" : "32pt-1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "16x16"
     },
     {
-      "filename" : "32 1x.png",
+      "filename" : "32pt-2.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "32x32"
     },
     {
-      "filename" : "64 1.png",
+      "filename" : "64pt-1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "32x32"
     },
     {
-      "filename" : "128.png",
+      "filename" : "128pt-1.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "128x128"
     },
     {
-      "filename" : "256 2x.png",
+      "filename" : "256pt-1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "128x128"
     },
     {
-      "filename" : "256 1x.png",
+      "filename" : "256pt-2.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "256x256"
     },
     {
-      "filename" : "512 2x.png",
+      "filename" : "512pt-1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "256x256"
     },
     {
-      "filename" : "Adobe Downloader- 512 x 513.png",
+      "filename" : "512pt-2.png",
       "idiom" : "mac",
       "scale" : "1x",
       "size" : "512x512"
     },
     {
-      "filename" : "Adobe Downloader - 1024 x 1025.png",
+      "filename" : "1024pt-1.png",
       "idiom" : "mac",
       "scale" : "2x",
       "size" : "512x512"

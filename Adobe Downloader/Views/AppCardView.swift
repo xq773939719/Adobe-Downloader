@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -8,50 +8,60 @@ import SwiftUI
 
 class IconCache {
     static let shared = IconCache()
-    private var cache: [String: NSImage] = [:]
-    private let queue = DispatchQueue(label: "com.adobe.downloader.iconcache")
+    private var cache = NSCache<NSString, NSImage>()
     
     func getIcon(for url: String) -> NSImage? {
-        queue.sync {
-            return cache[url]
-        }
+        cache.object(forKey: url as NSString)
     }
     
     func setIcon(_ image: NSImage, for url: String) {
-        queue.sync {
-            self.cache[url] = image
-        }
+        cache.setObject(image, forKey: url as NSString)
     }
 }
 
-struct AppCardView: View {
+class AppCardViewModel: ObservableObject {
+    @Published var iconImage: NSImage?
+    @Published var showError = false
+    @Published var errorMessage = ""
+    @Published var showVersionPicker = false
+    @Published var selectedVersion = ""
+    @Published var showLanguagePicker = false
+    @Published var selectedLanguage = ""
+    @Published var showExistingFileAlert = false
+    @Published var existingFilePath: URL?
+    @Published var pendingVersion = ""
+    @Published var pendingLanguage = ""
+    @Published var showRedownloadConfirm = false
+    
     let sap: Sap
-    @EnvironmentObject private var networkManager: NetworkManager
-    @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
-    @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
-    @AppStorage("useDefaultLanguage") private var useDefaultLanguage: Bool = true
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
-    @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
-    @State private var showError: Bool = false
-    @State private var errorMessage: String = ""
-    @State private var showVersionPicker = false
-    @State private var selectedVersion: String = ""
-    @State private var iconImage: NSImage? = nil
-    @State private var showLanguagePicker = false
-    @State private var selectedLanguage = ""
-    @State private var showExistingFileAlert = false
-    @State private var existingFilePath: URL? = nil
-    @State private var pendingVersion: String = ""
-    @State private var pendingLanguage: String = ""
-    @State private var showRedownloadConfirm = false
-
-    private var isDownloading: Bool {
-        networkManager.downloadTasks.contains(where: isTaskDownloading)
+    weak var networkManager: NetworkManager?
+    
+    @Published var isDownloading = false
+    private let userDefaults = UserDefaults.standard
+    
+    var useDefaultDirectory: Bool {
+        get { userDefaults.bool(forKey: "useDefaultDirectory") }
     }
-
+    
+    var defaultDirectory: String {
+        get { userDefaults.string(forKey: "defaultDirectory") ?? "" }
+    }
+    
+    init(sap: Sap, networkManager: NetworkManager?) {
+        self.sap = sap
+        self.networkManager = networkManager
+        loadIcon()
+    }
+    
+    func updateDownloadingStatus() {
+        Task { @MainActor in
+            isDownloading = networkManager?.downloadTasks.contains(where: isTaskDownloading) ?? false
+        }
+    }
+    
     private func isTaskDownloading(_ task: NewDownloadTask) -> Bool {
         guard task.sapCode == sap.sapCode else { return false }
-
+        
         switch task.totalStatus {
         case .downloading, .preparing, .waiting, .retrying:
             return true
@@ -60,51 +70,44 @@ struct AppCardView: View {
         }
     }
 
-    private var dependenciesCount: Int {
-        if let firstVersion = sap.versions.first?.value {
-            return firstVersion.dependencies.count
+    func getDestinationURL(version: String, language: String, useDefaultDirectory: Bool, defaultDirectory: String) async throws -> URL {
+        let platform = sap.versions[version]?.apPlatform ?? "unknown"
+        let installerName = sap.sapCode == "APRO" 
+            ? "Install \(sap.sapCode)_\(version)_\(platform).dmg"
+            : "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
+        
+        if useDefaultDirectory && !defaultDirectory.isEmpty {
+            return URL(fileURLWithPath: defaultDirectory)
+                .appendingPathComponent(installerName)
         }
-        return 0
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.main.async {
+                let panel = NSOpenPanel()
+                panel.title = "选择保存位置"
+                panel.canCreateDirectories = true
+                panel.canChooseDirectories = true
+                panel.canChooseFiles = false
+                panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+                
+                if panel.runModal() == .OK, let selectedURL = panel.url {
+                    continuation.resume(returning: selectedURL.appendingPathComponent(installerName))
+                } else {
+                    continuation.resume(throwing: NetworkError.cancelled)
+                }
+            }
+        }
     }
 
-    var body: some View {
-        CardContent(
-            sap: sap,
-            iconImage: iconImage,
-            loadIcon: loadIcon,
-            dependenciesCount: dependenciesCount,
-            isDownloading: isDownloading,
-            showVersionPicker: $showVersionPicker
-        )
-        .padding()
-        .frame(width: 250, height: 200)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.05)))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.1), lineWidth: 2)
-        )
-        .applyModifiers(
-            showVersionPicker: $showVersionPicker,
-            showLanguagePicker: $showLanguagePicker,
-            showExistingFileAlert: $showExistingFileAlert,
-            showError: $showError,
-            sap: sap,
-            existingFilePath: existingFilePath,
-            pendingVersion: pendingVersion,
-            pendingLanguage: pendingLanguage,
-            errorMessage: errorMessage,
-            selectedVersion: selectedVersion,
-            selectedLanguage: $selectedLanguage,
-            handleDownloadRequest: handleDownloadRequest,
-            checkAndStartDownload: checkAndStartDownload,
-            startDownload: startDownload,
-            createCompletedTask: createCompletedTask,
-            confirmRedownload: confirmRedownload,
-            showRedownloadConfirm: $showRedownloadConfirm
-        )
+    func handleError(_ error: Error) {
+        Task { @MainActor in
+            if case NetworkError.cancelled = error { return }
+            errorMessage = error.localizedDescription
+            showError = true
+        }
     }
 
-    private func loadIcon() {
+    func loadIcon() {
         if let bestIcon = sap.getBestIcon(),
            let iconURL = URL(string: bestIcon.url) {
             
@@ -144,83 +147,61 @@ struct AppCardView: View {
         }
     }
 
-    private func handleDownloadRequest(_ version: String) {
-        if useDefaultLanguage {
-            checkAndStartDownload(version: version, language: defaultLanguage)
-        } else {
-            selectedVersion = version
-            showLanguagePicker = true
+    func handleDownloadRequest(_ version: String, useDefaultLanguage: Bool, defaultLanguage: String) async {
+        await MainActor.run {
+            if useDefaultLanguage {
+                Task {
+                    await checkAndStartDownload(version: version, language: defaultLanguage)
+                }
+            } else {
+                selectedVersion = version
+                showLanguagePicker = true
+            }
         }
     }
     
-    private func checkAndStartDownload(version: String, language: String) {
-        if let existingPath = networkManager.isVersionDownloaded(sap: sap, version: version, language: language) {
-            existingFilePath = existingPath
-            pendingVersion = version
-            pendingLanguage = language
-            showExistingFileAlert = true
-        } else {
-            startDownload(version, language)
+    func checkAndStartDownload(version: String, language: String) async {
+        if let networkManager = networkManager {
+            if let existingPath = await networkManager.isVersionDownloaded(sap: sap, version: version, language: language) {
+                await MainActor.run {
+                    existingFilePath = existingPath
+                    pendingVersion = version
+                    pendingLanguage = language
+                    showExistingFileAlert = true
+                }
+            } else {
+                startDownload(version, language)
+            }
         }
     }
     
-    private func startDownload(_ version: String, _ language: String) {
+    func startDownload(_ version: String, _ language: String) {
         Task {
             do {
-                let destinationURL: URL
-                let platform = sap.versions[version]?.apPlatform ?? "unknown"
-                
-                if useDefaultDirectory && !defaultDirectory.isEmpty {
-                    var appName = ""
-                    if(sap.sapCode=="APRO"){
-                        appName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
-                    } else {
-                        appName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
-                    }
-                    destinationURL = URL(fileURLWithPath: defaultDirectory)
-                        .appendingPathComponent(appName)
-                } else {
-                    let panel = NSOpenPanel()
-                    panel.title = "选择保存位置"
-                    panel.canCreateDirectories = true
-                    panel.canChooseDirectories = true
-                    panel.canChooseFiles = false
-                    panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-                    
-                    guard await MainActor.run(body: { panel.runModal() == .OK }),
-                          let selectedURL = panel.url else {
-                        return
-                    }
-                    var appName = ""
-                    if(sap.sapCode=="APRO"){
-                        appName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
-                    } else {
-                        appName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
-                    }
-                    destinationURL = URL(fileURLWithPath: defaultDirectory)
-                        .appendingPathComponent(appName)
-                }
-                
-                try await networkManager.startDownload(
+                let destinationURL = try await getDestinationURL(
+                    version: version,
+                    language: language,
+                    useDefaultDirectory: useDefaultDirectory,
+                    defaultDirectory: defaultDirectory
+                )
+
+                try await networkManager?.startDownload(
                     sap: sap,
                     selectedVersion: version,
                     language: language,
                     destinationURL: destinationURL
                 )
             } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showError = true
-                }
+                handleError(error)
             }
         }
     }
 
-    private func createCompletedTask(_ path: URL) {
-        guard let productInfo = sap.versions[pendingVersion] else { return }
+    func createCompletedTask(_ path: URL) async {
+        guard let networkManager = networkManager,
+              let productInfo = sap.versions[pendingVersion] else { return }
 
         var productsToDownload: [ProductsToDownload] = []
-
         let mainProduct = ProductsToDownload(
             sapCode: sap.sapCode,
             version: pendingVersion,
@@ -229,14 +210,14 @@ struct AppCardView: View {
         productsToDownload.append(mainProduct)
 
         for dependency in productInfo.dependencies {
-            if let dependencyVersions = networkManager.saps[dependency.sapCode]?.versions {
+            if let dependencyVersions = await networkManager.saps[dependency.sapCode]?.versions {
                 let sortedVersions = dependencyVersions.sorted { first, second in
                     first.value.productVersion.compare(second.value.productVersion, options: .numeric) == .orderedDescending
                 }
                 
                 var buildGuid = ""
                 for (_, versionInfo) in sortedVersions where versionInfo.baseVersion == dependency.version {
-                    if networkManager.allowedPlatform.contains(versionInfo.apPlatform) {
+                    if await networkManager.allowedPlatform.contains(versionInfo.apPlatform) {
                         buildGuid = versionInfo.buildGuid
                         break
                     }
@@ -273,9 +254,65 @@ struct AppCardView: View {
             totalSpeed: 0
         )
 
-        Task { @MainActor in
+        await MainActor.run {
             networkManager.downloadTasks.append(completedTask)
             networkManager.objectWillChange.send()
+        }
+    }
+    
+    var dependenciesCount: Int {
+        if let firstVersion = sap.versions.first?.value {
+            return firstVersion.dependencies.count
+        }
+        return 0
+    }
+}
+
+struct AppCardView: View {
+    @StateObject private var viewModel: AppCardViewModel
+    @EnvironmentObject private var networkManager: NetworkManager
+    @AppStorage("useDefaultLanguage") private var useDefaultLanguage = true
+    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
+    
+    init(sap: Sap) {
+        _viewModel = StateObject(wrappedValue: AppCardViewModel(sap: sap, networkManager: nil))
+    }
+    
+    var body: some View {
+        CardContent(
+            sap: viewModel.sap,
+            iconImage: viewModel.iconImage,
+            loadIcon: viewModel.loadIcon,
+            dependenciesCount: viewModel.dependenciesCount,
+            isDownloading: viewModel.isDownloading,
+            showVersionPicker: $viewModel.showVersionPicker
+        )
+        .padding()
+        .frame(width: 250, height: 200)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.05)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray.opacity(0.1), lineWidth: 2)
+        )
+        .modifier(AlertModifier(viewModel: viewModel, confirmRedownload: true))
+        .sheet(isPresented: $viewModel.showVersionPicker) {
+            VersionPickerView(sap: viewModel.sap) { version in
+                Task {
+                    await viewModel.handleDownloadRequest(version, useDefaultLanguage: useDefaultLanguage, defaultLanguage: defaultLanguage)
+                }
+            }
+            .environmentObject(networkManager)
+        }
+        .sheet(isPresented: $viewModel.showLanguagePicker) {
+            LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
+                Task {
+                    await viewModel.checkAndStartDownload(version: viewModel.selectedVersion, language: language)
+                }
+            }
+        }
+        .onAppear {
+            viewModel.networkManager = networkManager
+            viewModel.updateDownloadingStatus()
         }
     }
 }
@@ -302,87 +339,8 @@ private struct CardContent: View {
 }
 
 private extension View {
-    func applyModifiers(
-        showVersionPicker: Binding<Bool>,
-        showLanguagePicker: Binding<Bool>,
-        showExistingFileAlert: Binding<Bool>,
-        showError: Binding<Bool>,
-        sap: Sap,
-        existingFilePath: URL?,
-        pendingVersion: String,
-        pendingLanguage: String,
-        errorMessage: String,
-        selectedVersion: String,
-        selectedLanguage: Binding<String>,
-        handleDownloadRequest: @escaping (String) -> Void,
-        checkAndStartDownload: @escaping (String, String) -> Void,
-        startDownload: @escaping (String, String) -> Void,
-        createCompletedTask: @escaping (URL) -> Void,
-        confirmRedownload: Bool,
-        showRedownloadConfirm: Binding<Bool>
-    ) -> some View {
-        self
-            .sheet(isPresented: showVersionPicker) {
-                VersionPickerView(sap: sap, onSelect: handleDownloadRequest)
-            }
-            .sheet(isPresented: showLanguagePicker) {
-                LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
-                    selectedLanguage.wrappedValue = language
-                    showLanguagePicker.wrappedValue = false
-                    if !selectedVersion.isEmpty {
-                        checkAndStartDownload(selectedVersion, language)
-                    }
-                }
-            }
-            .alert("安装程序已存在", isPresented: showExistingFileAlert) {
-                Button("使用现有程序") {
-                    if let path = existingFilePath,
-                       !pendingVersion.isEmpty && !pendingLanguage.isEmpty {
-                        createCompletedTask(path)
-                    }
-                }
-                Button("重新下载") {
-                    if !pendingVersion.isEmpty && !pendingLanguage.isEmpty {
-                        if confirmRedownload {
-                            showRedownloadConfirm.wrappedValue = true
-                        } else {
-                            startDownload(pendingVersion, pendingLanguage)
-                        }
-                    }
-                }
-                Button("取消", role: .cancel) {}
-            } message: {
-                VStack(alignment: .leading) {
-                    Text("在以下位置找到现有的安装程序：")
-                    if let path = existingFilePath {
-                        Text(path.path)
-                            .foregroundColor(.blue)
-                            .onTapGesture {
-                                NSWorkspace.shared.selectFile(path.path, inFileViewerRootedAtPath: path.deletingLastPathComponent().path)
-                            }
-                    }
-                }
-            }
-            .alert("确认重新下载", isPresented: showRedownloadConfirm) {
-                Button("取消", role: .cancel) { }
-                Button("确认") {
-                    if !pendingVersion.isEmpty && !pendingLanguage.isEmpty {
-                        startDownload(pendingVersion, pendingLanguage)
-                    }
-                }
-            } message: {
-                Text("是否确认重新下载？这将覆盖现有的安装程序。")
-            }
-            .alert("下载错误", isPresented: showError) {
-                Button("确定", role: .cancel) { }
-                Button("重试") {
-                    if !selectedVersion.isEmpty {
-                        startDownload(selectedVersion, selectedLanguage.wrappedValue)
-                    }
-                }
-            } message: {
-                Text(errorMessage)
-            }
+    func applyModifiers(viewModel: AppCardViewModel) -> some View {
+        self.modifier(AlertModifier(viewModel: viewModel, confirmRedownload: true))
     }
 }
 
@@ -452,7 +410,8 @@ private struct DownloadButton: View {
 }
 
 #Preview {
-    AppCardView(sap: Sap(
+    let networkManager = NetworkManager()
+    let sap = Sap(
         hidden: false,
         displayName: "Photoshop",
         sapCode: "PHSP",
@@ -476,6 +435,68 @@ private struct DownloadButton: View {
                 url: "https://ffc-static-cdn.oobesaas.adobe.com/icons/PHSP/25.0.0/192x192.png"
             )
         ]
-    ))
-    .environmentObject(NetworkManager())
+    )
+    
+    return AppCardView(sap: sap)
+        .environmentObject(networkManager)
+}
+
+struct AlertModifier: ViewModifier {
+    @ObservedObject var viewModel: AppCardViewModel
+    let confirmRedownload: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .alert("安装程序已存在", isPresented: $viewModel.showExistingFileAlert) {
+                Button("使用现有程序") {
+                    if let path = viewModel.existingFilePath,
+                       !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
+                        Task {
+                            await viewModel.createCompletedTask(path)
+                        }
+                    }
+                }
+                Button("重新下载") {
+                    if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
+                        if confirmRedownload {
+                            viewModel.showRedownloadConfirm = true
+                        } else {
+                            viewModel.startDownload(viewModel.pendingVersion, viewModel.pendingLanguage)
+                        }
+                    }
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                VStack(alignment: .leading) {
+                    Text("在以下位置找到现有的安装程序：")
+                    if let path = viewModel.existingFilePath {
+                        Text(path.path)
+                            .foregroundColor(.blue)
+                            .onTapGesture {
+                                NSWorkspace.shared.selectFile(path.path, inFileViewerRootedAtPath: path.deletingLastPathComponent().path)
+                            }
+                    }
+                }
+            }
+            .alert("确认重新下载", isPresented: $viewModel.showRedownloadConfirm) {
+                Button("取消", role: .cancel) { }
+                Button("确认") {
+                    if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
+                        viewModel.startDownload(viewModel.pendingVersion, viewModel.pendingLanguage)
+                    }
+                }
+            } message: {
+                Text("是否确认重新下载？这将覆盖现有的安装程序。")
+            }
+            .alert("下载错误", isPresented: $viewModel.showError) {
+                Button("确定", role: .cancel) { }
+                Button("重试") {
+                    if !viewModel.selectedVersion.isEmpty {
+                        viewModel.startDownload(viewModel.selectedVersion, viewModel.selectedLanguage)
+                    }
+                }
+            } message: {
+                Text(viewModel.errorMessage)
+            }
+    }
 }

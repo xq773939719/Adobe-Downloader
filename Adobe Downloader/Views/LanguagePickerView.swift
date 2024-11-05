@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -9,8 +9,8 @@ struct LanguagePickerView: View {
     let languages: [(code: String, name: String)]
     let onLanguageSelected: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
     @State private var searchText: String = ""
+    @State private var selectedLanguage: String = ""
     
     private var filteredLanguages: [(code: String, name: String)] {
         guard !searchText.isEmpty else {
@@ -64,9 +64,9 @@ struct LanguagePickerView: View {
                     ForEach(Array(filteredLanguages.enumerated()), id: \.element.code) { index, language in
                         LanguageRow(
                             language: language,
-                            isSelected: language.code == defaultLanguage,
+                            isSelected: language.code == selectedLanguage,
                             onSelect: {
-                                defaultLanguage = language.code
+                                selectedLanguage = language.code
                                 onLanguageSelected(language.code)
                                 dismiss()
                             }

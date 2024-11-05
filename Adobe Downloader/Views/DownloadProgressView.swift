@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -305,7 +305,7 @@ struct DownloadProgressView: View {
         }
 
         let lastComponents = components.suffix(2)
-        return ".../" + lastComponents.joined(separator: "/")
+        return "/" + lastComponents.joined(separator: "/")
     }
 
     var body: some View {
@@ -499,6 +499,35 @@ struct ProductRow: View {
 struct PackageRow: View {
     @ObservedObject var package: Package
     
+    private func statusView() -> some View {
+        Group {
+            switch package.status {
+            case .waiting:
+                HStack {
+                    Image(systemName: "hourglass.circle.fill")
+                    Text(package.status.description)
+                }
+                .foregroundColor(.secondary)
+            case .downloading:
+                HStack {
+                    Text("\(Int(package.progress * 100))%")
+                }
+                .foregroundColor(.blue)
+            case .completed:
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text(package.status.description)
+                }
+                .foregroundColor(.green)
+            default:
+                HStack {
+                    Text(package.status.description)
+                }
+                .foregroundColor(.secondary)
+            }
+        }
+    }
+    
     private func formatSpeed(_ bytesPerSecond: Double) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
@@ -529,24 +558,8 @@ struct PackageRow: View {
                 
                 Spacer()
                 
-                if package.status == .downloading {
-                    Text("\(Int(package.progress * 100))%")
-                        .font(.caption)
-                } else {
-                    if package.status == .waiting {
-                        Text("\(Image(systemName: "hourglass.circle.fill")) \(package.status.description)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else if package.status == .completed {
-                        Text("\(Image(systemName: "checkmark.circle.fill")) \(package.status.description)")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    } else {
-                        Text("\(package.status.description)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                statusView()
+                    .font(.caption)
             }
 
             if package.status == .downloading {

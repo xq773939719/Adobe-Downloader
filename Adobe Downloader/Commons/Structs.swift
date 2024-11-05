@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -96,6 +96,13 @@ class Package: Identifiable, ObservableObject {
 
     var hasValidSize: Bool {
         downloadSize > 0
+    }
+
+    func updateStatus(_ status: PackageStatus) {
+        Task { @MainActor in
+            self.status = status
+            objectWillChange.send()
+        }
     }
 }
 class ProductsToDownload: ObservableObject {

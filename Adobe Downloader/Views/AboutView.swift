@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -133,7 +133,12 @@ struct AboutAppView: View {
                  destination: URL(string: "https://github.com/Drovosek01/adobe-packager")!)
                 .font(.caption)
                 .foregroundColor(.blue)
-            
+
+            Link("Thanks QiuChenly: InjectLib",
+                 destination: URL(string: "https://github.com/QiuChenly/InjectLib")!)
+                .font(.caption)
+                .foregroundColor(.blue)
+
             Text("Released under GPLv3.")
                 .font(.caption)
                 .foregroundColor(.secondary)

@@ -1,23 +1,10 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
 import Foundation
 import AppKit
-
-extension FileManager {
-    func volumeAvailableCapacity(for url: URL) throws -> Int64 {
-        let resourceValues = try url.resourceValues(forKeys: [.volumeAvailableCapacityKey])
-        return Int64(resourceValues.volumeAvailableCapacity ?? 0)
-    }
-}
-
-extension Sap.Versions {
-    var size: Int64 {
-        return 0
-    }
-}
 
 extension NewDownloadTask {
     var startTime: Date {
@@ -30,13 +17,11 @@ extension NewDownloadTask {
             return info.timestamp
         case .paused(let info):
             return info.timestamp
-        case .retrying(let info):
-            return info.nextRetryDate.addingTimeInterval(-60)
         case .failed(let info):
             return info.timestamp
-        case .waiting:
-            return Date()
-        case .none:
+        case .retrying(let info):
+            return info.nextRetryDate.addingTimeInterval(-60)
+        case .waiting, .none:
             return createAt
         }
     }
@@ -54,7 +39,7 @@ extension NetworkManager {
                     for task in self.downloadTasks {
                         if case .paused(let info) = task.status,
                            info.reason == .networkIssue {
-                            await self.resumeDownload(taskId: task.id)
+                            await self.downloadUtils.resumeDownloadTask(taskId: task.id)
                         }
                     }
                 } else if wasConnected && !self.isConnected {

@@ -1,9 +1,11 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
 import Foundation
+import SwiftUI
+
 enum PackageStatus: Equatable {
     case waiting
     case downloading
@@ -11,7 +13,7 @@ enum PackageStatus: Equatable {
     case completed
     case failed(String)
 
-    var description: String {
+    var description: LocalizedStringKey {
         switch self {
         case .waiting: return "等待中"
         case .downloading: return "下载中"
@@ -68,6 +70,7 @@ enum NetworkError: Error, LocalizedError {
     case applicationInfoError(String, Error?)
     case unsupportedPlatform(String)
     case incompatibleVersion(String, String)
+    case cancelled
 
     var errorCode: Int {
         switch self {
@@ -93,6 +96,7 @@ enum NetworkError: Error, LocalizedError {
         case .applicationInfoError: return 7001
         case .unsupportedPlatform: return 7002
         case .incompatibleVersion: return 7003
+        case .cancelled: return 5004
         }
     }
 
@@ -151,6 +155,8 @@ enum NetworkError: Error, LocalizedError {
             return NSLocalizedString("不支持的平台: \(platform)", comment: "Unsupported platform")
         case .incompatibleVersion(let current, let required):
             return NSLocalizedString("版本不兼容: 当前版本 \(current), 需要版本 \(required)", comment: "Incompatible version")
+        case .cancelled:
+            return NSLocalizedString("下载已取消", comment: "Download cancelled")
         }
     }
     

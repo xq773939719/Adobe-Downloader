@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -27,8 +27,7 @@ struct DownloadManagerView: View {
     }
     
     private func removeTask(_ task: NewDownloadTask) {
-        networkManager.downloadTasks.removeAll { $0.id == task.id }
-        networkManager.updateDockBadge()
+        networkManager.removeTask(taskId: task.id)
     }
 
     private func sortTasks(_ tasks: [NewDownloadTask]) -> [NewDownloadTask] {
@@ -47,35 +46,60 @@ struct DownloadManagerView: View {
     }
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             HStack {
                 Text("下载管理")
                     .font(.headline)
                 Spacer()
-                Menu {
-                    ForEach([SortOrder.addTime, .name, .status], id: \.self) { order in
-                        Button(action: {
-                            sortOrder = order
-                        }) {
-                            HStack {
-                                Text(order.description)
-                                if sortOrder == order {
-                                    Image(systemName: "checkmark")
+                HStack(){
+                    Menu {
+                        ForEach([SortOrder.addTime, .name, .status], id: \.self) { order in
+                            Button(action: {
+                                sortOrder = order
+                            }) {
+                                HStack {
+                                    Text(order.description)
+                                    if sortOrder == order {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
-                    }
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.up.arrow.down")
-                        Text(sortOrder.description)
-                            .font(.caption)
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.up.arrow.down")
+                            Text(sortOrder.description)
+                                .font(.caption)
+                        }
                     }
                 }
+                .frame(minWidth: 120)
+                .fixedSize()
 
-                Button("全部暂停", action: {})
-                Button("全部继续", action: {})
-                Button("清理已完成", action: {
+                Button("全部暂停") {
+                    Task {
+                        for task in networkManager.downloadTasks {
+                            if case .downloading = task.status {
+                                await networkManager.downloadUtils.pauseDownloadTask(
+                                    taskId: task.id,
+                                    reason: .userRequested
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Button("全部继续") {
+                    Task {
+                        for task in networkManager.downloadTasks {
+                            if case .paused = task.status {
+                                await networkManager.downloadUtils.resumeDownloadTask(taskId: task.id)
+                            }
+                        }
+                    }
+                }
+                
+                Button("清理已完成") {
                     networkManager.downloadTasks.removeAll { task in
                         if case .completed = task.status {
                             return true
@@ -83,13 +107,14 @@ struct DownloadManagerView: View {
                         return false
                     }
                     networkManager.updateDockBadge()
-                })
+                }
                 
                 Button("关闭") {
                     dismiss()
                 }
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.vertical, 8)
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 8) {
@@ -97,19 +122,26 @@ struct DownloadManagerView: View {
                         DownloadProgressView(
                             task: task,
                             onCancel: {
-                                networkManager.cancelDownload(taskId: task.id)
+                                Task {
+                                    await networkManager.downloadUtils.cancelDownloadTask(taskId: task.id)
+                                }
                             },
                             onPause: {
-                                networkManager.pauseDownload(taskId: task.id)
+                                Task {
+                                    await networkManager.downloadUtils.pauseDownloadTask(
+                                        taskId: task.id,
+                                        reason: .userRequested
+                                    )
+                                }
                             },
                             onResume: {
                                 Task {
-                                    await networkManager.resumeDownload(taskId: task.id)
+                                    await networkManager.downloadUtils.resumeDownloadTask(taskId: task.id)
                                 }
                             },
                             onRetry: {
                                 Task {
-                                    await networkManager.resumeDownload(taskId: task.id)
+                                    await networkManager.downloadUtils.resumeDownloadTask(taskId: task.id)
                                 }
                             },
                             onRemove: {
@@ -119,11 +151,11 @@ struct DownloadManagerView: View {
                     }
                 }
                 .padding(.horizontal)
-                .padding(.bottom, 12)
+                .padding(.vertical, 8)
             }
             .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 600, height: 500)
+        .frame(width:800, height: 600)
     }
 }
 

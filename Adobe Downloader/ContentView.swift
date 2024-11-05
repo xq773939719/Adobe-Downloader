@@ -29,12 +29,13 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
+            HStack() {
                 Text("Adobe Downloader")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .frame(width: 180)
-                
+                    .fixedSize()
+
+
                 SettingsView(
                     useDefaultLanguage: $useDefaultLanguage,
                     useDefaultDirectory: $useDefaultDirectory,
@@ -45,7 +46,6 @@ struct ContentView: View {
                 
                 HStack(spacing: 8) {
                     SearchField(text: $searchText)
-                        .frame(width: 140)
 
                     Button(action: refreshData) {
                         Image(systemName: "arrow.clockwise")
@@ -73,10 +73,8 @@ struct ContentView: View {
                         }
                     )
                 }
-                .frame(width: 200)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor))
 
             ZStack {
@@ -107,12 +105,10 @@ struct ContentView: View {
                         Button(action: {
                             networkManager.retryFetchData()
                         }) {
-                            HStack(spacing: 8) {
+                            HStack() {
                                 Image(systemName: "arrow.clockwise")
                                 Text("重试")
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)

@@ -1,5 +1,5 @@
 //
-//  Adobe-Downloader
+//  Adobe Downloader
 //
 //  Created by X1a0He on 2024/10/30.
 //
@@ -30,4 +30,12 @@ struct AppStatics {
         ("hu_HU", "Magyar"),
         ("ALL", "所有语言")
     ]
+    
+    static func isValidLanguageCode(_ code: String) -> Bool {
+        return supportedLanguages.contains { $0.code == code }
+    }
+    
+    static func getLanguageName(for code: String) -> String? {
+        return supportedLanguages.first { $0.code == code }?.name
+    }
 } 

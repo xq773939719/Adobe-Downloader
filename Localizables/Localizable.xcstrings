@@ -34,22 +34,6 @@
         }
       }
     },
-    "%@ %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@"
-          }
-        }
-      }
-    },
-    "%@ 安装失败" : {
-
-    },
-    "%@ 安装完成" : {
-
-    },
     "%lld" : {
 
     },
@@ -105,204 +89,642 @@
     "Github: Adobe Downloader" : {
 
     },
+    "OK" : {
+
+    },
     "Released under GPLv3." : {
 
     },
+    "Setup未备份提示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup not backed up"
+          }
+        }
+      }
+    },
     "Thanks Drovosek01: adobe-packager" : {
+
+    },
+    "Thanks QiuChenly: InjectLib" : {
 
     },
     "Welcome to Adobe Downloader" : {
 
     },
     "下载" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download"
+          }
+        }
+      }
     },
     "下载中" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading"
+          }
+        }
+      }
     },
     "下载已取消" : {
-      "comment" : "Download cancelled"
+      "comment" : "Download cancelled",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download cancelled"
+          }
+        }
+      }
     },
     "下载此版本" : {
-
+      "comment" : "版本选择页面",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download"
+          }
+        }
+      }
     },
     "下载管理" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download management"
+          }
+        }
+      }
     },
     "下载设置" : {
-
+      "comment" : "设置页面",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
     },
     "下载错误" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download error"
+          }
+        }
+      }
     },
     "产品和包列表" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Products and Packages"
+          }
+        }
+      }
     },
     "使用现有程序" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use existing"
+          }
+        }
+      }
     },
     "使用默认目录" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default directory"
+          }
+        }
+      }
     },
     "使用默认语言" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default language"
+          }
+        }
+      }
     },
     "依赖包:" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dependencies"
+          }
+        }
+      }
     },
     "依赖包: %lld" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dependencies： %lld"
+          }
+        }
+      }
     },
     "全部暂停" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause All"
+          }
+        }
+      }
     },
     "全部继续" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue All"
+          }
+        }
+      }
     },
     "关闭" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
     },
     "删除" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
     },
     "加载失败" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading failed"
+          }
+        }
+      }
     },
     "取消" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
     },
     "可用版本: %lld" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Availables: %lld"
+          }
+        }
+      }
     },
     "在以下位置找到现有的安装程序：" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locate the existing installer at:"
+          }
+        }
+      }
+    },
+    "失败: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed: %@"
+          }
+        }
+      }
     },
     "安装" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install"
+          }
+        }
+      }
     },
     "安装程序已存在" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installer already exists"
+          }
+        }
+      }
     },
     "尝试使用不同的搜索关键词" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "try using different keywords"
+          }
+        }
+      }
     },
     "尝试其他搜索关键词" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "try other search keywords"
+          }
+        }
+      }
     },
     "已存在" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Existed"
+          }
+        }
+      }
+    },
+    "已完成" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        }
+      }
     },
     "已暂停" : {
-      "comment" : "Download status paused"
+      "comment" : "Download status paused",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused"
+          }
+        }
+      }
     },
     "搜索应用" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search"
+          }
+        }
+      }
     },
     "搜索语言" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "search language"
+          }
+        }
+      }
     },
     "是否确认重新下载？这将覆盖现有的安装程序。" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to re-download? This will overwrite the existing installer"
+          }
+        }
+      }
     },
     "是否要安装 %@?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you want to install %@"
+          }
+        }
+      }
     },
     "暂停" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
     },
     "服务器响应无效" : {
-      "comment" : "Invalid response"
+      "comment" : "Invalid response",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid server response"
+          }
+        }
+      }
     },
     "未找到语言" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "language not found"
+          }
+        }
+      }
+    },
+    "检测到Setup文件尚未备份，如果你需要安装程序，则Setup必须被处理，点击确定后你需要输入密码，Adobe Downloader将自动处理并备份为Setup.original" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It is detected that the Setup file has not been backed up. If you need to install the program, the Setup must be processed. After clicking OK, you need to enter the password. Adobe Downloader will automatically process and back up the Setup.original."
+          }
+        }
+      }
     },
     "正在下载 %@ (%d/%d)" : {
       "comment" : "Download status downloading",
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "正在下载 %1$@ (%2$d/%3$d)"
+            "state" : "translated",
+            "value" : "Downloading %1$@ (%2$d/%3$d)"
           }
         }
       }
     },
     "正在加载..." : {
-
-    },
-    "正在安装 %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
+          }
+        }
+      }
     },
     "没有找到产品" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No products found"
+          }
+        }
+      }
     },
     "没有网络连接" : {
-      "comment" : "Network error"
+      "comment" : "Network error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network error"
+          }
+        }
+      }
     },
     "清理已完成" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cleanup Completed"
+          }
+        }
+      }
     },
     "目录:" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directory: "
+          }
+        }
+      }
     },
     "确定" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm"
+          }
+        }
+      }
     },
     "确认" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm"
+          }
+        }
+      }
     },
     "确认重新下载" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm re-download"
+          }
+        }
+      }
     },
     "移除" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
     },
     "等待中" : {
-      "comment" : "Download status waiting"
+      "comment" : "Download status waiting",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting…"
+          }
+        }
+      }
     },
     "系统休眠" : {
-      "comment" : "Download status system sleep"
+      "comment" : "Download status system sleep",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System hibernation"
+          }
+        }
+      }
     },
     "继续" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
     },
     "网络中断" : {
-      "comment" : "Download status network paused"
+      "comment" : "Download status network paused",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network interrupt"
+          }
+        }
+      }
     },
     "语言:" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language: "
+          }
+        }
+      }
     },
     "选择" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select"
+          }
+        }
+      }
     },
     "选择安装语言" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select the installation language"
+          }
+        }
+      }
     },
     "选择版本" : {
-
+      "comment" : "版本选择页面",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versions"
+          }
+        }
+      }
     },
     "重新下载" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-download"
+          }
+        }
+      }
     },
     "重新下载时需要确认" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Re-download for second confirmation"
+          }
+        }
+      }
     },
     "重试" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "retry"
+          }
+        }
+      }
     },
     "重试中 (%d/%d)" : {
       "comment" : "Download status retrying",
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "重试中 (%1$d/%2$d)"
+            "state" : "translated",
+            "value" : "Retrying (%1$d/%2$d)"
           }
         }
       }
     },
     "错误详情:" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error details:"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -119,7 +119,9 @@ struct DownloadManagerView: View {
                     }
                 }
                 .padding(.horizontal)
+                .padding(.bottom, 12)
             }
+            .background(Color(NSColor.windowBackgroundColor))
         }
         .frame(width: 600, height: 500)
     }

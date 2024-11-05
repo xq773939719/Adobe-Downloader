@@ -77,21 +77,4 @@ extension NetworkManager {
         let randomString = String((0..<26).map { _ in letters.randomElement()! })
         return "fg=\(randomString)======"
     }
-
-    func updateDockBadge() {
-        let activeCount = downloadTasks.filter { task in
-            switch task.status {
-            case .downloading, .preparing, .waiting, .paused, .retrying, .failed:
-                return true
-            case .completed:
-                return false
-            }
-        }.count
-
-        if activeCount > 0 {
-            NSApplication.shared.dockTile.badgeLabel = "\(activeCount)"
-        } else {
-            NSApplication.shared.dockTile.badgeLabel = nil
-        }
-    }
 } 

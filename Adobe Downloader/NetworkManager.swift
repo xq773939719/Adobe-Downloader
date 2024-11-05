@@ -113,7 +113,6 @@ class NetworkManager: ObservableObject {
         guard let productInfo = self.saps[sap.sapCode]?.versions[selectedVersion] else {
             throw NetworkError.invalidData("无法获取产品信息")
         }
-        print(destinationURL)
         let task = NewDownloadTask(
             sapCode: sap.sapCode,
             version: selectedVersion,
@@ -137,6 +136,11 @@ class NetworkManager: ObservableObject {
         updateDockBadge()
         
         do {
+            if task.sapCode == "APRO" {
+                try await downloadUtils.downloadAPRO(task: task, productInfo: productInfo)
+                return
+            }
+            
             try downloadUtils.createInstallerApp(
                 for: task.sapCode,
                 version: task.version,
@@ -415,8 +419,11 @@ class NetworkManager: ObservableObject {
 
    private func performDownload(task: NewDownloadTask) async throws {
        if task.sapCode == "APRO" {
-           // APRO 的特殊处理
-           // 暂时移除 APRO 的处理，或者实现新的处理逻辑
+           if let productInfo = self.saps[task.sapCode]?.versions[task.version] {
+               try await downloadUtils.downloadAPRO(task: task, productInfo: productInfo)
+           } else {
+               throw NetworkError.invalidData("无法获取APRO产品信息")
+           }
            return
        }
 
@@ -1062,7 +1069,12 @@ class NetworkManager: ObservableObject {
 
     func isVersionDownloaded(sap: Sap, version: String, language: String) -> URL? {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
-        let fileName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
+        var fileName = ""
+        if(sap.sapCode=="APRO"){
+            fileName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
+        } else {
+            fileName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
+        }
 
         if !defaultDirectory.isEmpty {
             let defaultPath = URL(fileURLWithPath: defaultDirectory)
@@ -1083,5 +1095,20 @@ class NetworkManager: ObservableObject {
         }
         
         return nil
+    }
+
+    func updateDockBadge() {
+        let activeCount = downloadTasks.filter { task in
+            if case .completed = task.totalStatus {
+                return false
+            }
+            return true
+        }.count
+
+        if activeCount > 0 {
+            NSApplication.shared.dockTile.badgeLabel = "\(activeCount)"
+        } else {
+            NSApplication.shared.dockTile.badgeLabel = nil
+        }
     }
 }

@@ -443,6 +443,10 @@ struct ProductRow: View {
     let isCurrentProduct: Bool
     @Binding var expandedProducts: Set<String>
     
+    private var completedPackagesCount: Int {
+        product.packages.filter(\.downloaded).count
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Button(action: {
@@ -457,13 +461,13 @@ struct ProductRow: View {
                 HStack {
                     Image(systemName: "cube.box")
                         .foregroundColor(.blue)
-                    Text("\(product.sapCode) (\(product.version)) \(product.buildGuid)")
+                    Text("\(product.sapCode) (\(product.version))")
                         .font(.caption)
                         .fontWeight(.medium)
                     
                     Spacer()
                     
-                    Text("\(product.packages.filter(\.downloaded).count)/\(product.packages.count)")
+                    Text("\(completedPackagesCount)/\(product.packages.count)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     

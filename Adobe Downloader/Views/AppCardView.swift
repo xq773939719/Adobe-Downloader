@@ -171,8 +171,14 @@ struct AppCardView: View {
                 let platform = sap.versions[version]?.apPlatform ?? "unknown"
                 
                 if useDefaultDirectory && !defaultDirectory.isEmpty {
+                    var appName = ""
+                    if(sap.sapCode=="APRO"){
+                        appName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
+                    } else {
+                        appName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
+                    }
                     destinationURL = URL(fileURLWithPath: defaultDirectory)
-                        .appendingPathComponent("Install \(sap.sapCode)_\(version)-\(language)-\(platform).app")
+                        .appendingPathComponent(appName)
                 } else {
                     let panel = NSOpenPanel()
                     panel.title = "选择保存位置"
@@ -185,8 +191,14 @@ struct AppCardView: View {
                           let selectedURL = panel.url else {
                         return
                     }
-                    destinationURL = selectedURL
-                        .appendingPathComponent("Install \(sap.sapCode)_\(version)-\(language)-\(platform).app")
+                    var appName = ""
+                    if(sap.sapCode=="APRO"){
+                        appName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
+                    } else {
+                        appName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
+                    }
+                    destinationURL = URL(fileURLWithPath: defaultDirectory)
+                        .appendingPathComponent(appName)
                 }
                 
                 try await networkManager.startDownload(

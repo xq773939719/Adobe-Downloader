@@ -29,123 +29,191 @@ struct InstallProgressView: View {
         }
     }
     
+    private var statusIcon: String {
+        if isCompleted {
+            return "checkmark.circle.fill"
+        } else if isFailed {
+            return "xmark.circle.fill"
+        } else {
+            return "arrow.down.circle.fill"
+        }
+    }
+    
+    private var statusColor: Color {
+        if isCompleted {
+            return .green
+        } else if isFailed {
+            return .red
+        } else {
+            return .blue
+        }
+    }
+    
+    private var statusTitle: String {
+        if isCompleted {
+            return "\(productName) 安装完成"
+        } else if isFailed {
+            return "\(productName) 安装失败"
+        } else {
+            return "正在安装 \(productName)"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : 
-                      (status.contains("失败") ? "xmark.circle.fill" : "arrow.down.circle.fill"))
+                Image(systemName: statusIcon)
                     .font(.title2)
-                    .foregroundColor(isCompleted ? .green : 
-                                   (status.contains("失败") ? .red : .blue))
+                    .foregroundColor(statusColor)
                 
-                Text(isCompleted ? "\(productName) 安装完成" : 
-                     (status.contains("失败") ? "\(productName) 安装失败" : "正在安装 \(productName)"))
+                Text(statusTitle)
                     .font(.headline)
             }
             .padding(.horizontal, 20)
 
-            VStack(spacing: 4) {
-                if !status.contains("失败") {
-                    ProgressView(value: progress)
-                        .progressViewStyle(.linear)
-                        .frame(maxWidth: .infinity)
-                    
-                    Text(progressText)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            .padding(.horizontal, 20)
-            
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(Array(networkManager.installationLogs.enumerated()), id: \.offset) { index, log in
-                            Text(log)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .id(index)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-                }
-                .frame(height: 150)
-                .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
-                .onChange(of: networkManager.installationLogs) { oldValue, newValue in
-                    withAnimation {
-                        proxy.scrollTo(newValue.count - 1, anchor: .bottom)
-                    }
-                }
+            if !isFailed {
+                ProgressSection(progress: progress, progressText: progressText)
             }
 
-            if status.contains("失败") {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("错误详情:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fontWeight(.medium)
-                        
-                        Text(status)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                            .background(Color.secondary.opacity(0.1))
-                            .cornerRadius(6)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxHeight: 100)
-                .padding(.horizontal, 20)
+            LogSection(logs: networkManager.installationLogs)
+
+            if isFailed {
+                ErrorSection(status: status)
             }
 
-            HStack(spacing: 12) {
-                if isFailed {
-                    if let onRetry = onRetry {
-                        Button(action: onRetry) {
-                            Label("重试", systemImage: "arrow.clockwise.circle.fill")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
-                    }
-                    
-                    Button(action: onCancel) {
-                        Label("关闭", systemImage: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
-                } else if isCompleted {
-                    Button(action: onCancel) {
-                        Label("关闭", systemImage: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                } else {
-                    Button(action: onCancel) {
-                        Label("取消", systemImage: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
-                }
-            }
-            .padding(.horizontal, 20)
+            ButtonSection(
+                isCompleted: isCompleted,
+                isFailed: isFailed,
+                onCancel: onCancel,
+                onRetry: onRetry
+            )
         }
         .padding()
         .frame(minWidth: 500, minHeight: 300)
         .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(8)
+    }
+}
+
+private struct ProgressSection: View {
+    let progress: Double
+    let progressText: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            ProgressView(value: progress)
+                .progressViewStyle(.linear)
+                .frame(maxWidth: .infinity)
+            
+            Text(progressText)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct LogSection: View {
+    let logs: [String]
+    
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(logs.enumerated()), id: \.offset) { index, log in
+                        Text(log)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .id(index)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+            }
+            .frame(height: 150)
+            .background(Color(NSColor.textBackgroundColor))
+            .cornerRadius(4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            .onChange(of: logs) { _, newValue in
+                withAnimation {
+                    proxy.scrollTo(newValue.count - 1, anchor: .bottom)
+                }
+            }
+        }
+    }
+}
+
+private struct ErrorSection: View {
+    let status: String
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("错误详情:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fontWeight(.medium)
+                
+                Text(status)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(6)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxHeight: 100)
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct ButtonSection: View {
+    let isCompleted: Bool
+    let isFailed: Bool
+    let onCancel: () -> Void
+    let onRetry: (() -> Void)?
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            if isFailed {
+                if let onRetry = onRetry {
+                    Button(action: onRetry) {
+                        Label("重试", systemImage: "arrow.clockwise.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                }
+                
+                Button(action: onCancel) {
+                    Label("关闭", systemImage: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            } else if isCompleted {
+                Button(action: onCancel) {
+                    Label("关闭", systemImage: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+            } else {
+                Button(action: onCancel) {
+                    Label("取消", systemImage: "xmark.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+        }
+        .padding(.horizontal, 20)
     }
 }
 

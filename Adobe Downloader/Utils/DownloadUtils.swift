@@ -520,4 +520,154 @@ class DownloadUtils {
             }
         }
     }
+
+    func downloadAPRO(task: NewDownloadTask, productInfo: Sap.Versions) async throws {
+        guard let networkManager = networkManager else { return }
+        
+        let manifestURL = await networkManager.cdnUrl + productInfo.buildGuid
+        print("Manifest URL:", manifestURL)
+        guard let url = URL(string: manifestURL) else {
+            throw NetworkError.invalidURL(manifestURL)
+        }
+        
+        var request = URLRequest(url: url)
+        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        
+        let (manifestData, _) = try await URLSession.shared.data(for: request)
+        
+        let manifestXML = try XMLDocument(data: manifestData)
+        
+        guard let downloadPath = try manifestXML.nodes(forXPath: "//asset_list/asset/asset_path").first?.stringValue,
+              let assetSizeStr = try manifestXML.nodes(forXPath: "//asset_list/asset/asset_size").first?.stringValue,
+              let assetSize = Int64(assetSizeStr) else {
+            throw NetworkError.invalidData("无法从manifest中获取下载信息")
+        }
+
+        let aproPackage = Package(
+            type: "dmg",
+            fullPackageName: "Install \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform).dmg",
+            downloadSize: assetSize,
+            downloadURL: downloadPath
+        )
+
+        await MainActor.run {
+            let product = ProductsToDownload(
+                sapCode: task.sapCode,
+                version: task.version,
+                buildGuid: productInfo.buildGuid
+            )
+            product.packages = [aproPackage]
+            task.productsToDownload = [product]
+            task.totalSize = assetSize
+            task.currentPackage = aproPackage
+            task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                fileName: aproPackage.fullPackageName,
+                currentPackageIndex: 0,
+                totalPackages: 1,
+                startTime: Date(),
+                estimatedTimeRemaining: nil
+            )))
+        }
+
+        let tempDownloadDir = task.directory.deletingLastPathComponent()
+
+        var lastUpdateTime = Date()
+        var lastBytes: Int64 = 0
+
+        let delegate = DownloadDelegate(
+            destinationDirectory: tempDownloadDir,
+            fileName: aproPackage.fullPackageName,
+            completionHandler: { [weak networkManager] (localURL: URL?, response: URLResponse?, error: Error?) in
+                if let error = error {
+                    print("Download error:", error)
+                    return
+                }
+                Task { @MainActor in
+                    aproPackage.downloadedSize = aproPackage.downloadSize
+                    aproPackage.progress = 1.0
+                    aproPackage.status = .completed
+                    aproPackage.downloaded = true
+                    
+                    var totalDownloaded: Int64 = 0
+                    var totalSize: Int64 = 0
+                    
+                    totalSize += aproPackage.downloadSize
+                    if aproPackage.downloaded {
+                        totalDownloaded += aproPackage.downloadSize
+                    }
+                    
+                    task.totalSize = totalSize
+                    task.totalDownloadedSize = totalDownloaded
+                    task.totalProgress = Double(totalDownloaded) / Double(totalSize)
+                    task.totalSpeed = 0
+                    
+                    let allCompleted = task.productsToDownload.allSatisfy { product in
+                        product.packages.allSatisfy { $0.downloaded }
+                    }
+                    
+                    if allCompleted {
+                        task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                            timestamp: Date(),
+                            totalTime: Date().timeIntervalSince(task.createAt),
+                            totalSize: totalSize
+                        )))
+                    }
+                    
+                    task.objectWillChange.send()
+                    networkManager?.objectWillChange.send()
+                }
+            },
+            progressHandler: { [weak networkManager] (bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) in
+                Task { @MainActor in
+                    let now = Date()
+                    let timeDiff = now.timeIntervalSince(lastUpdateTime)
+
+                    if timeDiff >= 1.0 {
+                        let bytesDiff = totalBytesWritten - lastBytes
+                        let speed = Double(bytesDiff) / timeDiff
+
+                        aproPackage.updateProgress(
+                            downloadedSize: totalBytesWritten,
+                            speed: speed
+                        )
+
+                        task.totalDownloadedSize = totalBytesWritten
+                        task.totalProgress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+                        task.totalSpeed = speed
+                        
+                        lastUpdateTime = now
+                        lastBytes = totalBytesWritten
+                        
+                        task.objectWillChange.send()
+                        networkManager?.objectWillChange.send()
+                    }
+                }
+            }
+        )
+
+        guard let fullURL = URL(string: downloadPath) else {
+            throw NetworkError.invalidURL(downloadPath)
+        }
+        
+        var request2 = URLRequest(url: fullURL)
+        NetworkConstants.downloadHeaders.forEach { request2.setValue($0.value, forHTTPHeaderField: $0.key) }
+        
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        let downloadTask = session.downloadTask(with: request2)
+        downloadTask.resume()
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let originalCompletionHandler = delegate.completionHandler
+            
+            delegate.completionHandler = { (url: URL?, response: URLResponse?, error: Error?) in
+                originalCompletionHandler(url, response, error)
+                
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
 }

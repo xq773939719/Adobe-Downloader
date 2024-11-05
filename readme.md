@@ -2,12 +2,6 @@
 
 ![preview](imgs/Adobe%20Downloader.png)
 
-# TODO
-
-**If you have Intel chips mac, please contact [@X1a0He](https://t.me/X1a0He).**
-
-- [ ] Processing Setup file for Intel chip.
-
 ## Before Use
 
 **🍎Only for macOS 14+.**

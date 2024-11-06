@@ -119,15 +119,16 @@ private struct LogSection: View {
     
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(logs.enumerated()), id: \.offset) { index, log in
+            ScrollView(showsIndicators: true) {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(logs.suffix(1000).enumerated()), id: \.offset) { index, log in
                         Text(log)
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(.secondary)
                             .id(index)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
+                            .textSelection(.enabled)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -142,8 +143,10 @@ private struct LogSection: View {
             )
             .padding(.horizontal, 20)
             .onChange(of: logs) { _, newValue in
-                withAnimation {
-                    proxy.scrollTo(newValue.count - 1, anchor: .bottom)
+                if !newValue.isEmpty {
+                    withAnimation {
+                        proxy.scrollTo(newValue.count - 1, anchor: .bottom)
+                    }
                 }
             }
         }
@@ -215,57 +218,6 @@ private struct ButtonSection: View {
         }
         .padding(.horizontal, 20)
     }
-}
-
-#Preview("安装中") {
-    InstallProgressView(
-        productName: "Adobe Photoshop",
-        progress: 0.45,
-        status: "正在安装核心组件...",
-        onCancel: {},
-        onRetry: nil
-    )
-}
-
-#Preview("准备安装") {
-    InstallProgressView(
-        productName: "Adobe Photoshop",
-        progress: 0.0,
-        status: "正在准备安装...",
-        onCancel: {},
-        onRetry: nil
-    )
-}
-
-#Preview("安装完成") {
-    InstallProgressView(
-        productName: "Adobe Photoshop",
-        progress: 1.0,
-        status: "安装完成",
-        onCancel: {},
-        onRetry: nil
-    )
-}
-
-#Preview("安装失败") {
-    InstallProgressView(
-        productName: "Adobe Photoshop",
-        progress: 0.0,
-        status: "安装失败: 权限被拒绝",
-        onCancel: {},
-        onRetry: {}
-    )
-}
-
-#Preview("在深色模式下") {
-    InstallProgressView(
-        productName: "Adobe Photoshop",
-        progress: 0.75,
-        status: "正在安装...",
-        onCancel: {},
-        onRetry: nil
-    )
-    .preferredColorScheme(.dark)
 }
 
 #Preview("安装中带日志") {

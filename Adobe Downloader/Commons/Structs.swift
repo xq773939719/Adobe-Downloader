@@ -195,6 +195,4 @@ struct NetworkConstants {
     static let downloadHeaders = [
         "User-Agent": "Creative Cloud"
     ]
-
-    static let MAC_VOLUME_ICON_PATH = "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/CDAudioVolumeIcon.icns"
 }

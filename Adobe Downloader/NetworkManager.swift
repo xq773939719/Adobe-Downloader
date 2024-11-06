@@ -15,7 +15,13 @@ class NetworkManager: ObservableObject {
     @Published var loadingState: LoadingState = .idle
     @Published var downloadTasks: [NewDownloadTask] = []
     @Published var installationState: InstallationState = .idle
-    @Published var installationLogs: [String] = []
+    @Published var installationLogs: [String] = [] {
+        didSet {
+            if installationLogs.count > 1000 {
+                installationLogs = Array(installationLogs.suffix(1000))
+            }
+        }
+    }
     private let cancelTracker = CancelTracker()
     internal var downloadUtils: DownloadUtils!
     internal var progressObservers: [UUID: NSKeyValueObservation] = [:]
@@ -295,7 +301,7 @@ class NetworkManager: ObservableObject {
             URLQueryItem(name: "_type", value: "xml"),
             URLQueryItem(name: "channel", value: "ccm"),
             URLQueryItem(name: "channel", value: "sti"),
-            URLQueryItem(name: "platform", value: allowedPlatform.joined(separator: ",")),
+            URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
             URLQueryItem(name: "productType", value: "Desktop")
         ]
         

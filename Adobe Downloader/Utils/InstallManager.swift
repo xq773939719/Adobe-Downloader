@@ -3,6 +3,12 @@
 //
 //  Created by X1a0He on 2024/10/30.
 //
+/*
+    Adobe Exit Code
+    107: 架构或者版本不一致
+    103: 权限问题
+    182: 可能是文件不全或者出错了
+ */
 import Foundation
 
 actor InstallManager {
@@ -48,6 +54,9 @@ actor InstallManager {
             installProcess.executableURL = URL(fileURLWithPath: setupPath)
             installProcess.arguments = ["--install=1", "--driverXML=\(driverPath)"]
         }
+
+        let commandString = "sudo \"\(setupPath)\" --install=1 --driverXML=\"\(driverPath)\""
+        print(commandString)
 
         let outputPipe = Pipe()
         installProcess.standardOutput = outputPipe

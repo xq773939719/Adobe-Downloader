@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct Adobe_DownloaderApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var networkManager = NetworkManager()
     @State private var showBackupAlert = false
     @State private var showTipsSheet = false

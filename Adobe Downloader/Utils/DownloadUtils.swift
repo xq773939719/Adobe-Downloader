@@ -169,7 +169,7 @@ class DownloadUtils {
                 <Dependency>
                     <SAPCode>\(dependency.sapCode)</SAPCode>
                     <BaseVersion>\(dependency.version)</BaseVersion>
-                    <EsdDirectory>./\(dependency.sapCode)</EsdDirectory>
+                    <EsdDirectory>\(dependency.sapCode)</EsdDirectory>
                 </Dependency>
             """
         }.joined(separator: "\n")
@@ -181,7 +181,7 @@ class DownloadUtils {
                 <SAPCode>\(sapCode)</SAPCode>
                 <CodexVersion>\(version)</CodexVersion>
                 <Platform>\(productInfo.apPlatform)</Platform>
-                <EsdDirectory>./\(sapCode)</EsdDirectory>
+                <EsdDirectory>\(sapCode)</EsdDirectory>
                 <Dependencies>
                     \(dependencies)
                 </Dependencies>
@@ -272,6 +272,22 @@ class DownloadUtils {
         }
 
         for product in task.productsToDownload {
+            let productDir = task.directory.appendingPathComponent(product.sapCode)
+            if !FileManager.default.fileExists(atPath: productDir.path) {
+                do {
+                    try FileManager.default.createDirectory(
+                        at: productDir,
+                        withIntermediateDirectories: true,
+                        attributes: nil
+                    )
+                } catch {
+                    print("Error creating directory for \(product.sapCode): \(error)")
+                    continue
+                }
+            }
+        }
+
+        for product in task.productsToDownload {
             for package in product.packages where !package.downloaded {
                 let currentIndex = await progress.get()
                 
@@ -332,7 +348,7 @@ class DownloadUtils {
         
         return try await withCheckedThrowingContinuation { continuation in
             let delegate = DownloadDelegate(
-                destinationDirectory: task.directory.appendingPathComponent("Contents/Resources/products/\(product.sapCode)"),
+                destinationDirectory: task.directory.appendingPathComponent(product.sapCode),
                 fileName: package.fullPackageName,
                 completionHandler: { [weak networkManager] localURL, response, error in
                     if let error = error {
@@ -810,7 +826,7 @@ class DownloadUtils {
                 
                 if let currentPackage = task.currentPackage {
                     let destinationDir = task.directory
-                        .appendingPathComponent("Contents/Resources/products/\(task.sapCode)")
+                        .appendingPathComponent("\(task.sapCode)")
                     let fileURL = destinationDir.appendingPathComponent(currentPackage.fullPackageName)
                     try? FileManager.default.removeItem(at: fileURL)
                 }

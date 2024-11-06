@@ -2,29 +2,30 @@
 
 ![preview](imgs/Adobe%20Downloader.png)
 
-## Before Use
+# **[English version](readme-en.md)**
 
-**🍎Only for macOS 14+.**
+## 使用须知
 
-> **If you like Adobe Downloader, or it helps you, please Star🌟 it.**
+**🍎仅支持 macOS 14+.**
+
+> **如果你也喜欢 Adobe Downloader, 或者对你又帮助, 请 Star 仓库吧 🌟, 你的支持是我更新的动力**
 >
-> 1. Before proceeding with the installation, make sure you have
-     installed [Adobe Creative Cloud](https://creativecloud.adobe.com/apps/download/creative-cloud)
-> 2. In order to successfully install after downloading, you need to modify the Adobe Setup program. Thanks
-     to [QiuChenly](https://github.com/QiuChenly)
-     for providing the installation solution
-> 3. If you encounter any problems, don't panic, contact [@X1a0He](https://t.me/X1a0He) on Telegram or use the Python
-     version. Many thanks to [Drovosek01](https://github.com/Drovosek01) for
-     the [adobe-packager](https://github.com/Drovosek01/adobe-packager)
-> 4. ⚠️⚠️⚠️ **All Adobe apps in Adobe Downloader are from official Adobe channels and are not cracked versions.**
-> 5. ❌❌❌ **Do not use an external hard drive or any USB to store it, as this will cause permission issues, I do not have
-     the patience to solve any about permission issues**
+> 1. 在对
+     Adobe产品进行安装前，你必须先安装 [Adobe Creative Cloud](https://creativecloud.adobe.com/apps/download/creative-cloud)
+     ，否则将无法使用本程序
+> 2. 为了能够在下载后顺利安装，你需要对 Adobe 的 Setup 程序做出修改，非常感谢 [QiuChenly](https://github.com/QiuChenly)
+     提供的解决方案
+> 3. 如果在使用过程中遇到问题， 请通过 Telegram 联系我: [@X1a0He](https://t.me/X1a0He) , 或者使用 Python
+     版本，非常感谢 [Drovosek01](https://github.com/Drovosek01)
+     的 [adobe-packager](https://github.com/Drovosek01/adobe-packager)
+> 4. ⚠️⚠️⚠️ **Adobe Downloader 中的所有 Adobe 应用均来自 Adobe 官方渠道，并非破解版本。**
+> 5. ❌❌❌ **不要将下载目录设置为外接移动硬盘或者USB设备，这会导致出现权限问题，我并没有时间也没有耐心处理任何权限问题**
 
-## 📔Latest Log
+## 📔 最新日志
 
-- For historical update logs, please go to [Update Log](update-log.md)
+- 更多关于 App 的更新日志，请查看 [Update Log](update-log.md)
 
-- 2024-11-06 15:50 Update Log
+- 2024-11-06 15:50 更新日志
 
 ```markdown
 1. 增加程序首次启动时的默认配置设定与提示
@@ -34,64 +35,53 @@
 5. 版本选择页面增加架构提示
 6. 移除了安装程序的机制，现在不会再生成安装程序
 7. 增加了Adobe Creative Cloud安装检测，未安装前无法使用
-
-====================
-
-1. Added default configuration settings and prompts when the program is started for the first time
-2. Added optional architecture downloads, please select in settings
-3. Fixed the problem of version detection error \(only checks whether the file exists, not whether it is complete\)
-4. Removed the language selection and directory selection on the main interface and moved them to settings
-5. Added architecture prompts on the version selection page
-6. Removed the installer mechanism, and now no installer will be generated
-7. Added Adobe Creative Cloud installation detection, which cannot be used before installation
 ```
 
-### Language friendly
+### 语言支持
 
-- [x] Chinese
+- [x] 中文
 - [x] English
 
-## ⚠️ Warning
+## ⚠️ 注意
 
-**For all the SwiftUI seniors, I am just a SwiftUI newbie, some of the code comes from Claude, OpenAI and Apple, etc.**
+**对于各位 SwiftUI 前辈来说，我只是一个 SwiftUI 新手，部分代码来自 Claude、OpenAI 和 Apple 等**
 \
-**If you have any optimization suggestions or questions about Adobe Downloader, please open an issue or contact @X1a0He
-via Telegram.**
+**如果你对 Adobe Downloader 有任何优化建议或疑问，请提出 issue 或通过 Telegram 联系 [@X1a0He](https://t.me/X1a0He)**
 
-## ✨ Features
+## ✨ 特点
 
-- [x] Basic Functionality
-    - [x] Download Acrobat Pro
-    - [x] Download other Adobe products
-    - [x] Support installation of non-Acrobat products
-    - [x] Support multiple products download at the same time
-    - [x] Supports using default language and default directory
+- [x] 基本功能
+    - [x] Acrobat Pro 的下载
+    - [x] 其他 Adobe 产品的下载
+    - [x] 支持安装非 Acrobat 产品
+    - [x] 支持多个产品同时下载
+    - [x] 支持使用默认语言和默认目录
 
-## 👀 Preview
+## 👀 预览
 
-### Light Mode & Dark Mode
+### 浅色模式 & 深色模式
 
 ![light](imgs/preview-light.png)
 ![dark](imgs/preview-dark.png)
 
-### Version Picker
+### 版本选择
 
 ![version picker](imgs/version.png)
 
-### Language Picker
+### 语言选择
 
 ![language picker](imgs/language.png)
 
-### Download Management
+### 下载任务管理
 
 ![download management](imgs/download.png)
 
-## 🔗 References
+## 🔗 引用
 
 - [Drovosek01/adobe-packager](https://github.com/Drovosek01/adobe-packager/)
 - [QiuChenly/InjectLib](https://github.com/QiuChenly/InjectLib/)
 
-## 👨🏻‍💻Author
+## 👨🏻‍💻作者
 
 Adobe Downloader © X1a0He
 

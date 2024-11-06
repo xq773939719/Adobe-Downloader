@@ -163,52 +163,6 @@ class DownloadUtils {
         process.waitUntilExit()
     }
     
-    func createInstallerApp(for sapCode: String, version: String, language: String, at destinationURL: URL) throws {
-        let parentDirectory = destinationURL.deletingLastPathComponent()
-        if !FileManager.default.fileExists(atPath: parentDirectory.path) {
-            try FileManager.default.createDirectory(at: parentDirectory, withIntermediateDirectories: true)
-        }
-
-        if FileManager.default.fileExists(atPath: destinationURL.path) { try FileManager.default.removeItem(at: destinationURL) }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osacompile")
-
-        let tempScriptURL = FileManager.default.temporaryDirectory.appendingPathComponent("installer.js")
-        try NetworkConstants.INSTALL_APP_APPLE_SCRIPT.write(to: tempScriptURL, atomically: true, encoding: .utf8)
-
-        process.arguments = ["-l", "JavaScript", "-o", destinationURL.path, tempScriptURL.path]
-        
-        try process.run()
-        process.waitUntilExit()
-
-        if process.terminationStatus != 0 {
-            throw NetworkError.fileSystemError("Failed to create installer app: Exit code \(process.terminationStatus)", nil)
-        }
-        
-        try? FileManager.default.removeItem(at: tempScriptURL)
-
-        let iconDestination = destinationURL.appendingPathComponent("Contents/Resources/applet.icns")
-        if FileManager.default.fileExists(atPath: iconDestination.path) { try FileManager.default.removeItem(at: iconDestination) }
-
-        if FileManager.default.fileExists(atPath: NetworkConstants.ADOBE_CC_MAC_ICON_PATH) {
-            try FileManager.default.copyItem(
-                at: URL(fileURLWithPath: NetworkConstants.ADOBE_CC_MAC_ICON_PATH),
-                to: iconDestination
-            )
-        } else {
-            try FileManager.default.copyItem(
-                at: URL(fileURLWithPath: NetworkConstants.MAC_VOLUME_ICON_PATH),
-                to: iconDestination
-            )
-        }
-
-        try FileManager.default.createDirectory(
-            at: destinationURL.appendingPathComponent("Contents/Resources/products"),
-            withIntermediateDirectories: true
-        )
-    }
-    
     func generateDriverXML(sapCode: String, version: String, language: String, productInfo: Sap.Versions, displayName: String) -> String {
         let dependencies = productInfo.dependencies.map { dependency in
             """
@@ -290,7 +244,7 @@ class DownloadUtils {
             task.objectWillChange.send()
         }
 
-        let driverPath = task.directory.appendingPathComponent("Contents/Resources/products/driver.xml")
+        let driverPath = task.directory.appendingPathComponent("driver.xml")
         if !FileManager.default.fileExists(atPath: driverPath.path) {
             if let productInfo = await networkManager?.saps[task.sapCode]?.versions[task.version] {
                 let driverXml = generateDriverXML(
@@ -535,7 +489,7 @@ class DownloadUtils {
 
         let aproPackage = Package(
             type: "dmg",
-            fullPackageName: "Install \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform).dmg",
+            fullPackageName: "Adobe Downloader \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform)",
             downloadSize: assetSize,
             downloadURL: downloadPath
         )
@@ -667,13 +621,6 @@ class DownloadUtils {
             return
         }
         
-        try createInstallerApp(
-            for: task.sapCode,
-            version: task.version,
-            language: task.language,
-            at: task.directory
-        )
-        
         var productsToDownload: [ProductsToDownload] = []
 
         productsToDownload.append(ProductsToDownload(
@@ -720,11 +667,10 @@ class DownloadUtils {
                 )))
             }
 
-            let productDir = task.directory.appendingPathComponent("Contents/Resources/products/\(product.sapCode)")
+            let productDir = task.directory.appendingPathComponent("\(product.sapCode)")
             if !FileManager.default.fileExists(atPath: productDir.path) {
                 try FileManager.default.createDirectory(at: productDir, withIntermediateDirectories: true)
             }
-            print("product.sapCode: \(product.sapCode), product.buildGuid: \(product.buildGuid)")
             let jsonString = try await getApplicationInfo(buildGuid: product.buildGuid)
             let jsonURL = productDir.appendingPathComponent("application.json")
             try jsonString.write(to: jsonURL, atomically: true, encoding: .utf8)

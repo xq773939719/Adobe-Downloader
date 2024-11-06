@@ -353,9 +353,9 @@ class NetworkManager: ObservableObject {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         var fileName = ""
         if(sap.sapCode=="APRO") {
-            fileName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
+            fileName = "Adobe Downloader \(sap.sapCode)_\(version)_\(platform)"
         } else {
-            fileName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
+            fileName = "Adobe Downloader \(sap.sapCode)_\(version)-\(language)-\(platform)"
         }
 
         let useDefaultDirectory = UserDefaults.standard.bool(forKey: "useDefaultDirectory")

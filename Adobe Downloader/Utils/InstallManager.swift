@@ -37,7 +37,7 @@ actor InstallManager {
             throw InstallError.setupNotFound
         }
 
-        let driverPath = appPath.appendingPathComponent("Contents/Resources/products/driver.xml").path
+        let driverPath = appPath.appendingPathComponent("driver.xml").path
         let installProcess = Process()
         
         if withSudo {

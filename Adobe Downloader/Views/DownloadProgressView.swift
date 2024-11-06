@@ -592,7 +592,7 @@ struct PackageRow: View {
             version: "25.0",
             language: "zh_CN",
             displayName: "Adobe Audition",
-            directory: URL(fileURLWithPath: "/Users/username/Downloads/Install Audition_25.0-zh_CN-macuniversal.app"),
+            directory: URL(fileURLWithPath: "Adobe Downloader Audition_25.0-zh_CN-macuniversal"),
             productsToDownload: [
                 ProductsToDownload(
                     sapCode: "AUDT",
@@ -629,7 +629,7 @@ struct PackageRow: View {
             version: "25.0",
             language: "zh_CN",
             displayName: "Adobe Audition",
-            directory: URL(fileURLWithPath: "/Users/username/Downloads/Install Audition_25.0-zh_CN-macuniversal.app"),
+            directory: URL(fileURLWithPath: "Adobe Downloader Audition_25.0-zh_CN-macuniversal"),
             productsToDownload: [
                 ProductsToDownload(
                     sapCode: "AUDT",
@@ -664,7 +664,7 @@ struct PackageRow: View {
             version: "25.0",
             language: "zh_CN",
             displayName: "Adobe Audition",
-            directory: URL(fileURLWithPath: "/Users/username/Downloads/Install Audition_25.0-zh_CN-macuniversal.app"),
+            directory: URL(fileURLWithPath: "Adobe Downloader Audition_25.0-zh_CN-macuniversal"),
             productsToDownload: [
                 ProductsToDownload(
                     sapCode: "AUDT",

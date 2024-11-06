@@ -73,9 +73,9 @@ class AppCardViewModel: ObservableObject {
     func getDestinationURL(version: String, language: String, useDefaultDirectory: Bool, defaultDirectory: String) async throws -> URL {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         let installerName = sap.sapCode == "APRO" 
-            ? "Install \(sap.sapCode)_\(version)_\(platform).dmg"
-            : "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
-        
+            ? "Adobe Downloader \(sap.sapCode)_\(version)_\(platform)"
+            : "Adobe Downloader \(sap.sapCode)_\(version)-\(language)-\(platform)"
+
         if useDefaultDirectory && !defaultDirectory.isEmpty {
             return URL(fileURLWithPath: defaultDirectory)
                 .appendingPathComponent(installerName)

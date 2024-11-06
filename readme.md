@@ -24,7 +24,7 @@
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-06 15:15 Update Log
+- 2024-11-06 15:50 Update Log
 
 ```markdown
 1. 增加程序首次启动时的默认配置设定与提示
@@ -33,6 +33,7 @@
 4. 移除主界面的语言选择和目录选择，移动到了设置中
 5. 版本选择页面增加架构提示
 6. 移除了安装程序的机制，现在不会再生成安装程序
+7. 增加了Adobe Creative Cloud安装检测，未安装前无法使用
 
 ====================
 
@@ -42,6 +43,7 @@
 4. Removed the language selection and directory selection on the main interface and moved them to settings
 5. Added architecture prompts on the version selection page
 6. Removed the installer mechanism, and now no installer will be generated
+7. Added Adobe Creative Cloud installation detection, which cannot be used before installation
 ```
 
 ### Language friendly

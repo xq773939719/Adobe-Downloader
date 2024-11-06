@@ -7,6 +7,7 @@ struct Adobe_DownloaderApp: App {
     @State private var showBackupAlert = false
     @State private var showTipsSheet = false
     @State private var showLanguagePicker = false
+    @State private var showCreativeCloudAlert = false
     @AppStorage("useDefaultLanguage") private var useDefaultLanguage: Bool = true
     @AppStorage("defaultLanguage") private var defaultLanguage: String = "ALL"
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
@@ -44,6 +45,8 @@ struct Adobe_DownloaderApp: App {
                 .frame(width: 850, height: 800)
                 .tint(.blue)
                 .onAppear {
+                    checkCreativeCloudSetup()
+                    
                     if ModifySetup.checkSetupBackup() {
                         showBackupAlert = true
                     }
@@ -128,6 +131,19 @@ struct Adobe_DownloaderApp: App {
                         }
                     }
                 }
+                .alert("未安装 Adobe Creative Cloud", isPresented: $showCreativeCloudAlert) {
+                    Button("前往下载") {
+                        if let url = URL(string: "https://creativecloud.adobe.com/apps/download/creative-cloud") {
+                            NSWorkspace.shared.open(url)
+                        }
+                        NSApplication.shared.terminate(nil)
+                    }
+                    Button("取消", role: .cancel) {
+                        NSApplication.shared.terminate(nil)
+                    }
+                } message: {
+                    Text("需要先安装 Adobe Creative Cloud 才能继续使用本程序")
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -135,6 +151,13 @@ struct Adobe_DownloaderApp: App {
         Settings {
             AboutView()
                 .environmentObject(networkManager)
+        }
+    }
+
+    private func checkCreativeCloudSetup() {
+        let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
+        if !FileManager.default.fileExists(atPath: setupPath) {
+            showCreativeCloudAlert = true
         }
     }
 

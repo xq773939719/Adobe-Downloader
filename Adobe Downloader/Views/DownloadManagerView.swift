@@ -19,9 +19,9 @@ struct DownloadManagerView: View {
         
         var description: String {
             switch self {
-            case .addTime: return "按添加时间"
-            case .name: return "按名称"
-            case .status: return "按状态"
+            case .addTime: return String(localized: "按添加时间")
+            case .name: return String(localized: "按名称")
+            case .status: return String(localized: "按状态")
             }
         }
     }

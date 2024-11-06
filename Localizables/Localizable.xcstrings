@@ -330,6 +330,16 @@
         }
       }
     },
+    "前往下载" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to download"
+          }
+        }
+      }
+    },
     "加载失败" : {
       "localizations" : {
         "en" : {
@@ -461,6 +471,36 @@
         }
       }
     },
+    "按名称" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sort by name"
+          }
+        }
+      }
+    },
+    "按添加时间" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sort by added time"
+          }
+        }
+      }
+    },
+    "按状态" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sort by status"
+          }
+        }
+      }
+    },
     "搜索应用" : {
       "localizations" : {
         "en" : {
@@ -518,6 +558,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Invalid server response"
+          }
+        }
+      }
+    },
+    "未安装 Adobe Creative Cloud" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adobe Creative Cloud not installed"
           }
         }
       }
@@ -792,6 +842,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Error details:"
+          }
+        }
+      }
+    },
+    "需要先安装 Adobe Creative Cloud 才能继续使用本程序" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You need to install Adobe Creative Cloud before you can continue using this program"
           }
         }
       }

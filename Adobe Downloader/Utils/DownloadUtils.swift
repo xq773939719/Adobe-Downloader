@@ -505,7 +505,7 @@ class DownloadUtils {
 
         let aproPackage = Package(
             type: "dmg",
-            fullPackageName: "Adobe Downloader \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform)",
+            fullPackageName: "Adobe Downloader \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform).dmg",
             downloadSize: assetSize,
             downloadURL: downloadPath
         )

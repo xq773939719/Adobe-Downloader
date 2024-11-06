@@ -359,7 +359,7 @@ class NetworkManager: ObservableObject {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         var fileName = ""
         if(sap.sapCode=="APRO") {
-            fileName = "Adobe Downloader \(sap.sapCode)_\(version)_\(platform)"
+            fileName = "Adobe Downloader \(sap.sapCode)_\(version)_\(platform).dmg"
         } else {
             fileName = "Adobe Downloader \(sap.sapCode)_\(version)-\(language)-\(platform)"
         }

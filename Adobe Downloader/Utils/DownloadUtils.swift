@@ -724,7 +724,7 @@ class DownloadUtils {
             if !FileManager.default.fileExists(atPath: productDir.path) {
                 try FileManager.default.createDirectory(at: productDir, withIntermediateDirectories: true)
             }
-
+            print("product.sapCode: \(product.sapCode), product.buildGuid: \(product.buildGuid)")
             let jsonString = try await getApplicationInfo(buildGuid: product.buildGuid)
             let jsonURL = productDir.appendingPathComponent("application.json")
             try jsonString.write(to: jsonURL, atomically: true, encoding: .utf8)

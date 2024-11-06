@@ -9,6 +9,7 @@ struct VersionPickerView: View {
     @EnvironmentObject private var networkManager: NetworkManager
     @Environment(\.dismiss) private var dismiss
     @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
+    @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @State private var expandedVersions: Set<String> = []
     
     let sap: Sap
@@ -16,17 +17,24 @@ struct VersionPickerView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("\(sap.displayName)")
-                    .font(.headline)
-                Text("选择版本")
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("取消") {
-                    dismiss()
+            VStack {
+                HStack {
+                    Text("\(sap.displayName)")
+                        .font(.headline)
+                    Text("选择版本")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("取消") {
+                        dismiss()
+                    }
                 }
+                .padding(.bottom, 5)
+                Text("🔔 即将下载 \(downloadAppleSilicon ? "Apple Silicon" : "Intel") (\(networkManager.allowedPlatform.joined(separator: ", "))) 版本 🔔")
+                    .font(.caption)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.top)
             .background(Color(NSColor.windowBackgroundColor))
             
             ScrollView(showsIndicators: false) {

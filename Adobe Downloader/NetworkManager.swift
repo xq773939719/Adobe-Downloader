@@ -10,7 +10,7 @@ class NetworkManager: ObservableObject {
     @Published var isConnected = false
     @Published var saps: [String: Sap] = [:]
     @Published var cdn: String = ""
-    @Published var allowedPlatform = ["macuniversal", "macarm64", "osx10-64", "osx10"]
+    @Published var allowedPlatform: [String]
     @Published var sapCodes: [SapCodes] = []
     @Published var loadingState: LoadingState = .idle
     @Published var downloadTasks: [NewDownloadTask] = []
@@ -33,6 +33,9 @@ class NetworkManager: ObservableObject {
     }
 
     init() {
+        let useAppleSilicon = UserDefaults.standard.bool(forKey: "downloadAppleSilicon")
+        self.allowedPlatform = useAppleSilicon ? ["macuniversal", "macarm64"] : ["macuniversal", "osx10-64"]
+        
         self.downloadUtils = DownloadUtils(networkManager: self, cancelTracker: cancelTracker)
         setupNetworkMonitoring()
     }
@@ -259,7 +262,7 @@ class NetworkManager: ObservableObject {
         guard let url = URL(string: NetworkConstants.applicationJsonURL) else {
             throw NetworkError.invalidURL(NetworkConstants.applicationJsonURL)
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         
@@ -292,7 +295,7 @@ class NetworkManager: ObservableObject {
             URLQueryItem(name: "_type", value: "xml"),
             URLQueryItem(name: "channel", value: "ccm"),
             URLQueryItem(name: "channel", value: "sti"),
-            URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
+            URLQueryItem(name: "platform", value: allowedPlatform.joined(separator: ",")),
             URLQueryItem(name: "productType", value: "Desktop")
         ]
         
@@ -349,13 +352,14 @@ class NetworkManager: ObservableObject {
     func isVersionDownloaded(sap: Sap, version: String, language: String) -> URL? {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         var fileName = ""
-        if(sap.sapCode=="APRO"){
+        if(sap.sapCode=="APRO") {
             fileName = "Install \(sap.sapCode)_\(version)_\(platform).dmg"
         } else {
             fileName = "Install \(sap.sapCode)_\(version)-\(language)-\(platform).app"
         }
 
-        if !defaultDirectory.isEmpty {
+        let useDefaultDirectory = UserDefaults.standard.bool(forKey: "useDefaultDirectory")
+        if useDefaultDirectory && !defaultDirectory.isEmpty {
             let defaultPath = URL(fileURLWithPath: defaultDirectory)
                 .appendingPathComponent(fileName)
             if FileManager.default.fileExists(atPath: defaultPath.path) {
@@ -363,16 +367,16 @@ class NetworkManager: ObservableObject {
             }
         }
 
-        if let task = downloadTasks.first(where: { 
-            $0.sapCode == sap.sapCode && 
-            $0.version == version && 
-            $0.language == language 
+        if let task = downloadTasks.first(where: {
+            $0.sapCode == sap.sapCode &&
+            $0.version == version &&
+            $0.language == language
         }) {
             if FileManager.default.fileExists(atPath: task.directory.path) {
                 return task.directory
             }
         }
-        
+
         return nil
     }
 
@@ -401,5 +405,9 @@ class NetworkManager: ObservableObject {
             loadingState = .idle
             await fetchProducts()
         }
+    }
+
+    func updateAllowedPlatform(useAppleSilicon: Bool) {
+        allowedPlatform = useAppleSilicon ? ["macuniversal", "macarm64"] : ["macuniversal", "osx10-64"]
     }
 }

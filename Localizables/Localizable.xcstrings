@@ -60,6 +60,16 @@
     "|" : {
 
     },
+    "🔔 即将下载 %@ (%@) 版本 🔔" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🔔 To be downloaded %1$@ (%2$@) version 🔔"
+          }
+        }
+      }
+    },
     "About" : {
       "localizations" : {
         "zh-Hans" : {
@@ -73,7 +83,20 @@
     "Adobe Downloader" : {
 
     },
+    "Adobe Downloader 已为你默认设定如下值" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adobe Downloader has set the following default values ​​for you"
+          }
+        }
+      }
+    },
     "By X1a0He. ❤️ Love from China. ❤️" : {
+
+    },
+    "Contect @X1a0He" : {
 
     },
     "General" : {
@@ -120,6 +143,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Download"
+          }
+        }
+      }
+    },
+    "下载 Apple Silicon 架构" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download Apple Silicon"
           }
         }
       }
@@ -193,6 +226,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Products and Packages"
+          }
+        }
+      }
+    },
+    "你可以在设置中随时更改以上选项" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can change the above options at any time in the settings"
           }
         }
       }
@@ -408,6 +451,16 @@
         }
       }
     },
+    "当前架构: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current Architecture: %@"
+          }
+        }
+      }
+    },
     "搜索应用" : {
       "localizations" : {
         "en" : {
@@ -475,6 +528,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "language not found"
+          }
+        }
+      }
+    },
+    "未设置" : {
+      "comment" : "Default directory not set",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Set"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置"
           }
         }
       }

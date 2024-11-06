@@ -24,12 +24,14 @@ struct AboutView: View {
 }
 
 struct GeneralSettingsView: View {
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
+    @AppStorage("defaultLanguage") private var defaultLanguage: String = "ALL"
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
     @AppStorage("useDefaultLanguage") private var useDefaultLanguage: Bool = true
     @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
     @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
+    @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @State private var showLanguagePicker = false
+    @EnvironmentObject private var networkManager: NetworkManager
     
     var body: some View {
         Form {
@@ -45,7 +47,6 @@ struct GeneralSettingsView: View {
                             showLanguagePicker = true
                         }
                         .padding(.trailing, 5)
-                        .buttonStyle(.borderless)
                     }
                     
                     Divider()
@@ -62,7 +63,6 @@ struct GeneralSettingsView: View {
                             selectDirectory()
                         }
                         .padding(.trailing, 5)
-                        .buttonStyle(.borderless)
                     }
                     
                     Divider()
@@ -71,6 +71,19 @@ struct GeneralSettingsView: View {
                         Toggle("重新下载时需要确认", isOn: $confirmRedownload)
                             .padding(.leading, 5)
                         Spacer()
+                    }
+                    Divider()
+                    HStack {
+                        Toggle("下载 Apple Silicon 架构", isOn: $downloadAppleSilicon)
+                            .padding(.leading, 5)
+                        Spacer()
+                        Text("当前架构: \(AppStatics.cpuArchitecture)")
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .onChange(of: downloadAppleSilicon) { _, newValue in
+                        networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
                     }
                 }
                 .padding(.vertical, 4)
@@ -84,6 +97,9 @@ struct GeneralSettingsView: View {
                 showLanguagePicker = false
             }
         }
+        .onAppear {
+            networkManager.updateAllowedPlatform(useAppleSilicon: downloadAppleSilicon)
+        }
     }
     
     private func getLanguageName(code: String) -> String {
@@ -91,7 +107,7 @@ struct GeneralSettingsView: View {
     }
     
     private func formatPath(_ path: String) -> String {
-        if path.isEmpty { return "未设置" }
+        if path.isEmpty { return String(localized: "未设置") }
         return URL(fileURLWithPath: path).lastPathComponent
     }
     
@@ -124,6 +140,10 @@ struct AboutAppView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
+            Link("Contect @X1a0He",
+                 destination: URL(string: "https://t.me/X1a0He")!)
+                .font(.caption)
+                .foregroundColor(.blue)
             Link("Github: Adobe Downloader",
                  destination: URL(string: "https://github.com/X1a0He/Adobe-Downloader")!)
                 .font(.caption)
@@ -149,5 +169,7 @@ struct AboutAppView: View {
 }
 
 #Preview {
-    AboutView()
+    let networkManager = NetworkManager()
+    return AboutView()
+        .environmentObject(networkManager)
 } 

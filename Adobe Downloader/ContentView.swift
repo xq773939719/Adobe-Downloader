@@ -6,11 +6,6 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showDownloadManager = false
     @State private var searchText = ""
-    @AppStorage("useDefaultLanguage") private var useDefaultLanguage = true
-    @AppStorage("useDefaultDirectory") private var useDefaultDirectory = true
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
-    @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
-    @State private var showLanguagePicker = false
     
     private var filteredProducts: [Sap] {
         let products = networkManager.saps.values
@@ -27,6 +22,10 @@ struct ContentView: View {
         }
     }
     
+    private func openSettings() {
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             HStack() {
@@ -35,17 +34,17 @@ struct ContentView: View {
                     .fontWeight(.bold)
                     .fixedSize()
 
-
-                SettingsView(
-                    useDefaultLanguage: $useDefaultLanguage,
-                    useDefaultDirectory: $useDefaultDirectory,
-                    onSelectLanguage: selectLanguage,
-                    onSelectDirectory: selectDirectory
-                )
-                .frame(maxWidth: .infinity)
+                Spacer()
                 
                 HStack(spacing: 8) {
                     SearchField(text: $searchText)
+                        .frame(maxWidth: 200)
+
+                    SettingsLink {
+                        Image(systemName: "gearshape")
+                            .imageScale(.medium)
+                    }
+                    .buttonStyle(.borderless)
 
                     Button(action: refreshData) {
                         Image(systemName: "arrow.clockwise")
@@ -74,7 +73,8 @@ struct ContentView: View {
                     )
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor))
 
             ZStack {
@@ -113,7 +113,6 @@ struct ContentView: View {
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                     }
-                    .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
                 case .success:
@@ -139,12 +138,6 @@ struct ContentView: View {
                 }
             }
         }
-        .sheet(isPresented: $showLanguagePicker) {
-            LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
-                defaultLanguage = language
-                showLanguagePicker = false
-            }
-        }
         .sheet(isPresented: $showDownloadManager) {
             DownloadManagerView()
                 .environmentObject(networkManager)
@@ -166,23 +159,6 @@ struct ContentView: View {
             await MainActor.run {
                 isRefreshing = false
             }
-        }
-    }
-    
-    private func selectLanguage() {
-        showLanguagePicker = true
-    }
-    
-    private func selectDirectory() {
-        let panel = NSOpenPanel()
-        panel.title = "选择默认下载目录"
-        panel.canCreateDirectories = true
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        
-        if panel.runModal() == .OK {
-            defaultDirectory = panel.url?.path ?? ""
-            useDefaultDirectory = false
         }
     }
 }

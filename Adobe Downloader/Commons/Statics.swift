@@ -31,11 +31,23 @@ struct AppStatics {
         ("ALL", "所有语言")
     ]
     
-    static func isValidLanguageCode(_ code: String) -> Bool {
-        return supportedLanguages.contains { $0.code == code }
-    }
+    static let cpuArchitecture: String = {
+        #if arch(arm64)
+            return "Apple Silicon"
+        #elseif arch(x86_64)
+            return "Intel"
+        #else
+            return "Unknown Architecture"
+        #endif
+    }()
     
-    static func getLanguageName(for code: String) -> String? {
-        return supportedLanguages.first { $0.code == code }?.name
-    }
+    static let isAppleSilicon: Bool = {
+        #if arch(arm64)
+            return true
+        #elseif arch(x86_64)
+            return false
+        #else
+            return false
+        #endif
+    }()
 } 

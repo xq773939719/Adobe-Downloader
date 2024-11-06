@@ -15,7 +15,6 @@ class XHXMLParser {
     static func parseProductsXML(xmlData: Data) throws -> ParseResult {
         let xml = try XMLDocument(data: xmlData)
 
-        let allowedPlatforms = Set(["osx10-64", "osx10", "macuniversal", "macarm64"])
         guard let cdn = try xml.nodes(forXPath: "//channels/channel/cdn/secure").first?.stringValue else {
             throw ParserError.missingCDN
         }
@@ -60,6 +59,13 @@ class XHXMLParser {
                 var baseVersion = languageSet.attribute(forName: "baseVersion")?.stringValue ?? ""
                 var buildGuid = languageSet.attribute(forName: "buildGuid")?.stringValue ?? ""
                 let appPlatform = platform.attribute(forName: "id")?.stringValue ?? ""
+
+                if let existingVersion = products[sap]?.versions[productVersion] {
+                    if existingVersion.apPlatform == "macuniversal" {
+                        break
+                    }
+                }
+                
                 let dependencies = try languageSet.nodes(forXPath: "dependencies/dependency").compactMap { node -> Sap.Versions.Dependencies? in
                     guard let element = node as? XMLElement,
                           let sapCode = try element.nodes(forXPath: "sapCode").first?.stringValue,
@@ -69,11 +75,6 @@ class XHXMLParser {
                     return Sap.Versions.Dependencies(sapCode: sapCode, version: version)
                 }
 
-                if let existingVersion = products[sap]?.versions[productVersion],
-                   allowedPlatforms.contains(existingVersion.apPlatform) {
-                    break
-                }
-                
                 if sap == "APRO" {
                     baseVersion = productVersion
                     let buildNodes = try xml.nodes(forXPath: "//builds/build")
@@ -91,7 +92,7 @@ class XHXMLParser {
                     buildGuid = try languageSet.nodes(forXPath: "urls/manifestURL").first?.stringValue ?? ""
                 }
                 
-                if !buildGuid.isEmpty && allowedPlatforms.contains(appPlatform) {
+                if !buildGuid.isEmpty {
                     let version = Sap.Versions(
                         sapCode: sap,
                         baseVersion: baseVersion,

@@ -47,7 +47,7 @@ struct SettingsView: View {
                     .toggleStyle(.checkbox)
                     .fixedSize()
                     
-                    Text(formatPath(defaultDirectory.isEmpty ? "未设置" : defaultDirectory))
+                    Text(formatPath(defaultDirectory.isEmpty ? String(localized: "未设置") : defaultDirectory))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .frame(alignment: .leading)
@@ -67,7 +67,7 @@ struct SettingsView: View {
     }
     
     private func formatPath(_ path: String) -> String {
-        if path.isEmpty || path == "未设置" { return "未设置" }
+        if path.isEmpty { return String(localized: "未设置") }
         let url = URL(fileURLWithPath: path)
         return url.lastPathComponent
     }

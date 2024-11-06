@@ -142,7 +142,7 @@ private struct LogSection: View {
                     .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
             )
             .padding(.horizontal, 20)
-            .onChange(of: logs) { _, newValue in
+            .onChange(of: logs) { newValue in
                 if !newValue.isEmpty {
                     withAnimation {
                         proxy.scrollTo(newValue.count - 1, anchor: .bottom)

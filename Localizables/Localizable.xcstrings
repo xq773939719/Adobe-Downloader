@@ -70,16 +70,6 @@
         }
       }
     },
-    "About" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关于"
-          }
-        }
-      }
-    },
     "Adobe Downloader" : {
 
     },
@@ -96,26 +86,20 @@
     "By X1a0He. ❤️ Love from China. ❤️" : {
 
     },
-    "Contect @X1a0He" : {
+    "Github: Adobe Downloader" : {
 
     },
-    "General" : {
+    "GNU通用公共许可证GPL v3." : {
       "localizations" : {
-        "zh-Hans" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "通用"
+            "value" : "Released under GPLv3."
           }
         }
       }
     },
-    "Github: Adobe Downloader" : {
-
-    },
     "OK" : {
-
-    },
-    "Released under GPLv3." : {
 
     },
     "Setup未备份提示" : {
@@ -127,15 +111,6 @@
           }
         }
       }
-    },
-    "Thanks Drovosek01: adobe-packager" : {
-
-    },
-    "Thanks QiuChenly: InjectLib" : {
-
-    },
-    "Welcome to Adobe Downloader" : {
-
     },
     "下载" : {
       "localizations" : {
@@ -310,6 +285,16 @@
         }
       }
     },
+    "关于" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        }
+      }
+    },
     "关闭" : {
       "localizations" : {
         "en" : {
@@ -415,7 +400,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "try using different keywords"
+            "value" : "Try using different keywords"
           }
         }
       }
@@ -425,7 +410,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "try other search keywords"
+            "value" : "Try other search keywords"
           }
         }
       }
@@ -467,6 +452,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Current Architecture: %@"
+          }
+        }
+      }
+    },
+    "感谢 Drovosek01: adobe-packager" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanks Drovosek01: adobe-packager"
+          }
+        }
+      }
+    },
+    "感谢 QiuChenly: InjectLib" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanks QiuChenly: InjectLib"
           }
         }
       }
@@ -754,6 +759,16 @@
         }
       }
     },
+    "联系 @X1a0He" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contact @X1a0He"
+          }
+        }
+      }
+    },
     "语言:" : {
       "localizations" : {
         "en" : {
@@ -791,6 +806,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Versions"
+          }
+        }
+      }
+    },
+    "通用" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
           }
         }
       }

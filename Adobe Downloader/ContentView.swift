@@ -40,11 +40,19 @@ struct ContentView: View {
                     SearchField(text: $searchText)
                         .frame(maxWidth: 200)
 
-                    SettingsLink {
-                        Image(systemName: "gearshape")
-                            .imageScale(.medium)
+                    if #available(macOS 14.0, *) {
+                        SettingsLink {
+                            Image(systemName: "gearshape")
+                                .imageScale(.medium)
+                        }
+                        .buttonStyle(.borderless)
+                    } else {
+                        Button(action: openSettings) {
+                            Image(systemName: "gearshape")
+                                .imageScale(.medium)
+                        }
+                        .buttonStyle(.borderless)
                     }
-                    .buttonStyle(.borderless)
 
                     Button(action: refreshData) {
                         Image(systemName: "arrow.clockwise")
@@ -117,11 +125,18 @@ struct ContentView: View {
                 
                 case .success:
                     if filteredProducts.isEmpty {
-                        ContentUnavailableView(
-                            "没有找到产品",
-                            systemImage: "magnifyingglass",
-                            description: Text("尝试使用不同的搜索关键词")
-                        )
+                        VStack {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 36))
+                                .foregroundColor(.secondary)
+                            Text("没有找到产品")
+                                .font(.headline)
+                                .padding(.top)
+                            Text("尝试使用不同的搜索关键词")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ScrollView(showsIndicators: false) {
                             LazyVGrid(

@@ -81,11 +81,18 @@ struct LanguagePickerView: View {
             }
             
             if filteredLanguages.isEmpty {
-                ContentUnavailableView(
-                    "未找到语言",
-                    systemImage: "magnifyingglass",
-                    description: Text("尝试其他搜索关键词")
-                )
+                VStack {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundColor(.secondary)
+                    Text("未找到语言")
+                        .font(.headline)
+                        .padding(.top)
+                    Text("尝试其他搜索关键词")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(width: 320, height: 400)

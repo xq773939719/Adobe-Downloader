@@ -11,12 +11,12 @@ struct AboutView: View {
         TabView {
             GeneralSettingsView()
                 .tabItem {
-                    Label("General", systemImage: "gear")
+                    Label("通用", systemImage: "gear")
                 }
 
             AboutAppView()
                 .tabItem {
-                    Label("About", systemImage: "info.circle")
+                    Label("关于", systemImage: "info.circle")
                 }
         }
         .frame(width: 500, height: 400)
@@ -82,7 +82,7 @@ struct GeneralSettingsView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
-                    .onChange(of: downloadAppleSilicon) { _, newValue in
+                    .onChange(of: downloadAppleSilicon) { newValue in
                         networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
                     }
                 }
@@ -132,7 +132,7 @@ struct AboutAppView: View {
                 .resizable()
                 .frame(width: 96, height: 96)
             
-            Text("Welcome to Adobe Downloader")
+            Text("Adobe Downloader")
                 .font(.title2)
                 .bold()
             
@@ -140,7 +140,7 @@ struct AboutAppView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
-            Link("Contect @X1a0He",
+            Link("联系 @X1a0He",
                  destination: URL(string: "https://t.me/X1a0He")!)
                 .font(.caption)
                 .foregroundColor(.blue)
@@ -149,17 +149,17 @@ struct AboutAppView: View {
                 .font(.caption)
                 .foregroundColor(.blue)
             
-            Link("Thanks Drovosek01: adobe-packager",
+            Link("感谢 Drovosek01: adobe-packager",
                  destination: URL(string: "https://github.com/Drovosek01/adobe-packager")!)
                 .font(.caption)
                 .foregroundColor(.blue)
 
-            Link("Thanks QiuChenly: InjectLib",
+            Link("感谢 QiuChenly: InjectLib",
                  destination: URL(string: "https://github.com/QiuChenly/InjectLib")!)
                 .font(.caption)
                 .foregroundColor(.blue)
 
-            Text("Released under GPLv3.")
+            Text("GNU通用公共许可证GPL v3.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

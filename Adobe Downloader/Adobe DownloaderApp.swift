@@ -12,6 +12,8 @@ struct Adobe_DownloaderApp: App {
     @AppStorage("defaultLanguage") private var defaultLanguage: String = "ALL"
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
+    @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
+    @AppStorage("defaultDirectory") private var defaultDirectory: String = "Downloads"
 
     init() {
         let isFirstRun = UserDefaults.standard.object(forKey: "downloadAppleSilicon") == nil ||
@@ -34,7 +36,8 @@ struct Adobe_DownloaderApp: App {
         }
         
         if UserDefaults.standard.object(forKey: "useDefaultDirectory") == nil {
-            UserDefaults.standard.set(false, forKey: "useDefaultDirectory")
+            UserDefaults.standard.set(true, forKey: "useDefaultDirectory")
+            UserDefaults.standard.set("Downloads", forKey: "defaultDirectory")
         }
     }
     
@@ -84,9 +87,24 @@ struct Adobe_DownloaderApp: App {
                                     showLanguagePicker = true
                                 }
                                 .padding(.trailing, 5)
-                                .buttonStyle(.borderless)
                             }
                             
+                            Divider()
+
+                            HStack {
+                                Toggle("使用默认目录", isOn: $useDefaultDirectory)
+                                    .padding(.leading, 5)
+                                Spacer()
+                                Text(formatPath(defaultDirectory))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Button("选择") {
+                                    selectDirectory()
+                                }
+                                .padding(.trailing, 5)
+                            }
+
                             Divider()
 
                             HStack {
@@ -106,7 +124,7 @@ struct Adobe_DownloaderApp: App {
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                             }
-                            .onChange(of: downloadAppleSilicon) { _, newValue in
+                            .onChange(of: downloadAppleSilicon) { newValue in
                                 networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
                             }
                         }
@@ -151,6 +169,24 @@ struct Adobe_DownloaderApp: App {
         Settings {
             AboutView()
                 .environmentObject(networkManager)
+        }
+    }
+
+    private func formatPath(_ path: String) -> String {
+        if path.isEmpty { return String(localized: "未设置") }
+        return URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    private func selectDirectory() {
+        let panel = NSOpenPanel()
+        panel.title = "选择默认下载目录"
+        panel.canCreateDirectories = true
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+
+        if panel.runModal() == .OK {
+            defaultDirectory = panel.url?.path ?? "Downloads"
+            useDefaultDirectory = true
         }
     }
 

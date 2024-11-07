@@ -9,7 +9,7 @@
             <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <enclosure
-                    url="https://raw.githubusercontent.com/X1a0He/Adobe-Downloader/refs/heads/main/Adobe%20Downloader.dmg"
+                    url="https://github.com/X1a0He/Adobe-Downloader/releases/download/1.0.1/Adobe.Downloader.dmg"
                     length="2535835" type="application/octet-stream"
                     sparkle:edSignature="/paRKw18fjGopMIkrNSPJV1k0NloLccfjeyBLjjbNus7IyjFyGmdTH5ccxcbcXnYuFqozFrtKuBizpTCmNJfBw=="/>
             <description><![CDATA[

@@ -111,12 +111,27 @@ class ProductsToDownload: ObservableObject {
     var buildGuid: String
     var applicationJson: String?
     @Published var packages: [Package] = []
+    @Published var completedPackages: Int = 0
+    
+    var totalPackages: Int {
+        packages.count
+    }
 
     init(sapCode: String, version: String, buildGuid: String, applicationJson: String = "") {
         self.sapCode = sapCode
         self.version = version
         self.buildGuid = buildGuid
         self.applicationJson = applicationJson
+    }
+    
+    func updateCompletedPackages() {
+        completedPackages = packages.filter { 
+            if case .completed = $0.status {
+                return true
+            }
+            return $0.downloaded
+        }.count
+        objectWillChange.send()
     }
 }
 

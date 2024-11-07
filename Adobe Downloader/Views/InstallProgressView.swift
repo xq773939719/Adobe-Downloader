@@ -14,16 +14,16 @@ struct InstallProgressView: View {
     let onRetry: (() -> Void)?
     
     private var isCompleted: Bool {
-        progress >= 1.0 || status == "安装完成"
+        progress >= 1.0 || status == String(localized: "安装完成")
     }
     
     private var isFailed: Bool {
-        status.contains("失败")
+        status.contains(String(localized: "失败"))
     }
     
     private var progressText: String {
         if isCompleted {
-            return "安装完成"
+            return String(localized: "安装完成")
         } else {
             return "\(Int(progress * 100))%"
         }
@@ -51,11 +51,11 @@ struct InstallProgressView: View {
     
     private var statusTitle: String {
         if isCompleted {
-            return "\(productName) 安装完成"
+            return String(localized: "\(productName) 安装完成")
         } else if isFailed {
-            return "\(productName) 安装失败"
+            return String(localized: "\(productName) 安装失败")
         } else {
-            return "正在安装 \(productName)"
+            return String(localized: "正在安装 \(productName)")
         }
     }
     
@@ -78,7 +78,9 @@ struct InstallProgressView: View {
             LogSection(logs: networkManager.installationLogs)
 
             if isFailed {
-                ErrorSection(status: status)
+                ErrorSection(
+                    status: status, isFailed: isFailed
+                )
             }
 
             ButtonSection(
@@ -89,7 +91,7 @@ struct InstallProgressView: View {
             )
         }
         .padding()
-        .frame(minWidth: 500, minHeight: 300)
+        .frame(minWidth: 500, minHeight: 400)
         .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(8)
     }
@@ -155,28 +157,61 @@ private struct LogSection: View {
 
 private struct ErrorSection: View {
     let status: String
-    
+    let isFailed: Bool
+
+    var body: some View {
+
+        VStack(alignment: .leading, spacing: 8) {
+            Text("错误详情:")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fontWeight(.medium)
+            Text(status)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(6)
+            if isFailed {
+                HStack {
+                    Text("自行安装命令:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fontWeight(.medium)
+                    CommandPopover()
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct CommandSection: View {
+    let command: String
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text("错误详情:")
+                Text("自行安装命令:")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fontWeight(.medium)
                 
-                Text(status)
+                Text(command)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity,alignment: .leading)
+                    .frame(minHeight: 200)
                     .padding(8)
                     .background(Color.secondary.opacity(0.1))
                     .cornerRadius(6)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxHeight: 100)
-        .padding(.horizontal, 20)
     }
 }
 
@@ -220,6 +255,36 @@ private struct ButtonSection: View {
     }
 }
 
+private struct CommandPopover: View {
+    @EnvironmentObject private var networkManager: NetworkManager
+    @State private var showPopover = false
+    
+    var body: some View {
+        Button(action: { showPopover.toggle() }) {
+            Image(systemName: "terminal.fill")
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showPopover, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                Button("复制命令") {
+
+                }
+
+                Text(networkManager.installCommand)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .textSelection(.enabled)
+                    .padding(8)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(6)
+            }
+            .padding()
+            .frame(width: 400)
+        }
+    }
+}
+
 #Preview("安装中带日志") {
     let networkManager = NetworkManager()
     return InstallProgressView(
@@ -260,6 +325,8 @@ private struct ButtonSection: View {
     )
     .environmentObject(networkManager)
     .onAppear {
+        networkManager.installCommand = "sudo \"/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup\" --install=1 --driverXML=\"/Users/demo/Downloads/Adobe Photoshop/driver.xml\""
+        
         let previewLogs = [
             "正在准备安装...",
             "Progress: 10%",

@@ -365,7 +365,7 @@ class DownloadUtils {
                         package.progress = 1.0
                         package.status = .completed
                         package.downloaded = true
-
+                        
                         var totalDownloaded: Int64 = 0
                         var totalSize: Int64 = 0
 
@@ -395,7 +395,6 @@ class DownloadUtils {
                             )))
                         }
 
-                        task.objectWillChange.send()
                         networkManager?.objectWillChange.send()
                     }
 
@@ -437,7 +436,6 @@ class DownloadUtils {
                             lastUpdateTime = now
                             lastBytes = totalBytesWritten
                             
-                            task.objectWillChange.send()
                             networkManager?.objectWillChange.send()
                         }
                     }
@@ -677,7 +675,7 @@ class DownloadUtils {
         for product in productsToDownload {
             await MainActor.run {
                 task.setStatus(.preparing(DownloadStatus.PrepareInfo(
-                    message: "正在处理 \(product.sapCode) 的包信息...",
+                    message: String(localized: "正在处理 \(product.sapCode) 的包信息..."),
                     timestamp: Date(),
                     stage: .fetchingInfo
                 )))

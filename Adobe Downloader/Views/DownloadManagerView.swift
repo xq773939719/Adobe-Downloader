@@ -112,6 +112,8 @@ struct DownloadManagerView: View {
                 Button("关闭") {
                     dismiss()
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)

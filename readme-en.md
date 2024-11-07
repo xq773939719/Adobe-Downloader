@@ -6,7 +6,7 @@
 
 ## Before Use
 
-**🍎Only for macOS 14+.**
+**🍎Only for macOS 13.0+.**
 
 > **If you like Adobe Downloader, or it helps you, please Star🌟 it.**
 >
@@ -21,21 +21,21 @@
 > 4. ⚠️⚠️⚠️ **All Adobe apps in Adobe Downloader are from official Adobe channels and are not cracked versions.**
 > 5. ❌❌❌ **Do not use an external hard drive or any USB to store it, as this will cause permission issues, I do not have
      the patience to solve any about permission issues**
+> 6. ❌❌❌ **Due to permission reasons, there may be problems with installation on hackintosh**
 
 ## 📔Latest Log
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-06 15:50 Update Log
+- 2024-11-07 16:00 Update Log
 
 ```markdown
-1. Added default configuration settings and prompts when the program is started for the first time
-2. Added optional architecture downloads, please select in settings
-3. Fixed the problem of version detection error \(only checks whether the file exists, not whether it is complete\)
-4. Removed the language selection and directory selection on the main interface and moved them to settings
-5. Added architecture prompts on the version selection page
-6. Removed the installer mechanism, and now no installer will be generated
-7. Added Adobe Creative Cloud installation detection, which cannot be used before installation
+1. Support macOS 13.0 and above
+2. Added Sparkle for checking update
+3. When the default directory is not selected, the Downloads folder will be used as the default directory
+4. When installing via Adobe Downloader and encountering permission issues, provide terminal commands to allow users to
+   install by themselves
+5. Adjusted the UI display of existing files
 ```
 
 ### Language friendly

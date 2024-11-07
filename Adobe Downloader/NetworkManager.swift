@@ -22,6 +22,7 @@ class NetworkManager: ObservableObject {
             }
         }
     }
+    @Published var installCommand: String = ""
     private let cancelTracker = CancelTracker()
     internal var downloadUtils: DownloadUtils!
     internal var progressObservers: [UUID: NSKeyValueObservation] = [:]
@@ -71,6 +72,8 @@ class NetworkManager: ObservableObject {
         
         downloadTasks.append(task)
         updateDockBadge()
+        
+        NotificationCenter.default.post(name: NSNotification.Name("UpdateDownloadStatus"), object: nil)
         
         do {
             try await downloadUtils.handleDownload(task: task, productInfo: productInfo, allowedPlatform: allowedPlatform, saps: saps)
@@ -190,7 +193,13 @@ class NetworkManager: ObservableObject {
                 installationState = .completed
             }
         } catch {
+            let command = await installManager.getInstallCommand(
+                for: path.appendingPathComponent("driver.xml").path
+            )
+            
             await MainActor.run {
+                self.installCommand = command
+                
                 if let installError = error as? InstallManager.InstallError {
                     switch installError {
                     case .installationFailed(let message):

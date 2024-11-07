@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "(退出代码: %d)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（Exit Code: %d)"
+          }
+        }
+      }
+    },
     "/" : {
 
     },
@@ -30,6 +40,26 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@ 安装失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Install failed"
+          }
+        }
+      }
+    },
+    "%@ 安装完成" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Install completed"
           }
         }
       }
@@ -71,6 +101,9 @@
       }
     },
     "Adobe Downloader" : {
+
+    },
+    "Adobe Downloader %@" : {
 
     },
     "Adobe Downloader 已为你默认设定如下值" : {
@@ -355,12 +388,22 @@
         }
       }
     },
-    "在以下位置找到现有的安装程序：" : {
+    "复制命令" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Locate the existing installer at:"
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed"
           }
         }
       }
@@ -385,12 +428,42 @@
         }
       }
     },
+    "安装完成" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed"
+          }
+        }
+      }
+    },
+    "安装已取消" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelled"
+          }
+        }
+      }
+    },
     "安装程序已存在" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Installer already exists"
+          }
+        }
+      }
+    },
+    "安装程序调用失败，请联系X1a0He" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The installation program failed to call, please contact X1a0He"
           }
         }
       }
@@ -476,6 +549,16 @@
         }
       }
     },
+    "找不到安装程序" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installer not found"
+          }
+        }
+      }
+    },
     "按名称" : {
       "localizations" : {
         "en" : {
@@ -556,6 +639,16 @@
         }
       }
     },
+    "更新设置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update settings"
+          }
+        }
+      }
+    },
     "服务器响应无效" : {
       "comment" : "Invalid response",
       "localizations" : {
@@ -604,6 +697,26 @@
         }
       }
     },
+    "权限被拒绝" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permission denied"
+          }
+        }
+      }
+    },
+    "检查更新..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for updates…"
+          }
+        }
+      }
+    },
     "检测到Setup文件尚未备份，如果你需要安装程序，则Setup必须被处理，点击确定后你需要输入密码，Adobe Downloader将自动处理并备份为Setup.original" : {
       "localizations" : {
         "en" : {
@@ -625,12 +738,72 @@
         }
       }
     },
+    "正在准备..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing..."
+          }
+        }
+      }
+    },
+    "正在准备安装..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing..."
+          }
+        }
+      }
+    },
     "正在加载..." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Loading…"
+          }
+        }
+      }
+    },
+    "正在处理 %@ 的包信息..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Processing package for %@..."
+          }
+        }
+      }
+    },
+    "正在安装 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installing %@"
+          }
+        }
+      }
+    },
+    "正在安装包..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installing packages..."
+          }
+        }
+      }
+    },
+    "正在重试安装..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retrying installation..."
           }
         }
       }
@@ -769,12 +942,53 @@
         }
       }
     },
+    "自动下载最新版本" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically download updates"
+          }
+        }
+      }
+    },
+    "自动检查更新版本" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically check for updates"
+          }
+        }
+      }
+    },
+    "自行安装命令:" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Self-installation command:"
+          }
+        }
+      }
+    },
     "语言:" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Language: "
+          }
+        }
+      }
+    },
+    "请求超时，请检查网络连接后重试" : {
+      "comment" : "Network timeout",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request timed out, please check the network connection and try again"
           }
         }
       }
@@ -857,6 +1071,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Retrying (%1$d/%2$d)"
+          }
+        }
+      }
+    },
+    "重试失败，需要重新输入密码" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry failed, need to re-enter password"
           }
         }
       }

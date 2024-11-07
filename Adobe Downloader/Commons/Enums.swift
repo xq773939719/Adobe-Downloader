@@ -43,7 +43,7 @@ enum PackageStatus: Equatable {
 
 enum NetworkError: Error, LocalizedError {
     case noConnection
-    case timeout(TimeInterval)
+    case timeout
     case serverUnreachable(String)
 
     case invalidURL(String)
@@ -104,8 +104,8 @@ enum NetworkError: Error, LocalizedError {
         switch self {
         case .noConnection:
             return NSLocalizedString("没有网络连接", comment: "Network error")
-        case .timeout(let duration):
-            return NSLocalizedString("请求超时: \(duration)", comment: "Network timeout")
+        case .timeout:
+            return NSLocalizedString("请求超时，请检查网络连接后重试", comment: "Network timeout")
         case .serverUnreachable(let server):
             return NSLocalizedString("无法连接到服务器: \(server)", comment: "Server unreachable")
         case .invalidURL(let url):
@@ -274,13 +274,13 @@ enum DownloadStatus: Equatable {
     
     var isActive: Bool {
         switch self {
-        case .downloading, .preparing, .retrying:
+        case .downloading, .preparing, .waiting, .retrying:
             return true
         default:
             return false
         }
     }
-    
+
     var isFinished: Bool {
         switch self {
         case .completed, .failed:

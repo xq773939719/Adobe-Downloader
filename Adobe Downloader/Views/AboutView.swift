@@ -5,11 +5,18 @@
 //
 
 import SwiftUI
+import Sparkle
 
 struct AboutView: View {
+    private let updater: SPUUpdater
+
+    init(updater: SPUUpdater) {
+        self.updater = updater
+    }
+    
     var body: some View {
         TabView {
-            GeneralSettingsView()
+            GeneralSettingsView(updater: updater)
                 .tabItem {
                     Label("通用", systemImage: "gear")
                 }
@@ -19,7 +26,8 @@ struct AboutView: View {
                     Label("关于", systemImage: "info.circle")
                 }
         }
-        .frame(width: 500, height: 400)
+        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 500, height: 350)
     }
 }
 
@@ -32,7 +40,17 @@ struct GeneralSettingsView: View {
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @State private var showLanguagePicker = false
     @EnvironmentObject private var networkManager: NetworkManager
-    
+
+    private let updater: SPUUpdater
+    @State private var automaticallyChecksForUpdates: Bool
+    @State private var automaticallyDownloadsUpdates: Bool
+
+    init(updater: SPUUpdater) {
+        self.updater = updater
+        _automaticallyChecksForUpdates = State(initialValue: updater.automaticallyChecksForUpdates)
+        _automaticallyDownloadsUpdates = State(initialValue: updater.automaticallyDownloadsUpdates)
+    }
+
     var body: some View {
         Form {
             GroupBox(label: Text("下载设置").padding(.bottom, 8)) {
@@ -86,8 +104,29 @@ struct GeneralSettingsView: View {
                         networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(8)
             }
+
+            GroupBox(label: Text("更新设置").padding(.bottom, 8)) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Toggle("自动检查更新版本", isOn: $automaticallyChecksForUpdates)
+                            .onChange(of: automaticallyChecksForUpdates) { newValue in
+                                updater.automaticallyChecksForUpdates = newValue
+                            }
+                        Spacer()
+                        
+                        CheckForUpdatesView(updater: updater)
+                    }
+                    Divider()
+                    Toggle("自动下载最新版本", isOn: $automaticallyDownloadsUpdates)
+                        .disabled(!automaticallyChecksForUpdates)
+                        .onChange(of: automaticallyDownloadsUpdates) { newValue in
+                            updater.automaticallyDownloadsUpdates = newValue
+                        }
+                }.padding(8)
+            }
+            .padding(.vertical, 5)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -126,13 +165,20 @@ struct GeneralSettingsView: View {
 }
 
 struct AboutAppView: View {
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        // let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        // return "Version \(version) (\(build))"
+        return "\(version)"
+    }
+    
     var body: some View {
         VStack(spacing: 12) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .frame(width: 96, height: 96)
             
-            Text("Adobe Downloader")
+            Text("Adobe Downloader \(appVersion)")
                 .font(.title2)
                 .bold()
             
@@ -168,8 +214,39 @@ struct AboutAppView: View {
     }
 }
 
-#Preview {
+#Preview("About Tab") {
+    AboutAppView()
+}
+
+#Preview("General Settings") {
     let networkManager = NetworkManager()
-    return AboutView()
-        .environmentObject(networkManager)
+    VStack {
+        GeneralSettingsView(updater: PreviewUpdater())
+            .environmentObject(networkManager)
+    }
+}
+
+private class PreviewUpdater: SPUUpdater {
+    init() {
+        let hostBundle = Bundle.main
+        let applicationBundle = Bundle.main
+        let userDriver = SPUStandardUserDriver(hostBundle: hostBundle, delegate: nil)
+        
+        super.init(
+            hostBundle: hostBundle,
+            applicationBundle: applicationBundle,
+            userDriver: userDriver,
+            delegate: nil
+        )
+    }
+    
+    override var automaticallyChecksForUpdates: Bool {
+        get { true }
+        set { }
+    }
+    
+    override var automaticallyDownloadsUpdates: Bool {
+        get { true }
+        set { }
+    }
 } 

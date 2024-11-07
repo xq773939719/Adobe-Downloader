@@ -443,10 +443,6 @@ struct ProductRow: View {
     let isCurrentProduct: Bool
     @Binding var expandedProducts: Set<String>
     
-    private var completedPackagesCount: Int {
-        product.packages.filter(\.downloaded).count
-    }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Button(action: {
@@ -467,7 +463,7 @@ struct ProductRow: View {
                     
                     Spacer()
                     
-                    Text("\(completedPackagesCount)/\(product.packages.count)")
+                    Text("\(product.completedPackages)/\(product.totalPackages)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     

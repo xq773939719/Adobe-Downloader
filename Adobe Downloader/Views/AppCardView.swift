@@ -51,22 +51,24 @@ class AppCardViewModel: ObservableObject {
         self.sap = sap
         self.networkManager = networkManager
         loadIcon()
-    }
-    
-    func updateDownloadingStatus() {
-        Task { @MainActor in
-            isDownloading = networkManager?.downloadTasks.contains(where: isTaskDownloading) ?? false
-        }
-    }
-    
-    private func isTaskDownloading(_ task: NewDownloadTask) -> Bool {
-        guard task.sapCode == sap.sapCode else { return false }
         
-        switch task.totalStatus {
-        case .downloading, .preparing, .waiting, .retrying:
-            return true
-        default:
-            return false
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(updateDownloadingStatus),
+            name: NSNotification.Name("UpdateDownloadStatus"),
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc func updateDownloadingStatus() {
+        Task { @MainActor in
+            isDownloading = networkManager?.downloadTasks.contains { task in
+                return task.sapCode == sap.sapCode && task.status.isActive
+            } ?? false
         }
     }
 
@@ -202,6 +204,17 @@ class AppCardViewModel: ObservableObject {
     func createCompletedTask(_ path: URL) async {
         guard let networkManager = networkManager,
               let productInfo = sap.versions[pendingVersion] else { return }
+
+        let existingTask = await networkManager.downloadTasks.first { task in
+            return task.sapCode == sap.sapCode && 
+                   task.version == pendingVersion && 
+                   task.language == pendingLanguage &&
+                   task.directory == path
+        }
+        
+        if existingTask != nil {
+            return
+        }
 
         var productsToDownload: [ProductsToDownload] = []
         let mainProduct = ProductsToDownload(
@@ -446,38 +459,38 @@ private struct DownloadButton: View {
 struct AlertModifier: ViewModifier {
     @ObservedObject var viewModel: AppCardViewModel
     let confirmRedownload: Bool
-    
+
     func body(content: Content) -> some View {
         content
-            .alert("安装程序已存在", isPresented: $viewModel.showExistingFileAlert) {
-                Button("使用现有程序") {
-                    if let path = viewModel.existingFilePath,
-                       !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
-                        Task {
-                            await viewModel.createCompletedTask(path)
-                        }
-                    }
-                }
-                Button("重新下载") {
-                    if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
-                        if confirmRedownload {
-                            viewModel.showRedownloadConfirm = true
-                        } else {
-                            viewModel.startDownload(viewModel.pendingVersion, viewModel.pendingLanguage)
-                        }
-                    }
-                }
-                Button("取消", role: .cancel) {}
-            } message: {
-                VStack(alignment: .leading) {
-                    Text("在以下位置找到现有的安装程序：")
-                    if let path = viewModel.existingFilePath {
-                        Text(path.path)
-                            .foregroundColor(.blue)
-                            .onTapGesture {
-                                NSWorkspace.shared.selectFile(path.path, inFileViewerRootedAtPath: path.deletingLastPathComponent().path)
+            .sheet(isPresented: $viewModel.showExistingFileAlert) {
+                if let path = viewModel.existingFilePath {
+                    ExistingFileAlertView(
+                        path: path,
+                        onUseExisting: {
+                            viewModel.showExistingFileAlert = false
+                            if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
+                                Task {
+                                    await viewModel.createCompletedTask(path)
+                                }
                             }
-                    }
+                        },
+                        onRedownload: {
+                            viewModel.showExistingFileAlert = false
+                            if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
+                                if confirmRedownload {
+                                    viewModel.showRedownloadConfirm = true
+                                } else {
+                                    viewModel.startDownload(viewModel.pendingVersion, viewModel.pendingLanguage)
+                                }
+                            }
+                        },
+                        onCancel: {
+                            viewModel.showExistingFileAlert = false
+                        },
+                        iconImage: viewModel.iconImage
+                    )
+                    .background(Color.black.opacity(0.3))
+                    .ignoresSafeArea()
                 }
             }
             .alert("确认重新下载", isPresented: $viewModel.showRedownloadConfirm) {

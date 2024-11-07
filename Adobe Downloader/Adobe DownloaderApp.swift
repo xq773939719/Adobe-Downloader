@@ -1,4 +1,5 @@
 import SwiftUI
+import Sparkle
 
 @main
 struct Adobe_DownloaderApp: App {
@@ -14,8 +15,11 @@ struct Adobe_DownloaderApp: App {
     @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
     @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
     @AppStorage("defaultDirectory") private var defaultDirectory: String = "Downloads"
-
+    private let updaterController: SPUStandardUpdaterController
+    
     init() {
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        
         let isFirstRun = UserDefaults.standard.object(forKey: "downloadAppleSilicon") == nil ||
                         UserDefaults.standard.object(forKey: "useDefaultLanguage") == nil
         
@@ -165,9 +169,13 @@ struct Adobe_DownloaderApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
-
+        .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: updaterController.updater)
+            }
+        }
         Settings {
-            AboutView()
+            AboutView(updater: updaterController.updater)
                 .environmentObject(networkManager)
         }
     }

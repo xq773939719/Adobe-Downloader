@@ -20,10 +20,10 @@ actor InstallManager {
         
         var errorDescription: String? {
             switch self {
-            case .setupNotFound: return "找不到安装程序"
-            case .installationFailed(let message): return message
-            case .cancelled: return "安装已取消"
-            case .permissionDenied: return "权限被拒绝"
+                case .setupNotFound: return String(localized: "找不到安装程序")
+                case .installationFailed(let message): return message
+                case .cancelled: return String(localized: "安装已取消")
+                case .permissionDenied: return String(localized: "权限被拒绝")
             }
         }
     }
@@ -72,7 +72,7 @@ actor InstallManager {
         installationProcess = installProcess
 
         await MainActor.run {
-            progressHandler(0.0, withSudo ? "正在准备安装..." : "正在重试安装...")
+            progressHandler(0.0, withSudo ? String(localized: "正在准备安装...") : String(localized: "正在重试安装..."))
         }
 
         try installProcess.run()
@@ -93,10 +93,10 @@ actor InstallManager {
                            let codeStr = line[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
                            let code = Int32(codeStr) {
                             if code != 0 {
-                                let errorMessage = code == -1 
-                                    ? "安装程序调用失败，请联系X1a0He"
-                                    : "(退出代码: \(code))"
-                                
+                                let errorMessage = code == -1
+                                    ? String(localized: "安装程序调用失败，请联系X1a0He")
+                                    : String(localized: "(退出代码: \(code))")
+
                                 installProcess.terminate()
                                 continuation.resume(throwing: InstallError.installationFailed(errorMessage))
                                 return
@@ -115,9 +115,9 @@ actor InstallManager {
                     if installProcess.terminationStatus == 0 {
                         continuation.resume()
                     } else {
-                        let errorMessage = withSudo 
-                            ? "安装失败 (退出代码: \(installProcess.terminationStatus))"
-                            : "重试失败，需要重新输入密码"
+                        let errorMessage = withSudo
+                            ? String(localized: "(退出代码: \(installProcess.terminationStatus))")
+                            : String(localized: "重试失败，需要重新输入密码")
                         continuation.resume(throwing: InstallError.installationFailed(errorMessage))
                     }
                 } catch {
@@ -127,7 +127,7 @@ actor InstallManager {
         }
 
         await MainActor.run {
-            progressHandler(1.0, "安装完成")
+            progressHandler(1.0, String(localized: "安装完成"))
         }
     }
     
@@ -167,7 +167,7 @@ actor InstallManager {
         authProcess.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         let authScript = """
         tell application "System Events"
-            display dialog "请输入管理员密码以继续安装" default answer "" with hidden answer ¬
+            display dialog "请输入管理员密码以继续安装(Please enter the password to continue the installation)" default answer "" with hidden answer ¬
                 buttons {"取消", "确定"} default button "确定" ¬
                 with icon caution ¬
                 with title "需要管理员权限"
@@ -208,22 +208,26 @@ actor InstallManager {
         if let range = line.range(of: "Exit Code: (-?[0-9]+)", options: .regularExpression),
            let codeStr = line[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
            let exitCode = Int(codeStr) {
-            return exitCode == 0 ? (1.0, "安装完成") : nil
+            return exitCode == 0 ? (1.0, String(localized: "安装完成")) : nil
         }
 
         if let range = line.range(of: "Progress: ([0-9]{1,3})%", options: .regularExpression),
            let progressStr = line[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
            let progressValue = Double(progressStr.replacingOccurrences(of: "%", with: "")) {
-            return (progressValue / 100.0, "正在安装...")
+            return (progressValue / 100.0, String("正在安装..."))
         }
 
         if line.contains("Installing packages") {
-            return (0.0, "正在安装包...")
+            return (0.0, String(localized: "正在安装包..."))
         } else if line.contains("Preparing") {
-            return (0.0, "正在准备...")
+            return (0.0, String(localized: "正在准备..."))
         }
 
         return nil
+    }
+
+    func getInstallCommand(for driverPath: String) -> String {
+        return "sudo \"\(setupPath)\" --install=1 --driverXML=\"\(driverPath)\""
     }
 } 
 

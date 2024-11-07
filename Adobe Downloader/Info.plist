@@ -2,38 +2,30 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- 允许访问网络 -->
-    <key>com.apple.security.network.client</key>
-    <true/>
-    
-    <!-- 允许访问本地网络 -->
-    <key>com.apple.security.network.server</key>
-    <true/>
-    
-    <!-- 添加以下键值对 -->
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
-    
-    <!-- 添加以下权限声明 -->
-    <key>NSDownloadsFolderUsageDescription</key>
-    <string>需要访问下载文件夹来保存Adobe安装文件</string>
-    
-    <!-- 添加以下权限 -->
-    <key>com.apple.security.app-sandbox</key>
-    <true/>
-    
-    <key>com.apple.security.files.downloads.read-write</key>
-    <true/>
-    
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
-    
-    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
-    <array>
-        <string>/Downloads/</string>
-    </array>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>需要访问下载文件夹来保存Adobe安装文件</string>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.downloads.read-write</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+	<array>
+		<string>/Downloads/</string>
+	</array>
+	<key>SUPublicEDKey</key>
+	<string>gYylad3ybfiyK5ZTS3xRrw+3c/8063mpXdQnPpMB86Q=</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/X1a0He/Adobe-Downloader/refs/heads/main/appcast.xml</string>
 </dict>
 </plist>

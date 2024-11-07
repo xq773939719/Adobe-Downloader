@@ -4,14 +4,14 @@
         <title>Adobe Downloader</title>
         <item>
             <title>1.0.1</title>
-            <pubDate>Thu, 07 Nov 2024 16:06:42 +0800</pubDate>
+            <pubDate>Thu, 07 Nov 2024 21:29:26 +0800</pubDate>
             <sparkle:version>101</sparkle:version>
             <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <enclosure
                     url="https://raw.githubusercontent.com/X1a0He/Adobe-Downloader/refs/heads/main/Adobe%20Downloader.dmg"
-                    length="2531087" type="application/octet-stream"
-                    sparkle:edSignature="aEktEis1fZBGVe1BeYRkWtr+6pAYF1a3bjT9tjP3Jha+kdvft1xXAtUjX0m76emFCzPi6M+GYEYuxeAE44rFDQ=="/>
+                    length="2535835" type="application/octet-stream"
+                    sparkle:edSignature="/paRKw18fjGopMIkrNSPJV1k0NloLccfjeyBLjjbNus7IyjFyGmdTH5ccxcbcXnYuFqozFrtKuBizpTCmNJfBw=="/>
             <description><![CDATA[
                 <style>ul{margin-top: 0;margin-bottom: 7;padding-left: 18;}</style>
                 <h5>Adobe Downloader 更新日志: </h1>
@@ -21,6 +21,7 @@
                     <li>当默认目录为 未选择 时，将 下载 文件夹作为默认目录</li>
                     <li>当通过 Adobe Downloader 安装遇到权限问题时，提供终端命令让用户自行安装</li>
                     <li>调整了文件已存在的 UI 显示</li>
+                    <li>修复了在任务下载中，已下载包与总包数量不更新的问题</li>
                 </ul>
                 <hr>
                 <h5>Adobe Downloader Changes: </h1>
@@ -31,6 +32,7 @@
                     <li>When installing via Adobe Downloader and encountering permission issues, provide terminal commands to allow users to</li>
                     <li>install by themselves</li>
                     <li>Adjusted the UI display of existing files</li>
+                    <li>Fixed the issue where the number of downloaded packages and total packages was not updated during task download</li>
                 </ul>
             ]]></description>
         </item>

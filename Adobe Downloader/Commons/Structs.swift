@@ -125,13 +125,10 @@ class ProductsToDownload: ObservableObject {
     }
     
     func updateCompletedPackages() {
-        completedPackages = packages.filter { 
-            if case .completed = $0.status {
-                return true
-            }
-            return $0.downloaded
-        }.count
-        objectWillChange.send()
+        Task { @MainActor in
+            completedPackages = packages.filter { $0.downloaded }.count
+            objectWillChange.send()
+        }
     }
 }
 

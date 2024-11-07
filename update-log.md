@@ -1,6 +1,6 @@
 # Change Log
 
-- 2024-11-07 16:00 更新日志
+- 2024-11-07 21:10 更新日志
 
 ```markdown
 1. 修复了当系统版本低于 macOS 14.6 时无法打开程序的问题，现已支持 macOS 13.0 以上
@@ -8,6 +8,7 @@
 3. 当默认目录为 未选择 时，将 下载 文件夹作为默认目录
 4. 当通过 Adobe Downloader 安装遇到权限问题时，提供终端命令让用户自行安装
 5. 调整了文件已存在的 UI 显示
+6. 修复了在任务下载中，已下载包与总包数量不更新的问题
 
 ====================
 
@@ -17,6 +18,7 @@
 4. When installing via Adobe Downloader and encountering permission issues, provide terminal commands to allow users to
    install by themselves
 5. Adjusted the UI display of existing files
+6. Fixed the issue where the number of downloaded packages and total packages was not updated during task download
 ```
 
 - 2024-11-06 15:50 更新日志

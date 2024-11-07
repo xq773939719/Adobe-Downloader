@@ -51,20 +51,10 @@ class AppCardViewModel: ObservableObject {
         self.sap = sap
         self.networkManager = networkManager
         loadIcon()
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(updateDownloadingStatus),
-            name: NSNotification.Name("UpdateDownloadStatus"),
-            object: nil
-        )
+        updateDownloadingStatus()
     }
     
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-    
-    @objc func updateDownloadingStatus() {
+    func updateDownloadingStatus() {
         Task { @MainActor in
             isDownloading = networkManager?.downloadTasks.contains { task in
                 return task.sapCode == sap.sapCode && task.status.isActive

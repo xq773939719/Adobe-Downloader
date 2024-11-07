@@ -8,7 +8,7 @@
 
 **🍎仅支持 macOS 13.0+**
 
-> **如果你也喜欢 Adobe Downloader, 或者对你又帮助, 请 Star 仓库吧 🌟, 你的支持是我更新的动力**
+> **如果你也喜欢 Adobe Downloader, 或者对你有帮助, 请 Star 仓库吧 🌟, 你的支持是我更新的动力**
 >
 > 1. 在对
      Adobe产品进行安装前，你必须先安装 [Adobe Creative Cloud](https://creativecloud.adobe.com/apps/download/creative-cloud)
@@ -26,7 +26,7 @@
 
 - 更多关于 App 的更新日志，请查看 [Update Log](update-log.md)
 
-- 2024-11-07 16:00 更新日志
+- 2024-11-07 21:10 更新日志
 
 ```markdown
 1. 修复了当系统版本低于 macOS 14.6 时无法打开程序的问题，现已支持 macOS 13.0 以上
@@ -34,6 +34,7 @@
 3. 当默认目录为 未选择 时，将 下载 文件夹作为默认目录
 4. 当通过 Adobe Downloader 安装遇到权限问题时，提供终端命令让用户自行安装
 5. 调整了文件已存在的 UI 显示
+6. 修复了在任务下载中，已下载包与总包数量不更新的问题
 ```
 
 ### 语言支持

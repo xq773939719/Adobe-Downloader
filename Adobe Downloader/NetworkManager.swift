@@ -31,6 +31,7 @@ class NetworkManager: ObservableObject {
     internal var isFetchingProducts = false
     private let installManager = InstallManager()
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
+    @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
     
     enum InstallationState {
         case idle
@@ -72,8 +73,6 @@ class NetworkManager: ObservableObject {
         
         downloadTasks.append(task)
         updateDockBadge()
-        
-        NotificationCenter.default.post(name: NSNotification.Name("UpdateDownloadStatus"), object: nil)
         
         do {
             try await downloadUtils.handleDownload(task: task, productInfo: productInfo, allowedPlatform: allowedPlatform, saps: saps)
@@ -366,14 +365,10 @@ class NetworkManager: ObservableObject {
 
     func isVersionDownloaded(sap: Sap, version: String, language: String) -> URL? {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
-        var fileName = ""
-        if(sap.sapCode=="APRO") {
-            fileName = "Adobe Downloader \(sap.sapCode)_\(version)_\(platform).dmg"
-        } else {
-            fileName = "Adobe Downloader \(sap.sapCode)_\(version)-\(language)-\(platform)"
-        }
+        let fileName = sap.sapCode == "APRO" 
+            ? "Adobe Downloader \(sap.sapCode)_\(version)_\(platform).dmg"
+            : "Adobe Downloader \(sap.sapCode)_\(version)-\(language)-\(platform)"
 
-        let useDefaultDirectory = UserDefaults.standard.bool(forKey: "useDefaultDirectory")
         if useDefaultDirectory && !defaultDirectory.isEmpty {
             let defaultPath = URL(fileURLWithPath: defaultDirectory)
                 .appendingPathComponent(fileName)

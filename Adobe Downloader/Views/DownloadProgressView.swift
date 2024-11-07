@@ -239,8 +239,8 @@ struct DownloadProgressView: View {
         return formatter.string(fromByteCount: Int64(bytesPerSecond)) + "/s"
     }
 
-    private func openInFinder(_ url: URL) {
-        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
+    private func openInFinder(_ path: String) {
+        NSWorkspace.shared.selectFile(URL(fileURLWithPath: path).path, inFileViewerRootedAtPath: URL(fileURLWithPath: path).deletingLastPathComponent().path)
     }
     
     private func formatRemainingTime(totalSize: Int64, downloadedSize: Int64, speed: Double) -> String {
@@ -347,7 +347,7 @@ struct DownloadProgressView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .onTapGesture {
-                            openInFinder(task.directory)
+                            openInFinder(task.directory.path)
                         }
                         .help(task.directory.path)
                 }

@@ -12,8 +12,13 @@ struct VersionPickerView: View {
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @State private var expandedVersions: Set<String> = []
     
-    let sap: Sap
-    let onSelect: (String) -> Void
+    private let sap: Sap
+    private let onSelect: (String) -> Void
+    
+    init(sap: Sap, onSelect: @escaping (String) -> Void) {
+        self.sap = sap
+        self.onSelect = onSelect
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -73,9 +78,10 @@ struct VersionPickerView: View {
                                             language: defaultLanguage
                                         ) {
                                             Button(action: {
+                                                let path = existingPath.path
                                                 NSWorkspace.shared.selectFile(
-                                                    existingPath.path,
-                                                    inFileViewerRootedAtPath: existingPath.deletingLastPathComponent().path
+                                                    path,
+                                                    inFileViewerRootedAtPath: URL(fileURLWithPath: path).deletingLastPathComponent().path
                                                 )
                                             }) {
                                                 Text("已存在")

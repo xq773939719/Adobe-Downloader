@@ -394,6 +394,8 @@ class DownloadUtils {
                                 totalSize: totalSize
                             )))
                         }
+                        
+                        product.updateCompletedPackages()
 
                         networkManager?.objectWillChange.send()
                     }

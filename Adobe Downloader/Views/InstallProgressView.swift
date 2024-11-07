@@ -258,6 +258,7 @@ private struct ButtonSection: View {
 private struct CommandPopover: View {
     @EnvironmentObject private var networkManager: NetworkManager
     @State private var showPopover = false
+    @State private var showCopiedAlert = false
     
     var body: some View {
         Button(action: { showPopover.toggle() }) {
@@ -268,10 +269,25 @@ private struct CommandPopover: View {
         .popover(isPresented: $showPopover, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 8) {
                 Button("复制命令") {
-
+                    let command = networkManager.installCommand
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(command, forType: .string)
+                    showCopiedAlert = true
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        showCopiedAlert = false
+                    }
                 }
 
-                Text(networkManager.installCommand)
+                if showCopiedAlert {
+                    Text("已复制")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+
+                let command = networkManager.installCommand
+                Text(command)
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(.secondary)
                     .textSelection(.enabled)

@@ -27,7 +27,7 @@
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-07 16:00 Update Log
+- 2024-11-07 21:10 Update Log
 
 ```markdown
 1. Support macOS 13.0 and above
@@ -36,6 +36,7 @@
 4. When installing via Adobe Downloader and encountering permission issues, provide terminal commands to allow users to
    install by themselves
 5. Adjusted the UI display of existing files
+6. Fixed the issue where the number of downloaded packages and total packages was not updated during task download
 ```
 
 ### Language friendly

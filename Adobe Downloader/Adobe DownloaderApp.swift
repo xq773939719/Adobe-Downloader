@@ -172,7 +172,7 @@ struct Adobe_DownloaderApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .windowResizabilityContentSize()
         .commands {
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater)
@@ -211,5 +211,15 @@ struct Adobe_DownloaderApp: App {
 
     private func getLanguageName(code: String) -> String {
         AppStatics.supportedLanguages.first { $0.code == code }?.name ?? code
+    }
+}
+
+extension Scene {
+    func windowResizabilityContentSize() -> some Scene {
+        if #available(macOS 13.0, *) {
+            return windowResizability(.contentSize)
+        } else {
+            return self
+        }
     }
 }

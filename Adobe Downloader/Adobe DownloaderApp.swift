@@ -14,7 +14,7 @@ struct Adobe_DownloaderApp: App {
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
     @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
-    @AppStorage("defaultDirectory") private var defaultDirectory: String = "Downloads"
+    @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
     private let updaterController: SPUStandardUpdaterController
     
     init() {
@@ -40,8 +40,12 @@ struct Adobe_DownloaderApp: App {
         }
         
         if UserDefaults.standard.object(forKey: "useDefaultDirectory") == nil {
-            UserDefaults.standard.set(true, forKey: "useDefaultDirectory")
-            UserDefaults.standard.set("Downloads", forKey: "defaultDirectory")
+            if let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first {
+                print(downloadsURL.path)
+                defaultDirectory = downloadsURL.path
+                UserDefaults.standard.set(true, forKey: "useDefaultDirectory")
+                UserDefaults.standard.set(downloadsURL.path, forKey: "defaultDirectory")
+            }
         }
     }
     

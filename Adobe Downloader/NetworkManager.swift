@@ -40,12 +40,18 @@ class NetworkManager: ObservableObject {
         case failed(Error)
     }
 
-    init() {
+    private let networkService: NetworkService
+
+    init(networkService: NetworkService = NetworkService(),
+         downloadUtils: DownloadUtils? = nil) {
         let useAppleSilicon = UserDefaults.standard.bool(forKey: "downloadAppleSilicon")
         self.allowedPlatform = useAppleSilicon ? ["macuniversal", "macarm64"] : ["macuniversal", "osx10-64"]
         
-        self.downloadUtils = DownloadUtils(networkManager: self, cancelTracker: cancelTracker)
-        setupNetworkMonitoring()
+        self.networkService = networkService
+        self.downloadUtils = downloadUtils ?? DownloadUtils(networkManager: self, cancelTracker: cancelTracker)
+        
+        TaskPersistenceManager.shared.setCancelTracker(cancelTracker)
+        configureNetworkMonitor()
     }
 
     func fetchProducts() async {
@@ -64,15 +70,21 @@ class NetworkManager: ObservableObject {
             directory: destinationURL,
             productsToDownload: [],
             createAt: Date(),
-            totalStatus: .preparing(DownloadStatus.PrepareInfo(message: "正在准备下载...", timestamp: Date(), stage: .initializing)),
+            totalStatus: .preparing(DownloadStatus.PrepareInfo(
+                message: "正在准备下载...",
+                timestamp: Date(),
+                stage: .initializing
+            )),
             totalProgress: 0,
             totalDownloadedSize: 0,
             totalSize: 0,
-            totalSpeed: 0
+            totalSpeed: 0,
+            platform: productInfo.apPlatform
         )
         
         downloadTasks.append(task)
         updateDockBadge()
+        saveTask(task)
         
         do {
             try await downloadUtils.handleDownload(task: task, productInfo: productInfo, allowedPlatform: allowedPlatform, saps: saps)
@@ -84,6 +96,7 @@ class NetworkManager: ObservableObject {
                     timestamp: Date(),
                     recoverable: true
                 )))
+                saveTask(task)
                 objectWillChange.send()
             }
             throw error
@@ -101,9 +114,21 @@ class NetworkManager: ObservableObject {
            await cancelTracker.cancel(taskId)
            
            if let task = downloadTasks.first(where: { $0.id == taskId }) {
+               if task.status.isActive {
+                   task.setStatus(.failed(DownloadStatus.FailureInfo(
+                       message: "下载已取消",
+                       error: NetworkError.downloadCancelled,
+                       timestamp: Date(),
+                       recoverable: false
+                   )))
+                   saveTask(task)
+               }
+               
                if removeFiles {
                    try? FileManager.default.removeItem(at: task.directory)
                }
+               
+               TaskPersistenceManager.shared.removeTask(task)
                
                await MainActor.run {
                    downloadTasks.removeAll { $0.id == taskId }
@@ -125,7 +150,7 @@ class NetworkManager: ObservableObject {
         
         while retryCount < maxRetries {
             do {
-                let (saps, cdn, sapCodes) = try await fetchProductsData()
+                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData()
 
                 await MainActor.run {
                     self.saps = saps
@@ -273,97 +298,17 @@ class NetworkManager: ObservableObject {
     }
 
     func getApplicationInfo(buildGuid: String) async throws -> String {
-        guard let url = URL(string: NetworkConstants.applicationJsonURL) else {
-            throw NetworkError.invalidURL(NetworkConstants.applicationJsonURL)
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        
-        var headers = NetworkConstants.adobeRequestHeaders
-        headers["x-adobe-build-guid"] = buildGuid
-        headers["Cookie"] = generateCookie()
-        
-        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
-        }
-        
-        guard let jsonString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidData("无法将响应数据转换为json符串")
-        }
-        
-        return jsonString
-    }
-
-    func fetchProductsData() async throws -> ([String: Sap], String, [SapCodes]) {
-        var components = URLComponents(string: NetworkConstants.productsXmlURL)
-        components?.queryItems = [
-            URLQueryItem(name: "_type", value: "xml"),
-            URLQueryItem(name: "channel", value: "ccm"),
-            URLQueryItem(name: "channel", value: "sti"),
-            URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
-            URLQueryItem(name: "productType", value: "Desktop")
-        ]
-        
-        guard let url = components?.url else {
-            throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(httpResponse.statusCode, nil)
-        }
-        
-        guard let xmlString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidData("无法解码XML数据")
-        }
-
-        let result: ([String: Sap], String, [SapCodes]) = try await Task.detached(priority: .userInitiated) {
-            let parseResult = try XHXMLParser.parse(xmlString: xmlString)
-            let products = parseResult.products, cdn = parseResult.cdn
-            var sapCodes: [SapCodes] = []
-            let allowedPlatforms = ["macuniversal", "macarm64", "osx10-64", "osx10"]
-            for product in products.values {
-                if product.isValid {
-                    var lastVersion: String? = nil
-                    for version in product.versions.values.reversed() {
-                        if !version.buildGuid.isEmpty && allowedPlatforms.contains(version.apPlatform) {
-                            lastVersion = version.productVersion
-                            break
-                        }
-                    }
-                    if lastVersion != nil {
-                        sapCodes.append(SapCodes(
-                            sapCode: product.sapCode,
-                            displayName: product.displayName
-                        ))
-                    }
-                }
-            }
-            return (products, cdn, sapCodes)
-        }.value
-        
-        return result
+        return try await networkService.getApplicationInfo(buildGuid: buildGuid)
     }
 
     func isVersionDownloaded(sap: Sap, version: String, language: String) -> URL? {
+        if let task = downloadTasks.first(where: {
+            $0.sapCode == sap.sapCode &&
+            $0.version == version &&
+            $0.language == language &&
+            !$0.status.isCompleted
+        }) { return task.directory }
+
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         let fileName = sap.sapCode == "APRO" 
             ? "Adobe Downloader \(sap.sapCode)_\(version)_\(platform).dmg"
@@ -374,16 +319,6 @@ class NetworkManager: ObservableObject {
                 .appendingPathComponent(fileName)
             if FileManager.default.fileExists(atPath: defaultPath.path) {
                 return defaultPath
-            }
-        }
-
-        if let task = downloadTasks.first(where: {
-            $0.sapCode == sap.sapCode &&
-            $0.version == version &&
-            $0.language == language
-        }) {
-            if FileManager.default.fileExists(atPath: task.directory.path) {
-                return task.directory
             }
         }
 
@@ -405,10 +340,6 @@ class NetworkManager: ObservableObject {
         }
     }
 
-    private func setupNetworkMonitoring() {
-        configureNetworkMonitor()
-    }
-
     func retryFetchData() {
         Task {
             isFetchingProducts = false
@@ -419,5 +350,20 @@ class NetworkManager: ObservableObject {
 
     func updateAllowedPlatform(useAppleSilicon: Bool) {
         allowedPlatform = useAppleSilicon ? ["macuniversal", "macarm64"] : ["macuniversal", "osx10-64"]
+    }
+
+    func saveTask(_ task: NewDownloadTask) {
+        TaskPersistenceManager.shared.saveTask(task)
+    }
+
+    func loadSavedTasks() {
+        let savedTasks = TaskPersistenceManager.shared.loadTasks()
+        for task in savedTasks {
+            for product in task.productsToDownload {
+                product.updateCompletedPackages()
+            }
+        }
+        downloadTasks.append(contentsOf: savedTasks)
+        updateDockBadge()
     }
 }

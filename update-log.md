@@ -1,6 +1,28 @@
 # Change Log
 
+- 2024-11-09 23:00 更新日志
+
+[//]: # (1.1.0)
+
+```markdown
+1. 修复了初次启动程序时，默认下载目录为 "Downloads" 导致提示 你不能存储文件“ILST”，因为该宗卷是只读宗卷 的问题
+2. 新的实现取代了 windowResizability 以适应 macOS 12.0+（可能）
+3. 新增下载记录持久化功能(M1 Max macOS 15上测试正常，未测试其他机型)
+
+PS: 此版本改动略大，如有bugs，请及时提出
+====================
+
+1. Fixed the issue that when launching the program for the first time, the default directory is "Downloads", which
+   causes a download error message
+2. New implementation replaces windowResizability to adapt to macOS 12.0+ (Maybe)
+3. Added task record persistence(Tested normally on M1 Max macOS 15, other models not tested)
+
+PS: This version has been slightly changed. If there are any bugs, please report them in time.
+```
+
 - 2024-11-07 21:10 更新日志
+
+[//]: # (1.0.1)
 
 ```markdown
 1. 修复了当系统版本低于 macOS 14.6 时无法打开程序的问题，现已支持 macOS 13.0 以上
@@ -20,6 +42,14 @@
 5. Adjusted the UI display of existing files
 6. Fixed the issue where the number of downloaded packages and total packages was not updated during task download
 ```
+
+<img width="1064" alt="image" src="https://github.com/user-attachments/assets/84f3f1de-a429-45ca-9b29-948234b4fcdb">
+
+<img width="530" alt="image" src="https://github.com/user-attachments/assets/7a22ea27-449b-42cf-8142-fce1215c5d12">
+
+<img width="427" alt="image" src="https://github.com/user-attachments/assets/403b20db-4014-4645-8833-3616390b17fb">
+
+<img width="880" alt="image" src="https://github.com/user-attachments/assets/b6b04cd9-bfdf-4cdd-b14c-6dcd48b376a7">
 
 - 2024-11-06 15:50 更新日志
 

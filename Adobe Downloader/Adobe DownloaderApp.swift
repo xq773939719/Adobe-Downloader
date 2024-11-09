@@ -56,6 +56,10 @@ struct Adobe_DownloaderApp: App {
                 .frame(width: 850, height: 800)
                 .tint(.blue)
                 .onAppear {
+                    appDelegate.networkManager = networkManager
+                    
+                    networkManager.loadSavedTasks()
+                    
                     checkCreativeCloudSetup()
                     
                     if ModifySetup.checkSetupBackup() {

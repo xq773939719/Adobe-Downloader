@@ -8,7 +8,7 @@ import Foundation
 actor CancelTracker {
     private var cancelledIds: Set<UUID> = []
     private var pausedIds: Set<UUID> = []
-    private var downloadTasks: [UUID: URLSessionDownloadTask] = [:]
+    var downloadTasks: [UUID: URLSessionDownloadTask] = [:]
     private var sessions: [UUID: URLSession] = [:]
     private var resumeData: [UUID: Data] = [:]
 
@@ -63,5 +63,9 @@ actor CancelTracker {
     
     func isPaused(_ id: UUID) -> Bool {
         return pausedIds.contains(id)
+    }
+    
+    func storeResumeData(_ id: UUID, data: Data) {
+        resumeData[id] = data
     }
 } 

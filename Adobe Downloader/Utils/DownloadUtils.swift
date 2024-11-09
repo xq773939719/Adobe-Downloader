@@ -103,6 +103,18 @@ class DownloadUtils {
     }
 
     func pauseDownloadTask(taskId: UUID, reason: DownloadStatus.PauseInfo.PauseReason) async {
+        let task = await cancelTracker.downloadTasks[taskId]
+        if let downloadTask = task {
+            let data = await withCheckedContinuation { continuation in
+                downloadTask.cancel(byProducingResumeData: { data in
+                    continuation.resume(returning: data)
+                })
+            }
+            if let data = data {
+                await cancelTracker.storeResumeData(taskId, data: data)
+            }
+        }
+        
         await MainActor.run {
             if let task = networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
                 task.setStatus(.paused(DownloadStatus.PauseInfo(
@@ -110,24 +122,12 @@ class DownloadUtils {
                     timestamp: Date(),
                     resumable: true
                 )))
+                networkManager?.saveTask(task)
             }
         }
-        await cancelTracker.pause(taskId)
     }
     
     func resumeDownloadTask(taskId: UUID) async {
-        await MainActor.run {
-            if let task = networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
-                task.setStatus(.downloading(DownloadStatus.DownloadInfo(
-                    fileName: task.currentPackage?.fullPackageName ?? "",
-                    currentPackageIndex: 0,
-                    totalPackages: task.productsToDownload.reduce(0) { $0 + $1.packages.count },
-                    startTime: Date(),
-                    estimatedTimeRemaining: nil
-                )))
-            }
-        }
-        
         if let task = await networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
             await startDownloadProcess(task: task)
         }
@@ -223,7 +223,133 @@ class DownloadUtils {
         }
     }
 
-    internal func startDownloadProcess(task: NewDownloadTask) async {
+    private func downloadPackage(package: Package, task: NewDownloadTask, product: ProductsToDownload, url: URL? = nil, resumeData: Data? = nil) async throws {
+        var lastUpdateTime = Date()
+        var lastBytes: Int64 = 0
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            let delegate = DownloadDelegate(
+                destinationDirectory: task.directory.appendingPathComponent(product.sapCode),
+                fileName: package.fullPackageName,
+                completionHandler: { [weak networkManager] localURL, response, error in
+                    if let error = error {
+                        if (error as NSError).code == NSURLErrorCancelled {
+                            continuation.resume()
+                        } else {
+                            continuation.resume(throwing: error)
+                        }
+                        return
+                    }
+
+                    Task { @MainActor in
+                        package.downloadedSize = package.downloadSize
+                        package.progress = 1.0
+                        package.status = .completed
+                        package.downloaded = true
+                        
+                        var totalDownloaded: Int64 = 0
+                        var totalSize: Int64 = 0
+
+                        for prod in task.productsToDownload {
+                            for pkg in prod.packages {
+                                totalSize += pkg.downloadSize
+                                if pkg.downloaded {
+                                    totalDownloaded += pkg.downloadSize
+                                }
+                            }
+                        }
+
+                        task.totalSize = totalSize
+                        task.totalDownloadedSize = totalDownloaded
+                        task.totalProgress = Double(totalDownloaded) / Double(totalSize)
+                        task.totalSpeed = 0
+
+                        let allCompleted = task.productsToDownload.allSatisfy {
+                            product in product.packages.allSatisfy { $0.downloaded }
+                        }
+
+                        if allCompleted {
+                            task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                                timestamp: Date(),
+                                totalTime: Date().timeIntervalSince(task.createAt),
+                                totalSize: totalSize
+                            )))
+                        }
+                        
+                        product.updateCompletedPackages()
+                        networkManager?.saveTask(task)
+                        networkManager?.objectWillChange.send()
+                    }
+
+                    continuation.resume()
+                },
+                progressHandler: { [weak networkManager] bytesWritten, totalBytesWritten, totalBytesExpectedToWrite in
+                    Task { @MainActor in
+                        let now = Date()
+                        let timeDiff = now.timeIntervalSince(lastUpdateTime)
+
+                        if timeDiff >= 1.0 {
+                            let bytesDiff = totalBytesWritten - lastBytes
+                            let speed = Double(bytesDiff) / timeDiff
+                            
+                            package.updateProgress(
+                                downloadedSize: totalBytesWritten,
+                                speed: speed
+                            )
+                            
+                            var totalDownloaded: Int64 = 0
+                            var totalSize: Int64 = 0
+                            var currentSpeed: Double = 0
+                            
+                            for prod in task.productsToDownload {
+                                for pkg in prod.packages {
+                                    totalSize += pkg.downloadSize
+                                    if pkg.downloaded {
+                                        totalDownloaded += pkg.downloadSize
+                                    } else if pkg.id == package.id {
+                                        totalDownloaded += totalBytesWritten
+                                        currentSpeed = speed
+                                    }
+                                }
+                            }
+                            
+                            task.totalSize = totalSize
+                            task.totalDownloadedSize = totalDownloaded
+                            task.totalProgress = totalSize > 0 ? Double(totalDownloaded) / Double(totalSize) : 0
+                            task.totalSpeed = currentSpeed
+                            
+                            lastUpdateTime = now
+                            lastBytes = totalBytesWritten
+                            
+                            networkManager?.objectWillChange.send()
+                        }
+                    }
+                }
+            )
+            
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            
+            Task {
+                let downloadTask: URLSessionDownloadTask
+                if let resumeData = resumeData {
+                    downloadTask = session.downloadTask(withResumeData: resumeData)
+                } else if let url = url {
+                    var request = URLRequest(url: url)
+                    NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+                    downloadTask = session.downloadTask(with: request)
+                } else {
+                    continuation.resume(throwing: NetworkError.invalidData("Neither URL nor resume data provided"))
+                    return
+                }
+                
+                await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
+                await cancelTracker.clearResumeData(task.id)
+                downloadTask.resume()
+            }
+        }
+    }
+
+    private func startDownloadProcess(task: NewDownloadTask) async {
         actor DownloadProgress {
             var currentPackageIndex: Int = 0
             func increment() { currentPackageIndex += 1 }
@@ -300,6 +426,7 @@ class DownloadUtils {
                         startTime: Date(),
                         estimatedTimeRemaining: nil
                     )))
+                    networkManager?.saveTask(task)
                 }
                 
                 await progress.increment()
@@ -318,10 +445,14 @@ class DownloadUtils {
                 guard let url = URL(string: downloadURL) else { continue }
 
                 do {
-                    try await downloadPackage(package: package, task: task, product: product, url: url)
+                    if let resumeData = await cancelTracker.getResumeData(task.id) {
+                        try await downloadPackage(package: package, task: task, product: product, resumeData: resumeData)
+                    } else {
+                        try await downloadPackage(package: package, task: task, product: product, url: url)
+                    }
                 } catch {
-                    print("Error downloading \(package.fullPackageName): \(error.localizedDescription)")
-                    await self.handleError(task.id, error)
+                    print("Error downloading package \(package.fullPackageName): \(error.localizedDescription)")
+                    await handleError(task.id, error)
                     return
                 }
             }
@@ -338,128 +469,7 @@ class DownloadUtils {
                     totalTime: Date().timeIntervalSince(task.createAt),
                     totalSize: task.totalSize
                 )))
-            }
-        }
-    }
-
-    private func downloadPackage(package: Package, task: NewDownloadTask, product: ProductsToDownload, url: URL) async throws {
-        var lastUpdateTime = Date()
-        var lastBytes: Int64 = 0
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let delegate = DownloadDelegate(
-                destinationDirectory: task.directory.appendingPathComponent(product.sapCode),
-                fileName: package.fullPackageName,
-                completionHandler: { [weak networkManager] localURL, response, error in
-                    if let error = error {
-                        if (error as NSError).code == NSURLErrorCancelled {
-                            continuation.resume()
-                        } else {
-                            continuation.resume(throwing: error)
-                        }
-                        return
-                    }
-
-                    Task { @MainActor in
-                        package.downloadedSize = package.downloadSize
-                        package.progress = 1.0
-                        package.status = .completed
-                        package.downloaded = true
-                        
-                        var totalDownloaded: Int64 = 0
-                        var totalSize: Int64 = 0
-
-                        for prod in task.productsToDownload {
-                            for pkg in prod.packages {
-                                totalSize += pkg.downloadSize
-                                if pkg.downloaded {
-                                    totalDownloaded += pkg.downloadSize
-                                }
-                            }
-                        }
-
-                        task.totalSize = totalSize
-                        task.totalDownloadedSize = totalDownloaded
-                        task.totalProgress = Double(totalDownloaded) / Double(totalSize)
-                        task.totalSpeed = 0
-
-                        let allCompleted = task.productsToDownload.allSatisfy {
-                            product in product.packages.allSatisfy { $0.downloaded }
-                        }
-
-                        if allCompleted {
-                            task.setStatus(.completed(DownloadStatus.CompletionInfo(
-                                timestamp: Date(),
-                                totalTime: Date().timeIntervalSince(task.createAt),
-                                totalSize: totalSize
-                            )))
-                        }
-                        
-                        product.updateCompletedPackages()
-
-                        networkManager?.objectWillChange.send()
-                    }
-
-                    continuation.resume()
-                },
-                progressHandler: { [weak networkManager] bytesWritten, totalBytesWritten, totalBytesExpectedToWrite in
-                    Task { @MainActor in
-                        let now = Date()
-                        let timeDiff = now.timeIntervalSince(lastUpdateTime)
-
-                        if timeDiff >= 1.0 {
-                            let bytesDiff = totalBytesWritten - lastBytes
-                            let speed = Double(bytesDiff) / timeDiff
-                            
-                            package.updateProgress(
-                                downloadedSize: totalBytesWritten,
-                                speed: speed
-                            )
-                            
-                            var completedSize: Int64 = 0
-                            var totalSize: Int64 = 0
-                            
-                            for prod in task.productsToDownload {
-                                for pkg in prod.packages {
-                                    totalSize += pkg.downloadSize
-                                    if pkg.downloaded {
-                                        completedSize += pkg.downloadSize
-                                    } else if pkg.id == package.id {
-                                        completedSize += totalBytesWritten
-                                    }
-                                }
-                            }
-                            
-                            task.totalSize = totalSize
-                            task.totalDownloadedSize = completedSize
-                            task.totalProgress = Double(completedSize) / Double(totalSize)
-                            task.totalSpeed = speed
-                            
-                            lastUpdateTime = now
-                            lastBytes = totalBytesWritten
-                            
-                            networkManager?.objectWillChange.send()
-                        }
-                    }
-                }
-            )
-            
-            var request = URLRequest(url: url)
-            NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-            
-            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
-
-            Task {
-                if let resumeData = await cancelTracker.getResumeData(task.id) {
-                    let downloadTask = session.downloadTask(withResumeData: resumeData)
-                    await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
-                    await cancelTracker.clearResumeData(task.id)
-                    downloadTask.resume()
-                } else {
-                    let downloadTask = session.downloadTask(with: request)
-                    await cancelTracker.registerTask(task.id, task: downloadTask, session: session)
-                    downloadTask.resume()
-                }
+                networkManager?.saveTask(task)
             }
         }
     }
@@ -784,7 +794,7 @@ class DownloadUtils {
         }
         
         guard let jsonString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidData("无法将响应数据转换为json字符串")
+            throw NetworkError.invalidData(String(localized: "无法将响应数据转换为json字符串"))
         }
         
         return jsonString
@@ -831,6 +841,7 @@ class DownloadUtils {
                     try? FileManager.default.removeItem(at: fileURL)
                 }
                 
+                networkManager?.saveTask(task)
                 networkManager?.updateDockBadge()
                 networkManager?.objectWillChange.send()
             }
@@ -842,26 +853,26 @@ class DownloadUtils {
         case let networkError as NetworkError:
             switch networkError {
             case .noConnection:
-                return ("网络连接已断开", true)
+                    return (String(localized: "网络连接已断开"), true)
             case .timeout:
-                return ("下载超时", true)
+                return (String(localized: "下载超时"), true)
             case .serverUnreachable:
-                return ("服务器无法访问", true)
+                return (String(localized: "服务器无法访问"), true)
             case .insufficientStorage:
-                return ("存储空间不足", false)
+                return (String(localized: "存储空间不足"), false)
             case .filePermissionDenied:
-                return ("没有入权限", false)
+                return (String(localized: "没有写入权限"), false)
             default:
                 return (networkError.localizedDescription, false)
             }
         case let urlError as URLError:
             switch urlError.code {
             case .notConnectedToInternet:
-                return ("网络连接已开", true)
+                return (String(localized: "网络连接已断开"), true)
             case .timedOut:
-                return ("连接超时", true)
+                return (String(localized: "连接超时"), true)
             case .cancelled:
-                return ("下载已取消", false)
+                return (String(localized: "下载已取消"), false)
             default:
                 return (urlError.localizedDescription, true)
             }

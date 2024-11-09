@@ -218,6 +218,16 @@
         }
       }
     },
+    "下载超时" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download timeout"
+          }
+        }
+      }
+    },
     "下载错误" : {
       "localizations" : {
         "en" : {
@@ -414,6 +424,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed: %@"
+          }
+        }
+      }
+    },
+    "存储空间不足" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insufficient storage space"
           }
         }
       }
@@ -619,6 +639,16 @@
         }
       }
     },
+    "无法将响应数据转换为json字符串" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to convert response data to json string"
+          }
+        }
+      }
+    },
     "是否确认重新下载？这将覆盖现有的安装程序。" : {
       "localizations" : {
         "en" : {
@@ -659,6 +689,16 @@
         }
       }
     },
+    "有正在进行的下载任务，确定要退出吗？\n所有下载任务的进度已保存，下次启动可以继续下载" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are download tasks in progress. Are you sure you want to quit?\nThe progress of all download tasks has been saved and you can continue downloading next time you start the program."
+          }
+        }
+      }
+    },
     "服务器响应无效" : {
       "comment" : "Invalid response",
       "localizations" : {
@@ -666,6 +706,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Invalid server response"
+          }
+        }
+      }
+    },
+    "服务器无法访问" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server Unreachable"
           }
         }
       }
@@ -818,6 +868,16 @@
         }
       }
     },
+    "没有写入权限" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No write permission"
+          }
+        }
+      }
+    },
     "没有找到产品" : {
       "localizations" : {
         "en" : {
@@ -879,6 +939,16 @@
         }
       }
     },
+    "确认退出" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm Exit"
+          }
+        }
+      }
+    },
     "确认重新下载" : {
       "localizations" : {
         "en" : {
@@ -895,6 +965,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete"
+          }
+        }
+      }
+    },
+    "程序即将退出" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program is about to exit"
+          }
+        }
+      }
+    },
+    "程序意外退出" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program quit unexpectedly"
+          }
+        }
+      }
+    },
+    "程序重启后自动暂停" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically pause after program restart"
           }
         }
       }
@@ -938,6 +1038,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Network interrupt"
+          }
+        }
+      }
+    },
+    "网络连接已断开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Network connection lost"
           }
         }
       }
@@ -999,6 +1109,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Request timed out, please check the network connection and try again"
+          }
+        }
+      }
+    },
+    "连接超时" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connection timeout"
+          }
+        }
+      }
+    },
+    "退出" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exit"
           }
         }
       }

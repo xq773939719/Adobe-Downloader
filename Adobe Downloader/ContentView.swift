@@ -65,6 +65,7 @@ struct ContentView: View {
                         Image(systemName: "arrow.down.circle")
                             .imageScale(.medium)
                     }
+                    .disabled(isRefreshing)
                     .buttonStyle(.borderless)
                     .overlay(
                         Group {

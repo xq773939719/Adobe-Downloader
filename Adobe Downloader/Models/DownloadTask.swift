@@ -42,6 +42,7 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
             objectWillChange.send()
         }
     }
+    let platform: String
 
     var status: DownloadStatus {
         totalStatus ?? .waiting
@@ -88,7 +89,7 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
         objectWillChange.send()
     }
 
-    init(sapCode: String, version: String, language: String, displayName: String, directory: URL, productsToDownload: [ProductsToDownload] = [], retryCount: Int = 0, createAt: Date, totalStatus: DownloadStatus? = nil, totalProgress: Double, totalDownloadedSize: Int64 = 0, totalSize: Int64 = 0, totalSpeed: Double = 0, currentPackage: Package? = nil) {
+    init(sapCode: String, version: String, language: String, displayName: String, directory: URL, productsToDownload: [ProductsToDownload] = [], retryCount: Int = 0, createAt: Date, totalStatus: DownloadStatus? = nil, totalProgress: Double, totalDownloadedSize: Int64 = 0, totalSize: Int64 = 0, totalSpeed: Double = 0, currentPackage: Package? = nil, platform: String) {
         self.sapCode = sapCode
         self.version = version
         self.language = language
@@ -104,6 +105,7 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
         self.totalSpeed = totalSpeed
         self.currentPackage = currentPackage
         self.displayInstallButton = sapCode != "APRO"
+        self.platform = platform
     }
 
     static func == (lhs: NewDownloadTask, rhs: NewDownloadTask) -> Bool {

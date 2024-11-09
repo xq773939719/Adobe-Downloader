@@ -5,6 +5,7 @@
 //
 
 import SwiftUI
+import Combine
 
 class IconCache {
     static let shared = IconCache()
@@ -47,22 +48,50 @@ class AppCardViewModel: ObservableObject {
         get { userDefaults.string(forKey: "defaultDirectory") ?? "" }
     }
     
+    private var cancellables = Set<AnyCancellable>()
+    
     init(sap: Sap, networkManager: NetworkManager?) {
         self.sap = sap
         self.networkManager = networkManager
-        loadIcon()
-        updateDownloadingStatus()
+        
+        setupObservers()
+    }
+    
+    private func setupObservers() {
+        networkManager?.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updateDownloadingStatus()
+            }
+            .store(in: &cancellables)
     }
     
     func updateDownloadingStatus() {
+        guard let networkManager = networkManager else {
+            Task { @MainActor in
+                self.isDownloading = false
+            }
+            return
+        }
+        
         Task { @MainActor in
-            isDownloading = networkManager?.downloadTasks.contains { task in
-                return task.sapCode == sap.sapCode && task.status.isActive
-            } ?? false
+            let isActive = networkManager.downloadTasks.contains { task in
+                task.sapCode == sap.sapCode && isTaskActive(task.status)
+            }
+            self.isDownloading = isActive
+        }
+    }
+    
+    private func isTaskActive(_ status: DownloadStatus) -> Bool {
+        switch status {
+        case .downloading, .preparing, .paused, .waiting, .retrying(_):
+            return true
+        case .completed, .failed:
+            return false
         }
     }
 
-    func getDestinationURL(version: String, language: String, useDefaultDirectory: Bool, defaultDirectory: String) async throws -> URL {
+    func getDestinationURL(version: String, language: String) async throws -> URL {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         let installerName = sap.sapCode == "APRO" 
             ? "Adobe Downloader \(sap.sapCode)_\(version)_\(platform).dmg"
@@ -164,29 +193,17 @@ class AppCardViewModel: ObservableObject {
                     showExistingFileAlert = true
                 }
             } else {
-                startDownload(version, language)
-            }
-        }
-    }
-    
-    func startDownload(_ version: String, _ language: String) {
-        Task {
-            do {
-                let destinationURL = try await getDestinationURL(
-                    version: version,
-                    language: language,
-                    useDefaultDirectory: useDefaultDirectory,
-                    defaultDirectory: defaultDirectory
-                )
-
-                try await networkManager?.startDownload(
-                    sap: sap,
-                    selectedVersion: version,
-                    language: language,
-                    destinationURL: destinationURL
-                )
-            } catch {
-                handleError(error)
+                do {
+                    let destinationURL = try await getDestinationURL(version: version, language: language)
+                    try await networkManager.startDownload(
+                        sap: sap,
+                        selectedVersion: version,
+                        language: language,
+                        destinationURL: destinationURL
+                    )
+                } catch {
+                    handleError(error)
+                }
             }
         }
     }
@@ -256,7 +273,8 @@ class AppCardViewModel: ObservableObject {
             totalProgress: 1.0,
             totalDownloadedSize: 0,
             totalSize: 0,
-            totalSpeed: 0
+            totalSpeed: 0,
+            platform: ""
         )
 
         await MainActor.run {
@@ -317,6 +335,9 @@ struct AppCardView: View {
         }
         .onAppear {
             viewModel.networkManager = networkManager
+            viewModel.updateDownloadingStatus()
+        }
+        .onChange(of: networkManager.downloadTasks) { _ in
             viewModel.updateDownloadingStatus()
         }
     }
@@ -470,7 +491,12 @@ struct AlertModifier: ViewModifier {
                                 if confirmRedownload {
                                     viewModel.showRedownloadConfirm = true
                                 } else {
-                                    viewModel.startDownload(viewModel.pendingVersion, viewModel.pendingLanguage)
+                                    Task {
+                                        await viewModel.checkAndStartDownload(
+                                            version: viewModel.pendingVersion,
+                                            language: viewModel.pendingLanguage
+                                        )
+                                    }
                                 }
                             }
                         },
@@ -487,7 +513,12 @@ struct AlertModifier: ViewModifier {
                 Button("取消", role: .cancel) { }
                 Button("确认") {
                     if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
-                        viewModel.startDownload(viewModel.pendingVersion, viewModel.pendingLanguage)
+                        Task {
+                            await viewModel.checkAndStartDownload(
+                                version: viewModel.pendingVersion,
+                                language: viewModel.pendingLanguage
+                            )
+                        }
                     }
                 }
             } message: {
@@ -497,7 +528,12 @@ struct AlertModifier: ViewModifier {
                 Button("确定", role: .cancel) { }
                 Button("重试") {
                     if !viewModel.selectedVersion.isEmpty {
-                        viewModel.startDownload(viewModel.selectedVersion, viewModel.selectedLanguage)
+                        Task {
+                            await viewModel.checkAndStartDownload(
+                                version: viewModel.selectedVersion,
+                                language: viewModel.selectedLanguage
+                            )
+                        }
                     }
                 }
             } message: {

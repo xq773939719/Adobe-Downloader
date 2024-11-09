@@ -6,7 +6,7 @@
 import Foundation
 import SwiftUI
 
-enum PackageStatus: Equatable {
+enum PackageStatus: Equatable, Codable {
     case waiting
     case downloading
     case paused
@@ -165,7 +165,7 @@ enum NetworkError: Error, LocalizedError {
     }
 }
 
-enum DownloadStatus: Equatable {
+enum DownloadStatus: Equatable, Codable {
     case waiting
     case preparing(PrepareInfo)
     case downloading(DownloadInfo)
@@ -174,12 +174,12 @@ enum DownloadStatus: Equatable {
     case failed(FailureInfo)
     case retrying(RetryInfo)
 
-    struct PrepareInfo {
+    struct PrepareInfo: Codable {
         let message: String
         let timestamp: Date
         let stage: PrepareStage
         
-        enum PrepareStage {
+        enum PrepareStage: Codable {
             case initializing
             case creatingInstaller
             case signingApp
@@ -188,7 +188,7 @@ enum DownloadStatus: Equatable {
         }
     }
     
-    struct DownloadInfo {
+    struct DownloadInfo: Codable {
         let fileName: String
         let currentPackageIndex: Int
         let totalPackages: Int
@@ -196,12 +196,12 @@ enum DownloadStatus: Equatable {
         let estimatedTimeRemaining: TimeInterval?
     }
     
-    struct PauseInfo {
+    struct PauseInfo: Codable {
         let reason: PauseReason
         let timestamp: Date
         let resumable: Bool
         
-        enum PauseReason {
+        enum PauseReason: Codable {
             case userRequested
             case networkIssue
             case systemSleep
@@ -209,24 +209,122 @@ enum DownloadStatus: Equatable {
         }
     }
     
-    struct CompletionInfo {
+    struct CompletionInfo: Codable {
         let timestamp: Date
         let totalTime: TimeInterval
         let totalSize: Int64
     }
     
-    struct FailureInfo {
+    struct FailureInfo: Codable {
         let message: String
         let error: Error?
         let timestamp: Date
         let recoverable: Bool
+        
+        enum CodingKeys: CodingKey {
+            case message
+            case timestamp
+            case recoverable
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(message, forKey: .message)
+            try container.encode(timestamp, forKey: .timestamp)
+            try container.encode(recoverable, forKey: .recoverable)
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            message = try container.decode(String.self, forKey: .message)
+            timestamp = try container.decode(Date.self, forKey: .timestamp)
+            recoverable = try container.decode(Bool.self, forKey: .recoverable)
+            error = nil
+        }
+        
+        init(message: String, error: Error?, timestamp: Date, recoverable: Bool) {
+            self.message = message
+            self.error = error
+            self.timestamp = timestamp
+            self.recoverable = recoverable
+        }
     }
     
-    struct RetryInfo {
+    struct RetryInfo: Codable {
         let attempt: Int
         let maxAttempts: Int
         let reason: String
         let nextRetryDate: Date
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case info
+    }
+    
+    private enum StatusType: String, Codable {
+        case waiting
+        case preparing
+        case downloading
+        case paused
+        case completed
+        case failed
+        case retrying
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        switch self {
+        case .waiting:
+            try container.encode(StatusType.waiting, forKey: .type)
+        case .preparing(let info):
+            try container.encode(StatusType.preparing, forKey: .type)
+            try container.encode(info, forKey: .info)
+        case .downloading(let info):
+            try container.encode(StatusType.downloading, forKey: .type)
+            try container.encode(info, forKey: .info)
+        case .paused(let info):
+            try container.encode(StatusType.paused, forKey: .type)
+            try container.encode(info, forKey: .info)
+        case .completed(let info):
+            try container.encode(StatusType.completed, forKey: .type)
+            try container.encode(info, forKey: .info)
+        case .failed(let info):
+            try container.encode(StatusType.failed, forKey: .type)
+            try container.encode(info, forKey: .info)
+        case .retrying(let info):
+            try container.encode(StatusType.retrying, forKey: .type)
+            try container.encode(info, forKey: .info)
+        }
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(StatusType.self, forKey: .type)
+        
+        switch type {
+        case .waiting:
+            self = .waiting
+        case .preparing:
+            let info = try container.decode(PrepareInfo.self, forKey: .info)
+            self = .preparing(info)
+        case .downloading:
+            let info = try container.decode(DownloadInfo.self, forKey: .info)
+            self = .downloading(info)
+        case .paused:
+            let info = try container.decode(PauseInfo.self, forKey: .info)
+            self = .paused(info)
+        case .completed:
+            let info = try container.decode(CompletionInfo.self, forKey: .info)
+            self = .completed(info)
+        case .failed:
+            let info = try container.decode(FailureInfo.self, forKey: .info)
+            self = .failed(info)
+        case .retrying:
+            let info = try container.decode(RetryInfo.self, forKey: .info)
+            self = .retrying(info)
+        }
     }
     
     var description: String {

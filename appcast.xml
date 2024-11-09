@@ -3,6 +3,36 @@
     <channel>
         <title>Adobe Downloader</title>
         <item>
+            <title>1.1.0</title>
+            <pubDate>Sat, 09 Nov 2024 23:08:48 +0800</pubDate>
+            <sparkle:version>110</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/X1a0He/Adobe-Downloader/releases/download/1.1.0/Adobe.Downloader.dmg"
+                       length="2725357" type="application/octet-stream"
+                       sparkle:edSignature="kL76crIDDNBgf0fgr30VbQdY28eheD6t0Xz+5K9Gk8N2mc1pOT37ww9SszZSzKwoPyMbnX+KgG5/AWT2NC0FBA=="/>
+            <description>
+                <![CDATA[
+                    <style>ul{margin-top: 0;margin-bottom: 7;padding-left: 18;}</style>
+                    <h4>Adobe Downloader 更新日志: </h4>
+                    <ul>
+                        <li>修复了初次启动程序时，默认下载目录为 "Downloads" 导致提示 你不能存储文件“ILST”，因为该宗卷是只读宗卷 的问题</li>
+                        <li>新的实现取代了 windowResizability 以适应 macOS 12.0+（可能）</li>
+                        <li>新增下载记录持久化功能(M1 Max macOS 15上测试正常，未测试其他机型)</li>
+                    </ul>
+                    <h4>PS: 此版本改动略大，如有bugs，请及时提出</h4>
+                    <hr>
+                    <h4>Adobe Downloader Changes: </h4>
+                    <ul>
+                        <li>Fixed the issue that when launching the program for the first time, the default directory is "Downloads", which causes a download error message</li>
+                        <li>New implementation replaces windowResizability to adapt to macOS 12.0+ (Maybe)</li>
+                        <li>Added task record persistence(Tested normally on M1 Max macOS 15, other models not tested)</li>
+                    </ul>
+                    <h4>PS: This version has been slightly changed. If there are any bugs, please report them in time.</h4>
+                ]]>
+            </description>
+        </item>
+        <item>
             <title>1.0.1</title>
             <pubDate>Thu, 07 Nov 2024 21:29:26 +0800</pubDate>
             <sparkle:version>101</sparkle:version>
@@ -14,7 +44,7 @@
                     sparkle:edSignature="/paRKw18fjGopMIkrNSPJV1k0NloLccfjeyBLjjbNus7IyjFyGmdTH5ccxcbcXnYuFqozFrtKuBizpTCmNJfBw=="/>
             <description><![CDATA[
                 <style>ul{margin-top: 0;margin-bottom: 7;padding-left: 18;}</style>
-                <h5>Adobe Downloader 更新日志: </h1>
+                <h5>Adobe Downloader 更新日志: </h5>
                 <ul>
                     <li>修复了当系统版本低于 macOS 14.6 时无法打开程序的问题，现已支持 macOS 13.0 以上</li>
                     <li>增加 Sparkle 用于检测更新</li>
@@ -24,7 +54,7 @@
                     <li>修复了在任务下载中，已下载包与总包数量不更新的问题</li>
                 </ul>
                 <hr>
-                <h5>Adobe Downloader Changes: </h1>
+                <h5>Adobe Downloader Changes: </h5>
                 <ul>
                     <li>Support macOS 13.0 and above</li>
                     <li>Added Sparkle for checking update</li>

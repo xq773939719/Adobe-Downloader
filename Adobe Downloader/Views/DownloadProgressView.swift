@@ -607,7 +607,8 @@ struct PackageRow: View {
             totalProgress: 0.45,
             totalDownloadedSize: 457424883,
             totalSize: 878454797,
-            totalSpeed: 1024 * 1024 * 2
+            totalSpeed: 1024 * 1024 * 2,
+            platform: ""
         ),
         onCancel: {},
         onPause: {},
@@ -642,7 +643,8 @@ struct PackageRow: View {
             totalProgress: 1.0,
             totalDownloadedSize: 878454797,
             totalSize: 878454797,
-            totalSpeed: 0
+            totalSpeed: 0,
+            platform: ""
         ),
         onCancel: {},
         onPause: {},
@@ -677,7 +679,8 @@ struct PackageRow: View {
             totalProgress: 0.52,
             totalDownloadedSize: 457424883,
             totalSize: 878454797,
-            totalSpeed: 0
+            totalSpeed: 0,
+            platform: ""
         ),
         onCancel: {},
         onPause: {},

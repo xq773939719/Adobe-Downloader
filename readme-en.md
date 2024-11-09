@@ -6,7 +6,7 @@
 
 ## Before Use
 
-**🍎Only for macOS 13.0+.**
+**🍎Only for macOS 12.0+.**
 
 > **If you like Adobe Downloader, or it helps you, please Star🌟 it.**
 >
@@ -27,16 +27,15 @@
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-07 21:10 Update Log
+- 2024-11-09 23:00 Update Log
 
 ```markdown
-1. Support macOS 13.0 and above
-2. Added Sparkle for checking update
-3. When the default directory is not selected, the Downloads folder will be used as the default directory
-4. When installing via Adobe Downloader and encountering permission issues, provide terminal commands to allow users to
-   install by themselves
-5. Adjusted the UI display of existing files
-6. Fixed the issue where the number of downloaded packages and total packages was not updated during task download
+1. Fixed the issue that when launching the program for the first time, the default directory is "Downloads", which
+   causes a download error message
+2. New implementation replaces windowResizability to adapt to macOS 12.0+ (Maybe)
+3. Added task record persistence(Tested normally on M1 Max macOS 15, other models not tested)
+
+PS: This version has been slightly changed. If there are any bugs, please report them in time.
 ```
 
 ### Language friendly
@@ -59,6 +58,7 @@ via Telegram.**
     - [x] Support installation of non-Acrobat products
     - [x] Support multiple products download at the same time
     - [x] Supports using default language and default directory
+    - [x] Support task record persistence
 
 ## 👀 Preview
 

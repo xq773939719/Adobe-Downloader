@@ -3,6 +3,42 @@
     <channel>
         <title>Adobe Downloader</title>
         <item>
+            <title>1.2</title>
+            <pubDate>Mon, 11 Nov 2024 21:30:52 +0800</pubDate>
+            <sparkle:version>120</sparkle:version>
+            <sparkle:shortVersionString>1.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/X1a0He/Adobe-Downloader/releases/download/1.2.0/Adobe.Downloader.dmg"
+                       length="2902534" type="application/octet-stream"
+                       sparkle:edSignature="VEWF9MZO/LoLTpaSuxvy/1vgOip7w+WpqqUFGS21aZHABSnmzAQKxi2AKVBIOC+gacaDgFmgoY/62xmabcA7CQ=="/>
+            <description>
+                <![CDATA[
+                    <style>ul{margin-top: 0;margin-bottom: 7;padding-left: 18;}</style>
+                    <h4>Adobe Downloader 更新日志: </h4>
+                    <ul>
+                        <li>调整程序启动时 sheet 的弹出顺序</li>
+                        <li>设置中添加了 Setup 组件的检测和版本号检测，支持在设置中重新备份与处理</li>
+                        <li>调整 Setup 组件的检测，不再需要完整安装 Adobe Creative Cloud</li>
+                        <li>增加了安装前 Setup 组件是否已处理的判断，未处理 Setup 组件，无法使用安装功能</li>
+                        <li>调整 Setup 组件检测弹窗界面</li>
+                        <li>增加从 GitHub 中下载 Setup 组件，无法访问 GitHub 的用户可能会出现无法下载的问题</li>
+                    </ul>
+                    <h4>PS: Setup 组件的来源均为 Adobe Creative Cloud 官方提取，可能存在更新不及时</h4>
+                    <hr>
+                    <h4>Adobe Downloader Changes: </h4>
+                    <ul>
+                        <li>Adjust the order of sheet pop-up when the program starts</li>
+                        <li>Added detection of Setup components and version number detection in settings, supporting re-backup and processing in settings</li>
+                        <li>Adjusted detection of Setup components, no longer requiring full installation of Adobe Creative Cloud</li>
+                        <li>Added judgment of whether Setup components have been processed before installation. If Setup components are not processed, the installation function cannot be used</li>
+                        <li>Adjusted the pop-up interface of Setup component detection</li>
+                        <li>Added downloading of Setup components from GitHub. Users who cannot access GitHub may encounter problems with download failure</li>
+                    </ul>
+                    <h4>PS: The sources of Setup components are all extracted from Adobe Creative Cloud, so they may not be updated in time.</h4>
+                ]]>
+            </description>
+        </item>
+        <item>
             <title>1.1.0</title>
             <pubDate>Sat, 09 Nov 2024 23:08:48 +0800</pubDate>
             <sparkle:version>110</sparkle:version>

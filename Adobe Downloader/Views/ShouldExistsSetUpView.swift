@@ -9,9 +9,14 @@ import SwiftUI
 
 struct ShouldExistsSetUpView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var networkManager: NetworkManager
     @State private var showingAlert = false
     @State private var isDownloading = false
     @State private var downloadProgress: Double = 0
+    @State private var downloadStatus: String = ""
+    @State private var isCancelled = false
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
 
     var body: some View {
         VStack(spacing: 20) {
@@ -55,19 +60,51 @@ struct ShouldExistsSetUpView: View {
                 .disabled(isDownloading)
                 Button(action: {
                     isDownloading = true
-                    // TODO
+                    isCancelled = false
+                    Task {
+                        do {
+                            try await networkManager.downloadUtils.downloadSetupComponents(
+                                progressHandler: { progress, status in
+                                    Task { @MainActor in
+                                        downloadProgress = progress
+                                        downloadStatus = status
+                                    }
+                                },
+                                cancellationHandler: { isCancelled }
+                            )
+                            await MainActor.run {
+                                dismiss()
+                            }
+                        } catch NetworkError.cancelled {
+                            await MainActor.run {
+                                isDownloading = false
+                            }
+                        } catch {
+                            await MainActor.run {
+                                isDownloading = false
+                                errorMessage = error.localizedDescription
+                                showErrorAlert = true
+                            }
+                        }
+                    }
                 }) {
                     if isDownloading {
-                        ProgressView(value: downloadProgress) {
-                            Label("正在下载 X1a0He CC \(Int(downloadProgress * 100))%", systemImage: "arrow.down")
-                                .frame(height: 32)
-                                .frame(maxWidth: 360)
-                                .frame(alignment: .center)
-                                .font(.system(size: 14))
+                        VStack {
+                            ProgressView(value: downloadProgress) {
+                                Text(downloadStatus)
+                                    .font(.system(size: 14))
+                            }
+                            Text("\(Int(downloadProgress * 100))%")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Button("取消") {
+                                isCancelled = true
+                            }
+                            .buttonStyle(.borderless)
                         }
+                        .frame(maxWidth: 360)
                         .progressViewStyle(.linear)
                         .tint(.green)
-                        .frame(maxWidth: 360)
                     } else {
                         Label("下载 X1a0He CC 组件", systemImage: "arrow.down")
                             .frame(minWidth: 0, maxWidth: 360)
@@ -112,14 +149,20 @@ struct ShouldExistsSetUpView: View {
                 .disabled(isDownloading)
             }
         }
-        .frame(width: 400)
+        .frame(width: 500)
         .padding()
         .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(12)
         .shadow(radius: 10)
+        .alert("下载失败", isPresented: $showErrorAlert) {
+            Button("确定") { }
+        } message: {
+            Text(errorMessage)
+        }
     }
 }
 
 #Preview {
     ShouldExistsSetUpView()
+        .environmentObject(NetworkManager())
 }

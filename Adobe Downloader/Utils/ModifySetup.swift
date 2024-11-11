@@ -10,18 +10,25 @@ import SwiftUI
 
 class ModifySetup {
     private static var cachedVersion: String?
-    
+
+    static func isSetupExists() -> Bool {
+        return FileManager.default.fileExists(atPath: "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup")
+    }
+
+    static func isSetupBackup() -> Bool {
+        return FileManager.default.fileExists(atPath: "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original")
+    }
+
     static func checkComponentVersion() -> String {
-        if let cachedVersion = cachedVersion {
-            return cachedVersion
-        }
-        
         let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
         
-        guard FileManager.default.fileExists(atPath: setupPath) else {
-            let message = String(localized: "未找到 Setup 组件")
-            cachedVersion = message
-            return message
+        guard isSetupExists() else {
+            cachedVersion = nil
+            return String(localized: "未找到 Setup 组件")
+        }
+        
+        if let cachedVersion = cachedVersion {
+            return cachedVersion
         }
         
         let process = Process()
@@ -64,10 +71,6 @@ class ModifySetup {
     static func clearVersionCache() {
         cachedVersion = nil
     }
-
-    static func isSetupBackup() -> Bool {
-        return FileManager.default.fileExists(atPath: "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original")
-    }
     
     static func backupSetupFile(completion: @escaping (Bool, String) -> Void) {
         let setupQueue = DispatchQueue(label: "com.x1a0he.adobedownloader.setup")
@@ -94,7 +97,11 @@ function prep() {
     xattr -cr "$1"
 }
 
-cp '\(setupPath)' '\(backupPath)'
+if [ -f '\(backupPath)' ]; then
+    cp '\(backupPath)' '\(setupPath)'
+else
+    cp '\(setupPath)' '\(backupPath)'
+fi
 
 replace '\(setupPath)' '554889E553504889FB488B0570C70300488B00488945F0E824D7FEFF4883C3084839D80F' '6A0158C353504889FB488B0570C70300488B00488945F0E824D7FEFF4883C3084839D80F'
 replace '\(setupPath)' 'FFC300D1F44F01A9FD7B02A9FD830091F30300AA1F2003D568A11D58080140F9E80700F9' '200080D2C0035FD6FD7B02A9FD830091F30300AA1F2003D568A11D58080140F9E80700F9'

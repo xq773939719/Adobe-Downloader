@@ -58,24 +58,31 @@ struct Adobe_DownloaderApp: App {
                 .environmentObject(networkManager)
                 .frame(width: 850, height: 800)
                 .tint(.blue)
-                .onAppear {
-                    appDelegate.networkManager = networkManager
-                    
-                    networkManager.loadSavedTasks()
-                    
-                    checkCreativeCloudSetup()
-
-                    if !showCreativeCloudAlert && !ModifySetup.isSetupBackup() {
-                        showBackupAlert = true
+                .task {
+                    await MainActor.run {
+                        appDelegate.networkManager = networkManager
+                        networkManager.loadSavedTasks()
                     }
                     
-                    if UserDefaults.standard.bool(forKey: "isFirstLaunch") {
-                        showTipsSheet = true
-                        UserDefaults.standard.removeObject(forKey: "isFirstLaunch")
+                    let needsBackup = !ModifySetup.isSetupBackup()
+                    let needsSetup = !ModifySetup.isSetupExists()
+                    
+                    await MainActor.run {
+                        if needsSetup {
+                            showCreativeCloudAlert = true
+                        } else if needsBackup {
+                            showBackupAlert = true
+                        }
+                        
+                        if UserDefaults.standard.bool(forKey: "isFirstLaunch") {
+                            showTipsSheet = true
+                            UserDefaults.standard.removeObject(forKey: "isFirstLaunch")
+                        }
                     }
                 }
                 .sheet(isPresented: $showCreativeCloudAlert) {
                     ShouldExistsSetUpView()
+                        .environmentObject(networkManager)
                 }
                 .alert("Setup未备份提示", isPresented: $showBackupAlert) {
                     Button("确定") {

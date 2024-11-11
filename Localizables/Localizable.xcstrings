@@ -152,16 +152,6 @@
         }
       }
     },
-    "Setup 备份状态: " : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setup backup status:"
-          }
-        }
-      }
-    },
     "Setup 组件未处理" : {
       "localizations" : {
         "en" : {
@@ -177,7 +167,17 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Setup component version: %@"
+            "value" : "Setup version: %@"
+          }
+        }
+      }
+    },
+    "Setup 组件状态: " : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup status:"
           }
         }
       }
@@ -212,16 +212,6 @@
         }
       }
     },
-    "下载 Setup 组件" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download Setup component"
-          }
-        }
-      }
-    },
     "下载 X1a0He CC 组件" : {
       "localizations" : {
         "en" : {
@@ -238,6 +228,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Downloading"
+          }
+        }
+      }
+    },
+    "下载失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download failed"
           }
         }
       }
@@ -321,6 +321,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Products and Packages"
+          }
+        }
+      }
+    },
+    "从 GitHub 下载 Setup 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download Setup from GitHub"
           }
         }
       }
@@ -606,15 +616,11 @@
       }
     },
     "安装程序调用失败，Setup 组件未被处理，请联系开发者" : {
-
-    },
-    "安装程序调用失败，请联系X1a0He" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The installation program failed to call, please contact X1a0He"
+            "value" : "The installation program failed to call, please contact developer"
           }
         }
       }
@@ -871,18 +877,25 @@
         }
       }
     },
-    "未对 Setup 组件进行备份处理，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理" : {
+    "未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The Setup component has not been backed up, so the installation function cannot be used. You can back up the Setup component again through the settings page."
+            "value" : "The Setup component has not been backed up or does not exist, so the installation function cannot be used. You can back up the Setup component again through the settings."
           }
         }
       }
     },
     "未找到 Setup 组件" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup component not found"
+          }
+        }
+      }
     },
     "未找到语言" : {
       "localizations" : {
@@ -961,6 +974,16 @@
         }
       }
     },
+    "检测到系统中不存在 Setup 组件，需要先下载组件才能继续操作。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It has been detected that the Setup component does not exist in the system. The component needs to be downloaded before the operation can continue."
+          }
+        }
+      }
+    },
     "正在下载 %@ (%d/%d)" : {
       "comment" : "Download status downloading",
       "localizations" : {
@@ -968,16 +991,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Downloading %1$@ (%2$d/%3$d)"
-          }
-        }
-      }
-    },
-    "正在下载 X1a0He CC %lld%%" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloading X1a0He CC %lld"
           }
         }
       }
@@ -1113,12 +1126,42 @@
         }
       }
     },
+    "确定要下载并安装 Setup 组件吗？这个操作需要管理员权限。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to download and install the Setup components? This operation requires administrator privileges."
+          }
+        }
+      }
+    },
+    "确定要重新处理 Setup 组件吗？这个操作需要管理员权限。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to reprocess the Setup components? This operation requires administrator privileges."
+          }
+        }
+      }
+    },
     "确认" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Confirm"
+          }
+        }
+      }
+    },
+    "确认下载" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm download"
           }
         }
       }
@@ -1139,6 +1182,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Confirm re-download"
+          }
+        }
+      }
+    },
+    "确认重新处理" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm reprocess"
           }
         }
       }
@@ -1189,16 +1242,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatically pause after program restart"
-          }
-        }
-      }
-    },
-    "立即备份" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Backup now"
           }
         }
       }
@@ -1398,6 +1441,16 @@
         }
       }
     },
+    "重新处理" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reprocessing"
+          }
+        }
+      }
+    },
     "重试" : {
       "localizations" : {
         "en" : {
@@ -1419,23 +1472,22 @@
         }
       }
     },
-    "重试失败，需要重新输入密码" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry failed, need to re-enter password"
-          }
-        }
-      }
-    },
     "错误详情:" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Error details:"
+          }
+        }
+      }
+    },
+    "需要下载 Setup 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Need to download the Setup component"
           }
         }
       }

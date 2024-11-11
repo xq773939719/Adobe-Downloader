@@ -1,6 +1,6 @@
 # Change Log
 
-- 2024-11-11 23:00 更新日志
+## 2024-11-11 21:00 更新日志
 
 [//]: # (1.2.0)
 
@@ -10,14 +10,31 @@
 3. 调整 Setup 组件的检测，不再需要完整安装 Adobe Creative Cloud
 4. 增加了安装前 Setup 组件是否已处理的判断，未处理 Setup 组件，无法使用安装功能
 5. 调整 Setup 组件检测弹窗界面
+6. 增加从 GitHub 中下载 Setup 组件，无法访问 GitHub 的用户可能会出现无法下载的问题
 
-PS: Setup 组件的来源均为 Adobe Creative Cloud 官方组件
+PS: Setup 组件的来源均为 Adobe Creative Cloud 官方提取，可能存在更新不及时
 ====================
 
-1. 
+1. Adjust the order of sheet pop-up when the program starts
+2. Added detection of Setup components and version number detection in settings, supporting re-backup and processing in
+   settings
+3. Adjusted detection of Setup components, no longer requiring full installation of Adobe Creative Cloud
+4. Added judgment of whether Setup components have been processed before installation. If Setup components are not
+   processed, the installation function cannot be used
+5. Adjusted the pop-up interface of Setup component detection
+6. Added downloading of Setup components from GitHub. Users who cannot access GitHub may encounter problems with
+   download failure
+
+PS: The sources of Setup components are all extracted from Adobe Creative Cloud, so they may not be updated in time.
 ```
 
-- 2024-11-09 23:00 更新日志
+<img width="562" alt="image" src="https://github.com/user-attachments/assets/47159318-a7b0-46db-b6af-4e8926a6733c">
+
+<img width="630" alt="image" src="https://github.com/user-attachments/assets/9dbec07d-d280-4107-b6cf-5ad7cab8158e">
+
+<img width="880" alt="image" src="https://github.com/user-attachments/assets/5d1fcd81-7ac6-41db-a8d3-5ff2c116056e">
+
+## 2024-11-09 23:00 更新日志
 
 [//]: # (1.1.0)
 
@@ -37,7 +54,7 @@ PS: 此版本改动略大，如有bugs，请及时提出
 PS: This version has been slightly changed. If there are any bugs, please report them in time.
 ```
 
-- 2024-11-07 21:10 更新日志
+## 2024-11-07 21:10 更新日志
 
 [//]: # (1.0.1)
 
@@ -68,7 +85,7 @@ PS: This version has been slightly changed. If there are any bugs, please report
 
 <img width="880" alt="image" src="https://github.com/user-attachments/assets/b6b04cd9-bfdf-4cdd-b14c-6dcd48b376a7">
 
-- 2024-11-06 15:50 更新日志
+## 2024-11-06 15:50 更新日志
 
 ```markdown
 1. 增加程序首次启动时的默认配置设定与提示
@@ -90,7 +107,7 @@ PS: This version has been slightly changed. If there are any bugs, please report
 7. Added Adobe Creative Cloud installation detection, which cannot be used before installation
 ```
 
-- 2024-11-05 21:15 更新日志
+## 2024-11-05 21:15 更新日志
 
 ```markdown
 1. 增加Intel机型的Setup处理，感谢@aronychen
@@ -102,7 +119,7 @@ PS: This version has been slightly changed. If there are any bugs, please report
 
 ----
 
-- 2024-11-05 15:05 更新日志
+## 2024-11-05 15:05 更新日志
 
 ```markdown
 1. 初始化仓库

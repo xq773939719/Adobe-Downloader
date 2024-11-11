@@ -949,4 +949,164 @@ class DownloadUtils {
             networkManager.objectWillChange.send()
         }
     }
+
+    func downloadSetupComponents(
+        progressHandler: @escaping (Double, String) -> Void,
+        cancellationHandler: @escaping () -> Bool
+    ) async throws {
+        let architecture = AppStatics.isAppleSilicon ? "arm" : "intel"
+        let baseURLs = [
+            "https://github.com/X1a0He/Adobe-Downloader/raw/refs/heads/main/X1a0HeCC/\(architecture)/HDBox/",
+            "https://github.com/X1a0He/Adobe-Downloader/raw/refs/heads/develop/X1a0HeCC/\(architecture)/HDBox/"
+        ]
+        
+        let components = [
+            "HDHelper",
+            "HDIM.dylib",
+            "HDPIM.dylib",
+            "HUM.dylib",
+            "Setup"
+        ]
+        
+        let targetDirectory = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox"
+        
+        let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 300
+        let session = URLSession(configuration: configuration)
+
+        for (index, component) in components.enumerated() {
+            if cancellationHandler() {
+                try? FileManager.default.removeItem(at: tempDirectory)
+                throw NetworkError.cancelled
+            }
+            
+            await MainActor.run {
+                progressHandler(Double(index) / Double(components.count), "正在下载 \(component)...")
+            }
+            
+            var lastError: Error? = nil
+            var downloaded = false
+            
+            for baseURL in baseURLs {
+                guard !downloaded else { break }
+                if cancellationHandler() {
+                    try? FileManager.default.removeItem(at: tempDirectory)
+                    throw NetworkError.cancelled
+                }
+                
+                let url = URL(string: baseURL + component)!
+                let destinationURL = tempDirectory.appendingPathComponent(component)
+                print(url)
+                do {
+                    let (downloadURL, response) = try await session.download(from: url)
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw NetworkError.invalidResponse
+                    }
+                    
+                    if httpResponse.statusCode == 404 {
+                        lastError = NetworkError.fileNotFound(component)
+                        continue
+                    }
+                    
+                    if !(200...299).contains(httpResponse.statusCode) {
+                        lastError = NetworkError.httpError(httpResponse.statusCode, "下载 \(component) 失败")
+                        continue
+                    }
+                    
+                    try FileManager.default.moveItem(at: downloadURL, to: destinationURL)
+                    downloaded = true
+                    
+                } catch URLError.timedOut {
+                    lastError = NetworkError.timeout
+                    continue
+                } catch {
+                    lastError = error is NetworkError ? error : NetworkError.downloadError("下载 \(component) 失败: \(error.localizedDescription)", error)
+                    continue
+                }
+            }
+            
+            if !downloaded {
+                try? FileManager.default.removeItem(at: tempDirectory)
+                throw lastError ?? NetworkError.downloadError("无法下载 \(component)", nil)
+            }
+        }
+        
+        await MainActor.run {
+            progressHandler(1.0, "下载完成，正在安装...")
+        }
+
+        let bashScript = """
+function hex() {
+    echo \\"$1\\" | perl -0777pe 's|([0-9a-zA-Z]{2}+(?![^\\\\(]*\\\\)))|\\\\\\\\x${1}|gs'
+}
+
+function replace() {
+    declare -r dom=$(hex \\"$2\\")
+    declare -r sub=$(hex \\"$3\\")
+    perl -0777pi -e 'BEGIN{$/=\\\\1e8} s|'$dom'|'$sub'|gs' \\"$1\\"
+}
+
+function prep() {
+    codesign --remove-signature \\"$1\\"
+    codesign -f -s - --timestamp=none --all-architectures --deep \\"$1\\"
+    xattr -cr \\"$1\\"
+}
+
+cp \\"\(targetDirectory)/Setup\\" \\"\(targetDirectory)/Setup.original\\" &&
+replace \\"\(targetDirectory)/Setup\\" \\"554889E553504889FB488B0570C70300488B00488945F0E824D7FEFF4883C3084839D80F\\" \\"6A0158C353504889FB488B0570C70300488B00488945F0E824D7FEFF4883C3084839D80F\\" &&
+replace \\"\(targetDirectory)/Setup\\" \\"FFC300D1F44F01A9FD7B02A9FD830091F30300AA1F2003D568A11D58080140F9E80700F9\\" \\"200080D2C0035FD6FD7B02A9FD830091F30300AA1F2003D568A11D58080140F9E80700F9\\" &&
+prep \\"\(targetDirectory)/Setup\\"
+"""
+
+        let script = """
+        tell application "System Events"
+            set thePassword to text returned of (display dialog "请输入管理员密码以继续安装" default answer "" with hidden answer buttons {"取消", "确定"} default button "确定" with icon caution with title "需要管理员权限")
+            do shell script "cat > /tmp/setup_script.sh << 'EOL'
+        \(bashScript)
+        EOL
+        chmod +x /tmp/setup_script.sh &&
+        mkdir -p '\(targetDirectory)' && 
+        chmod 755 '\(targetDirectory)' && 
+        cp -f '\(tempDirectory.path)/'* '\(targetDirectory)/' && 
+        chmod 755 '\(targetDirectory)/'* && 
+        chown -R root:wheel '\(targetDirectory)' &&
+        /tmp/setup_script.sh &&
+        rm -f /tmp/setup_script.sh" password thePassword with administrator privileges
+        end tell
+        """
+        
+        var error: NSDictionary?
+        if let appleScript = NSAppleScript(source: script) {
+            appleScript.executeAndReturnError(&error)
+            
+            try? FileManager.default.removeItem(at: tempDirectory)
+            
+            if let error = error {
+                if let errorMessage = error["NSAppleScriptErrorMessage"] as? String,
+                   errorMessage.contains("User canceled") {
+                    throw NSError(domain: "SetupComponentsError",
+                                code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "用户取消了操作"])
+                }
+                throw NSError(domain: "SetupComponentsError",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "安装组件失败: \(error)"])
+            }
+
+            ModifySetup.clearVersionCache()
+            
+            await MainActor.run {
+                progressHandler(1.0, "安装完成")
+            }
+        } else {
+            throw NSError(domain: "SetupComponentsError",
+                         code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "创建安装脚本失败"])
+        }
+    }
 }

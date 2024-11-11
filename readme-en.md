@@ -10,11 +10,12 @@
 
 > **If you like Adobe Downloader, or it helps you, please Star🌟 it.**
 >
-> 1. Before proceeding with the installation, make sure you have
-     installed [Adobe Creative Cloud](https://creativecloud.adobe.com/apps/download/creative-cloud)
-> 2. In order to successfully install after downloading, you need to modify the Adobe Setup program. Thanks
-     to [QiuChenly](https://github.com/QiuChenly)
-     for providing the installation solution
+> 1. Before installing Adobe products, the Adobe Setup component must be present on your system; otherwise, the
+     installation feature will not work. You can download it through the built-in “Settings” in the program or
+     from [Adobe Creative Cloud](https://creativecloud.adobe.com/apps/download/creative-cloud).
+> 2. To enable smooth installation after downloading, Adobe Downloader needs to modify Adobe’s Setup program. This
+     process is fully automated by the program and requires no user intervention. Many thanks
+     to [QiuChenly](https://github.com/QiuChenly) for providing the solution.
 > 3. If you encounter any problems, don't panic, contact [@X1a0He](https://t.me/X1a0He) on Telegram or use the Python
      version. Many thanks to [Drovosek01](https://github.com/Drovosek01) for
      the [adobe-packager](https://github.com/Drovosek01/adobe-packager)
@@ -23,19 +24,58 @@
      the patience to solve any about permission issues**
 > 6. ❌❌❌ **Due to permission reasons, there may be problems with installation on hackintosh**
 
+## FAQ
+
+**This section will be updated periodically with meaningful issues that have been raised.**
+
+### Questions about the Setup Component
+
+> It’s mentioned in the usage instructions that to use the installation feature, you need to modify Adobe’s setup
+> component. You can find details in the code.
+
+Why is this necessary? Without modifications, installation will fail with error code 2700.
+
+> **Does the setup modification require user intervention?**
+
+No, Adobe Downloader automates the setup component handling, including backup. All you need to do is enter your password
+when prompted.
+
+### About Entering Your Password in the Program
+
+> Why do I need to enter my password when installing the setup component?
+
+Since the setup component is downloaded from GitHub and written to your system, sudo permission is required.
+
+> Is my password sent online when downloading from GitHub?
+
+No, it isn’t. Each time you enter your password, Adobe Downloader uses a system prompt, so your password is securely
+handled by your operating system. Only you know your password and Adobe Downloader doesn’t have access to it.
+
+> Why am I asked for my password multiple times? In what situations will I need to enter it?
+
+1. During the download and installation of the setup component.
+2. When backing up and modifying the setup component.
+3. When installing Adobe apps using the setup component.
+4. Anytime an operation requires elevated permissions (as before, you can safely enter your password).
+
 ## 📔Latest Log
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-09 23:00 Update Log
+- 2024-11-11 21:00 Update Log
 
 ```markdown
-1. Fixed the issue that when launching the program for the first time, the default directory is "Downloads", which
-   causes a download error message
-2. New implementation replaces windowResizability to adapt to macOS 12.0+ (Maybe)
-3. Added task record persistence(Tested normally on M1 Max macOS 15, other models not tested)
+1. Adjust the order of sheet pop-up when the program starts
+2. Added detection of Setup components and version number detection in settings, supporting re-backup and processing in
+   settings
+3. Adjusted detection of Setup components, no longer requiring full installation of Adobe Creative Cloud
+4. Added judgment of whether Setup components have been processed before installation. If Setup components are not
+   processed, the installation function cannot be used
+5. Adjusted the pop-up interface of Setup component detection
+6. Added downloading of Setup components from GitHub. Users who cannot access GitHub may encounter problems with
+   download failure
 
-PS: This version has been slightly changed. If there are any bugs, please report them in time.
+PS: The sources of Setup components are all extracted from Adobe Creative Cloud, so they may not be updated in time.
 ```
 
 ### Language friendly

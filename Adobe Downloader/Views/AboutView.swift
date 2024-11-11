@@ -20,40 +20,78 @@ struct AboutView: View {
                 .tabItem {
                     Label("通用", systemImage: "gear")
                 }
+                .id("general_settings")
 
             AboutAppView()
                 .tabItem {
                     Label("关于", systemImage: "info.circle")
                 }
+                .id("about_app")
         }
         .background(Color(NSColor.windowBackgroundColor))
         .frame(width: 600)
     }
 }
 
-struct GeneralSettingsView: View {
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "ALL"
-    @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
-    @AppStorage("useDefaultLanguage") private var useDefaultLanguage: Bool = true
-    @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
-    @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
-    @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
-    @State private var showLanguagePicker = false
-    @EnvironmentObject private var networkManager: NetworkManager
-    @State private var showAlert = false
-    @State private var alertMessage = ""
-    @State private var isSuccess = false
+final class GeneralSettingsViewModel: ObservableObject {
+    @Published var setupVersion: String = ""
+    @Published var isDownloadingSetup = false
+    @Published var setupDownloadProgress = 0.0
+    @Published var setupDownloadStatus = ""
+    @Published var showAlert = false
+    @Published var alertMessage = ""
+    @Published var isSuccess = false
+    @Published var showDownloadAlert = false
+    @Published var showLanguagePicker = false
+    @Published var showDownloadConfirmAlert = false
+    @Published var showReprocessConfirmAlert = false
     
-    @State private var setupVersion: String = ""
-
-    private let updater: SPUUpdater
-    @State private var automaticallyChecksForUpdates: Bool
-    @State private var automaticallyDownloadsUpdates: Bool
-
+    @AppStorage("defaultLanguage") var defaultLanguage: String = "ALL"
+    @AppStorage("defaultDirectory") var defaultDirectory: String = ""
+    @AppStorage("useDefaultLanguage") var useDefaultLanguage: Bool = true
+    @AppStorage("useDefaultDirectory") var useDefaultDirectory: Bool = true
+    
+    @Published var automaticallyChecksForUpdates: Bool
+    @Published var automaticallyDownloadsUpdates: Bool
+    
+    @Published var isCancelled = false
+    
+    let updater: SPUUpdater
+    
     init(updater: SPUUpdater) {
         self.updater = updater
-        _automaticallyChecksForUpdates = State(initialValue: updater.automaticallyChecksForUpdates)
-        _automaticallyDownloadsUpdates = State(initialValue: updater.automaticallyDownloadsUpdates)
+        self.automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+        self.automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
+        self.setupVersion = ModifySetup.checkComponentVersion()
+    }
+    
+    func updateAutomaticallyChecksForUpdates(_ newValue: Bool) {
+        automaticallyChecksForUpdates = newValue
+        updater.automaticallyChecksForUpdates = newValue
+    }
+    
+    func updateAutomaticallyDownloadsUpdates(_ newValue: Bool) {
+        automaticallyDownloadsUpdates = newValue
+        updater.automaticallyDownloadsUpdates = newValue
+    }
+    
+    var isAutomaticallyDownloadsUpdatesDisabled: Bool {
+        !automaticallyChecksForUpdates
+    }
+    
+    func cancelDownload() {
+        isCancelled = true
+    }
+}
+
+struct GeneralSettingsView: View {
+    @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
+    @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
+    @EnvironmentObject private var networkManager: NetworkManager
+    @StateObject private var viewModel: GeneralSettingsViewModel
+
+    init(updater: SPUUpdater) {
+        _viewModel = StateObject(wrappedValue: GeneralSettingsViewModel(updater: updater))
     }
 
     var body: some View {
@@ -61,13 +99,13 @@ struct GeneralSettingsView: View {
             GroupBox(label: Text("下载设置").padding(.bottom, 8)) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Toggle("使用默认语言", isOn: $useDefaultLanguage)
+                        Toggle("使用默认语言", isOn: $viewModel.useDefaultLanguage)
                             .padding(.leading, 5)
                         Spacer()
-                        Text(getLanguageName(code: defaultLanguage))
+                        Text(getLanguageName(code: viewModel.defaultLanguage))
                             .foregroundColor(.secondary)
                         Button("选择") {
-                            showLanguagePicker = true
+                            viewModel.showLanguagePicker = true
                         }
                         .padding(.trailing, 5)
                     }
@@ -75,10 +113,10 @@ struct GeneralSettingsView: View {
                     Divider()
                     
                     HStack {
-                        Toggle("使用默认目录", isOn: $useDefaultDirectory)
+                        Toggle("使用默认目录", isOn: $viewModel.useDefaultDirectory)
                             .padding(.leading, 5)
                         Spacer()
-                        Text(formatPath(defaultDirectory))
+                        Text(formatPath(viewModel.defaultDirectory))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
@@ -114,7 +152,7 @@ struct GeneralSettingsView: View {
             GroupBox(label: Text("其他设置").padding(.bottom, 8)) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Setup 备份状态: ")
+                        Text("Setup 组件状态: ")
                         if ModifySetup.isSetupBackup() {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
@@ -126,25 +164,36 @@ struct GeneralSettingsView: View {
                         Spacer()
 
                         Button(action: {
-                            ModifySetup.backupSetupFile { success, message in
-                                self.isSuccess = success
-                                self.alertMessage = message
-                                self.showAlert = true
+                            if !ModifySetup.isSetupExists() {
+                                viewModel.showDownloadAlert = true
+                            } else {
+                                viewModel.showReprocessConfirmAlert = true
                             }
                         }) {
-                            Text("立即备份")
+                            Text("重新处理")
                         }
-                        .disabled(ModifySetup.isSetupBackup())
                     }
                     Divider()
                     HStack {
-                        Text("Setup 组件版本: \(setupVersion)")
+                        Text("Setup 组件版本: \(viewModel.setupVersion)")
                         Spacer()
-
-                        Button(action: {}) {
-                            Text("下载 Setup 组件")
+                        
+                        if viewModel.isDownloadingSetup {
+                            ProgressView(value: viewModel.setupDownloadProgress) {
+                                Text(viewModel.setupDownloadStatus)
+                                    .font(.caption)
+                            }
+                            .frame(width: 150)
+                            Button("取消") {
+                                viewModel.cancelDownload()
+                            }
+                        } else {
+                            Button(action: {
+                                viewModel.showDownloadConfirmAlert = true
+                            }) {
+                                Text("从 GitHub 下载 Setup 组件")
+                            }
                         }
-                        .disabled(setupVersion != String(localized: "未知 Setup 组件版本号"))
                     }
                 }.padding(8)
             }
@@ -152,19 +201,19 @@ struct GeneralSettingsView: View {
             GroupBox(label: Text("更新设置").padding(.bottom, 8)) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Toggle("自动检查更新版本", isOn: $automaticallyChecksForUpdates)
-                            .onChange(of: automaticallyChecksForUpdates) { newValue in
-                                updater.automaticallyChecksForUpdates = newValue
+                        Toggle("自动检查更新版本", isOn: $viewModel.automaticallyChecksForUpdates)
+                            .onChange(of: viewModel.automaticallyChecksForUpdates) { newValue in
+                                viewModel.updateAutomaticallyChecksForUpdates(newValue)
                             }
                         Spacer()
                         
-                        CheckForUpdatesView(updater: updater)
+                        CheckForUpdatesView(updater: viewModel.updater)
                     }
                     Divider()
-                    Toggle("自动下载最新版本", isOn: $automaticallyDownloadsUpdates)
-                        .disabled(!automaticallyChecksForUpdates)
-                        .onChange(of: automaticallyDownloadsUpdates) { newValue in
-                            updater.automaticallyDownloadsUpdates = newValue
+                    Toggle("自动下载最新版本", isOn: $viewModel.automaticallyDownloadsUpdates)
+                        .disabled(viewModel.isAutomaticallyDownloadsUpdatesDisabled)
+                        .onChange(of: viewModel.automaticallyDownloadsUpdates) { newValue in
+                            viewModel.updateAutomaticallyDownloadsUpdates(newValue)
                         }
                 }.padding(8)
             }
@@ -172,21 +221,95 @@ struct GeneralSettingsView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .sheet(isPresented: $showLanguagePicker) {
+        .sheet(isPresented: $viewModel.showLanguagePicker) {
             LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
-                defaultLanguage = language
-                showLanguagePicker = false
+                viewModel.defaultLanguage = language
+                viewModel.showLanguagePicker = false
             }
         }
-        .alert(isPresented: $showAlert) {
+        .alert(isPresented: $viewModel.showAlert) {
             Alert(
-                title: Text(isSuccess ? "操作成功" : "操作失败"),
-                message: Text(alertMessage),
+                title: Text(viewModel.isSuccess ? "操作成功" : "操作失败"),
+                message: Text(viewModel.alertMessage),
                 dismissButton: .default(Text("确定"))
             )
         }
-        .onAppear {
-            setupVersion = ModifySetup.checkComponentVersion()
+        .alert("需要下载 Setup 组件", isPresented: $viewModel.showDownloadAlert) {
+            Button("取消", role: .cancel) { }
+            Button("下载") {
+                Task {
+                    viewModel.isDownloadingSetup = true
+                    viewModel.isCancelled = false
+                    do {
+                        try await networkManager.downloadUtils.downloadSetupComponents(
+                            progressHandler: { progress, status in
+                                viewModel.setupDownloadProgress = progress
+                                viewModel.setupDownloadStatus = status
+                            },
+                            cancellationHandler: { viewModel.isCancelled }
+                        )
+                        viewModel.setupVersion = ModifySetup.checkComponentVersion()
+                        viewModel.isSuccess = true
+                        viewModel.alertMessage = "Setup 组件安装成功"
+                    } catch NetworkError.cancelled {
+                        viewModel.isSuccess = false
+                        viewModel.alertMessage = "下载已取消"
+                    } catch {
+                        viewModel.isSuccess = false
+                        viewModel.alertMessage = error.localizedDescription
+                    }
+                    viewModel.showAlert = true
+                    viewModel.isDownloadingSetup = false
+                }
+            }
+        } message: {
+            Text("检测到系统中不存在 Setup 组件，需要先下载组件才能继续操作。")
+        }
+        .alert("确认下载", isPresented: $viewModel.showDownloadConfirmAlert) {
+            Button("取消", role: .cancel) { }
+            Button("确定") {
+                Task {
+                    viewModel.isDownloadingSetup = true
+                    viewModel.isCancelled = false
+                    do {
+                        try await networkManager.downloadUtils.downloadSetupComponents(
+                            progressHandler: { progress, status in
+                                viewModel.setupDownloadProgress = progress
+                                viewModel.setupDownloadStatus = status
+                            },
+                            cancellationHandler: { viewModel.isCancelled }
+                        )
+                        viewModel.setupVersion = ModifySetup.checkComponentVersion()
+                        viewModel.isSuccess = true
+                        viewModel.alertMessage = "Setup 组件安装成功"
+                    } catch NetworkError.cancelled {
+                        viewModel.isSuccess = false
+                        viewModel.alertMessage = "下载已取消"
+                    } catch {
+                        viewModel.isSuccess = false
+                        viewModel.alertMessage = error.localizedDescription
+                    }
+                    viewModel.showAlert = true
+                    viewModel.isDownloadingSetup = false
+                }
+            }
+        } message: {
+            Text("确定要下载并安装 Setup 组件吗？这个操作需要管理员权限。")
+        }
+        .alert("确认重新处理", isPresented: $viewModel.showReprocessConfirmAlert) {
+            Button("取消", role: .cancel) { }
+            Button("确定") {
+                ModifySetup.backupSetupFile { success, message in
+                    viewModel.isSuccess = success
+                    viewModel.alertMessage = message
+                    viewModel.showAlert = true
+                }
+            }
+        } message: {
+            Text("确定要重新处理 Setup 组件吗？这个操作需要管理员权限。")
+        }
+        .task {
+            viewModel.setupVersion = ModifySetup.checkComponentVersion()
             networkManager.updateAllowedPlatform(useAppleSilicon: downloadAppleSilicon)
         }
     }
@@ -208,8 +331,8 @@ struct GeneralSettingsView: View {
         panel.canChooseFiles = false
         
         if panel.runModal() == .OK {
-            defaultDirectory = panel.url?.path ?? ""
-            useDefaultDirectory = true
+            viewModel.defaultDirectory = panel.url?.path ?? ""
+            viewModel.useDefaultDirectory = true
         }
     }
 }

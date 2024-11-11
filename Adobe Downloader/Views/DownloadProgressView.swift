@@ -134,7 +134,8 @@ struct DownloadProgressView: View {
                         .alert("Setup 组件未处理", isPresented: $showSetupBackupAlert) {
                             Button("确定") { }
                         } message: {
-                            Text("未对 Setup 组件进行备份处理，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理")
+                            Text("未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理")
+                                .font(.system(size: 18))
                         }
                     }
                     

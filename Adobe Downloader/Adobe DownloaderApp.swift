@@ -15,6 +15,9 @@ struct Adobe_DownloaderApp: App {
     @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
     @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
+    @State private var showBackupResultAlert = false
+    @State private var backupResultMessage = ""
+    @State private var backupSuccess = false
     private let updaterController: SPUStandardUpdaterController
     
     init() {
@@ -61,8 +64,8 @@ struct Adobe_DownloaderApp: App {
                     networkManager.loadSavedTasks()
                     
                     checkCreativeCloudSetup()
-                    
-                    if ModifySetup.checkSetupBackup() {
+
+                    if !showCreativeCloudAlert && !ModifySetup.isSetupBackup() {
                         showBackupAlert = true
                     }
                     
@@ -71,17 +74,25 @@ struct Adobe_DownloaderApp: App {
                         UserDefaults.standard.removeObject(forKey: "isFirstLaunch")
                     }
                 }
+                .sheet(isPresented: $showCreativeCloudAlert) {
+                    ShouldExistsSetUpView()
+                }
                 .alert("Setup未备份提示", isPresented: $showBackupAlert) {
-                    Button("OK") {
+                    Button("确定") {
                         ModifySetup.backupSetupFile { success, message in
-                            if !success {
-                                print(message)
-                            }
+                            backupSuccess = success
+                            backupResultMessage = message
+                            showBackupResultAlert = true
                         }
                     }
                     Button("取消", role: .cancel) {}
                 } message: {
                     Text("检测到Setup文件尚未备份，如果你需要安装程序，则Setup必须被处理，点击确定后你需要输入密码，Adobe Downloader将自动处理并备份为Setup.original")
+                }
+                .alert(backupSuccess ? "备份成功" : "备份失败", isPresented: $showBackupResultAlert) {
+                    Button("确定") { }
+                } message: {
+                    Text(backupResultMessage)
                 }
                 .sheet(isPresented: $showTipsSheet) {
                     VStack(spacing: 20) {
@@ -160,19 +171,6 @@ struct Adobe_DownloaderApp: App {
                             showLanguagePicker = false
                         }
                     }
-                }
-                .alert("未安装 Adobe Creative Cloud", isPresented: $showCreativeCloudAlert) {
-                    Button("前往下载") {
-                        if let url = URL(string: "https://creativecloud.adobe.com/apps/download/creative-cloud") {
-                            NSWorkspace.shared.open(url)
-                        }
-                        NSApplication.shared.terminate(nil)
-                    }
-                    Button("取消", role: .cancel) {
-                        NSApplication.shared.terminate(nil)
-                    }
-                } message: {
-                    Text("需要先安装 Adobe Creative Cloud 才能继续使用本程序")
                 }
         }
         .windowStyle(.hiddenTitleBar)

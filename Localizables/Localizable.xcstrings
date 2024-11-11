@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "(将导致无法使用安装功能)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（Unavailable to use install）"
+          }
+        }
+      }
+    },
     "(退出代码: %d)" : {
       "localizations" : {
         "en" : {
@@ -106,6 +116,16 @@
     "Adobe Downloader %@" : {
 
     },
+    "Adobe Downloader 完全开源免费: https://github.com/X1a0He/Adobe-Downloader" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adobe Downloader is completely open source and free: https://github.com/X1a0He/Adobe-Downloader"
+          }
+        }
+      }
+    },
     "Adobe Downloader 已为你默认设定如下值" : {
       "localizations" : {
         "en" : {
@@ -132,8 +152,35 @@
         }
       }
     },
-    "OK" : {
-
+    "Setup 备份状态: " : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup backup status:"
+          }
+        }
+      }
+    },
+    "Setup 组件未处理" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup component not processed"
+          }
+        }
+      }
+    },
+    "Setup 组件版本: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup component version: %@"
+          }
+        }
+      }
     },
     "Setup未备份提示" : {
       "localizations" : {
@@ -161,6 +208,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Download Apple Silicon"
+          }
+        }
+      }
+    },
+    "下载 Setup 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download Setup component"
+          }
+        }
+      }
+    },
+    "下载 X1a0He CC 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download X1a0He CC"
           }
         }
       }
@@ -238,6 +305,16 @@
         }
       }
     },
+    "不使用安装功能" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I don't install apps"
+          }
+        }
+      }
+    },
     "产品和包列表" : {
       "localizations" : {
         "en" : {
@@ -254,6 +331,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You can change the above options at any time in the settings"
+          }
+        }
+      }
+    },
+    "你确定不使用安装功能吗？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you don't want to install apps?"
           }
         }
       }
@@ -348,6 +435,16 @@
         }
       }
     },
+    "其他设置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other settings"
+          }
+        }
+      }
+    },
     "删除" : {
       "localizations" : {
         "en" : {
@@ -358,12 +455,12 @@
         }
       }
     },
-    "前往下载" : {
+    "前往 Adobe Creative Cloud" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Go to download"
+            "value" : "Go to Adobe Creative Cloud"
           }
         }
       }
@@ -394,6 +491,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Availables: %lld"
+          }
+        }
+      }
+    },
+    "可能导致无法使用安装功能，请确保是否使用安装功能" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This may result in the inability to use the installation function. Please make sure whether you use the installation function."
+          }
+        }
+      }
+    },
+    "备份失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup failure"
+          }
+        }
+      }
+    },
+    "备份成功" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup success"
           }
         }
       }
@@ -478,7 +605,11 @@
         }
       }
     },
+    "安装程序调用失败，Setup 组件未被处理，请联系开发者" : {
+
+    },
     "安装程序调用失败，请联系X1a0He" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -639,6 +770,26 @@
         }
       }
     },
+    "操作失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operation failed"
+          }
+        }
+      }
+    },
+    "操作成功" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operation successful"
+          }
+        }
+      }
+    },
     "无法将响应数据转换为json字符串" : {
       "localizations" : {
         "en" : {
@@ -720,15 +871,18 @@
         }
       }
     },
-    "未安装 Adobe Creative Cloud" : {
+    "未对 Setup 组件进行备份处理，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adobe Creative Cloud not installed"
+            "value" : "The Setup component has not been backed up, so the installation function cannot be used. You can back up the Setup component again through the settings page."
           }
         }
       }
+    },
+    "未找到 Setup 组件" : {
+
     },
     "未找到语言" : {
       "localizations" : {
@@ -736,6 +890,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "language not found"
+          }
+        }
+      }
+    },
+    "未检测到 Adobe Setup 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adobe Setup component not detected"
+          }
+        }
+      }
+    },
+    "未知 Setup 组件版本号" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown Setup component version"
           }
         }
       }
@@ -794,6 +968,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Downloading %1$@ (%2$d/%3$d)"
+          }
+        }
+      }
+    },
+    "正在下载 X1a0He CC %lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading X1a0He CC %lld"
           }
         }
       }
@@ -989,12 +1173,32 @@
         }
       }
     },
+    "程序检测到你的系统中不存在 Adobe Setup 组件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detected that the Adobe Setup component is not present on your system"
+          }
+        }
+      }
+    },
     "程序重启后自动暂停" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatically pause after program restart"
+          }
+        }
+      }
+    },
+    "立即备份" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup now"
           }
         }
       }
@@ -1216,6 +1420,7 @@
       }
     },
     "重试失败，需要重新输入密码" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1231,16 +1436,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Error details:"
-          }
-        }
-      }
-    },
-    "需要先安装 Adobe Creative Cloud 才能继续使用本程序" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You need to install Adobe Creative Cloud before you can continue using this program"
           }
         }
       }

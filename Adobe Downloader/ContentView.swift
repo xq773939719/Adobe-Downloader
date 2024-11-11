@@ -86,6 +86,16 @@ struct ContentView: View {
             .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor))
 
+            HStack() {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("Adobe Downloader 完全开源免费: https://github.com/X1a0He/Adobe-Downloader")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.bottom, 5)
+            .background(Color(NSColor.windowBackgroundColor))
+
             ZStack {
                 Color(NSColor.windowBackgroundColor)
                     .ignoresSafeArea()

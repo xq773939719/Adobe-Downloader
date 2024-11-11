@@ -9,12 +9,64 @@ import Foundation
 import SwiftUI
 
 class ModifySetup {
-    static func checkSetupBackup() -> Bool {
-        let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
-        let backupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original"
+    private static var cachedVersion: String?
+    
+    static func checkComponentVersion() -> String {
+        if let cachedVersion = cachedVersion {
+            return cachedVersion
+        }
         
-        return FileManager.default.fileExists(atPath: setupPath) && 
-               !FileManager.default.fileExists(atPath: backupPath)
+        let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
+        
+        guard FileManager.default.fileExists(atPath: setupPath) else {
+            let message = String(localized: "未找到 Setup 组件")
+            cachedVersion = message
+            return message
+        }
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/strings")
+        process.arguments = [setupPath]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            if let output = try pipe.fileHandleForReading.readToEnd(),
+               let outputString = String(data: output, encoding: .utf8) {
+                let lines = outputString.components(separatedBy: .newlines)
+                for (index, line) in lines.enumerated() {
+                    if line == "Adobe Setup Version: %s" && index + 1 < lines.count {
+                        let version = lines[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
+                        if version.range(of: "^[0-9.]+$", options: .regularExpression) != nil {
+                            cachedVersion = version
+                            return version
+                        }
+                    }
+                }
+            }
+            
+            let message = String(localized: "未知 Setup 组件版本号")
+            cachedVersion = message
+            return message
+        } catch {
+            print("Error checking Setup version: \(error)")
+            let message = String(localized: "未知 Setup 组件版本号")
+            cachedVersion = message
+            return message
+        }
+    }
+
+    static func clearVersionCache() {
+        cachedVersion = nil
+    }
+
+    static func isSetupBackup() -> Bool {
+        return FileManager.default.fileExists(atPath: "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original")
     }
     
     static func backupSetupFile(completion: @escaping (Bool, String) -> Void) {
@@ -55,7 +107,7 @@ prep '\(setupPath)'
                 try shellScript.write(to: tempScriptPath, atomically: true, encoding: .utf8)
 
                 let script = """
-                do shell script "chmod +x '\(tempScriptPath.path)' && sudo '\(tempScriptPath.path)'" with administrator privileges
+                do shell script "sudo chmod 777 '\(tempScriptPath.path)' && sudo '\(tempScriptPath.path)'" with administrator privileges
                 """
 
                 var scriptError: NSDictionary?

@@ -27,7 +27,7 @@ struct AboutView: View {
                 }
         }
         .background(Color(NSColor.windowBackgroundColor))
-        .frame(width: 500, height: 350)
+        .frame(width: 600)
     }
 }
 
@@ -40,6 +40,11 @@ struct GeneralSettingsView: View {
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @State private var showLanguagePicker = false
     @EnvironmentObject private var networkManager: NetworkManager
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var isSuccess = false
+    
+    @State private var setupVersion: String = ""
 
     private let updater: SPUUpdater
     @State private var automaticallyChecksForUpdates: Bool
@@ -106,7 +111,44 @@ struct GeneralSettingsView: View {
                 }
                 .padding(8)
             }
+            GroupBox(label: Text("其他设置").padding(.bottom, 8)) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Setup 备份状态: ")
+                        if ModifySetup.isSetupBackup() {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        } else {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.red)
+                            Text("(将导致无法使用安装功能)")
+                        }
+                        Spacer()
 
+                        Button(action: {
+                            ModifySetup.backupSetupFile { success, message in
+                                self.isSuccess = success
+                                self.alertMessage = message
+                                self.showAlert = true
+                            }
+                        }) {
+                            Text("立即备份")
+                        }
+                        .disabled(ModifySetup.isSetupBackup())
+                    }
+                    Divider()
+                    HStack {
+                        Text("Setup 组件版本: \(setupVersion)")
+                        Spacer()
+
+                        Button(action: {}) {
+                            Text("下载 Setup 组件")
+                        }
+                        .disabled(setupVersion != String(localized: "未知 Setup 组件版本号"))
+                    }
+                }.padding(8)
+            }
+            .padding(.vertical, 5)
             GroupBox(label: Text("更新设置").padding(.bottom, 8)) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -136,7 +178,15 @@ struct GeneralSettingsView: View {
                 showLanguagePicker = false
             }
         }
+        .alert(isPresented: $showAlert) {
+            Alert(
+                title: Text(isSuccess ? "操作成功" : "操作失败"),
+                message: Text(alertMessage),
+                dismissButton: .default(Text("确定"))
+            )
+        }
         .onAppear {
+            setupVersion = ModifySetup.checkComponentVersion()
             networkManager.updateAllowedPlatform(useAppleSilicon: downloadAppleSilicon)
         }
     }

@@ -19,6 +19,7 @@ struct DownloadProgressView: View {
     @State private var isPackageListExpanded: Bool = false
     @State private var expandedProducts: Set<String> = []
     @State private var iconImage: NSImage? = nil
+    @State private var showSetupBackupAlert = false
     
     private var statusLabel: some View {
         Text(task.status.description)
@@ -116,16 +117,25 @@ struct DownloadProgressView: View {
                 HStack(spacing: 8) {
                     if task.displayInstallButton {
                         Button(action: { 
-                            showInstallPrompt = false
-                            isInstalling = true
-                            Task {
-                                await networkManager.installProduct(at: task.directory)
+                            if !ModifySetup.isSetupBackup() {
+                                showSetupBackupAlert = true
+                            } else {
+                                showInstallPrompt = false
+                                isInstalling = true
+                                Task {
+                                    await networkManager.installProduct(at: task.directory)
+                                }
                             }
                         }) {
                             Label("安装", systemImage: "square.and.arrow.down.on.square")
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.green)
+                        .alert("Setup 组件未处理", isPresented: $showSetupBackupAlert) {
+                            Button("确定") { }
+                        } message: {
+                            Text("未对 Setup 组件进行备份处理，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理")
+                        }
                     }
                     
                     Button(action: onRemove) {

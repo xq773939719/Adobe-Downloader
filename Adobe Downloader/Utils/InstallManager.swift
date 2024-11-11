@@ -94,7 +94,7 @@ actor InstallManager {
                            let code = Int32(codeStr) {
                             if code != 0 {
                                 let errorMessage = code == -1
-                                    ? String(localized: "安装程序调用失败，请联系X1a0He")
+                                    ? String(localized: "安装程序调用失败，Setup 组件未被处理，请联系开发者")
                                     : String(localized: "(退出代码: \(code))")
 
                                 installProcess.terminate()
@@ -115,9 +115,7 @@ actor InstallManager {
                     if installProcess.terminationStatus == 0 {
                         continuation.resume()
                     } else {
-                        let errorMessage = withSudo
-                            ? String(localized: "(退出代码: \(installProcess.terminationStatus))")
-                            : String(localized: "重试失败，需要重新输入密码")
+                        let errorMessage = String(localized: "(退出代码: \(installProcess.terminationStatus))")
                         continuation.resume(throwing: InstallError.installationFailed(errorMessage))
                     }
                 } catch {
@@ -154,9 +152,11 @@ actor InstallManager {
         logHandler: @escaping (String) -> Void
     ) async throws {
         self.progressHandler = progressHandler
+        let password = try await requestPassword()
         try await executeInstallation(
             at: appPath,
-            withSudo: false,
+            withSudo: true,
+            password: password,
             progressHandler: progressHandler,
             logHandler: logHandler
         )

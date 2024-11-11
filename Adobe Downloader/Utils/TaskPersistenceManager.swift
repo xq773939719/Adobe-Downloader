@@ -10,7 +10,6 @@ class TaskPersistenceManager {
     private init() {
         let containerURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         tasksDirectory = containerURL.appendingPathComponent("Adobe Downloader/tasks", isDirectory: true)
-        print(tasksDirectory)
         try? fileManager.createDirectory(at: tasksDirectory, withIntermediateDirectories: true)
     }
     

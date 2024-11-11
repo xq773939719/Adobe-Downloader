@@ -1,3 +1,10 @@
+//
+//  ShouldExistsSetUpView.swift
+//  Adobe Downloader
+//
+//  Created by X1a0He.
+//
+
 import SwiftUI
 
 struct ExistingFileAlertView: View {

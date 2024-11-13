@@ -9,7 +9,19 @@
             <key>com.x1a0he.macOS.Adobe-Downloader.helper</key>
             <true/>
         </dict>
-        <key>AssociatedBundleIdentifiers</key>
-        <string>com.x1a0he.macOS.Adobe-Downloader</string>
+        <key>Program</key>
+        <string>/Library/PrivilegedHelperTools/com.x1a0he.macOS.Adobe-Downloader.helper</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/Library/PrivilegedHelperTools/com.x1a0he.macOS.Adobe-Downloader.helper</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>StandardErrorPath</key>
+        <string>/tmp/com.x1a0he.macOS.Adobe-Downloader.helper.err</string>
+        <key>StandardOutPath</key>
+        <string>/tmp/com.x1a0he.macOS.Adobe-Downloader.helper.out</string>
     </dict>
 </plist>

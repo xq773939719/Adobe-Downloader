@@ -194,8 +194,11 @@ struct NetworkConstants {
     static let maxConcurrentDownloads = 3
     static let progressUpdateInterval: TimeInterval = 1
 
+    static var productsXmlURL: String {
+        "https://prod-rel-ffc-ccm.oobesaas.adobe.com/adobe-ffc-external/core/v\(UserDefaults.standard.string(forKey: "apiVersion") ?? "6")/products/all"
+    }
+
     static let applicationJsonURL = "https://cdn-ffc.oobesaas.adobe.com/core/v3/applications"
-    static let productsXmlURL = "https://prod-rel-ffc-ccm.oobesaas.adobe.com/adobe-ffc-external/core/v6/products/all"
 
     static let adobeRequestHeaders = [
         "X-Adobe-App-Id": "accc-apps-panel-desktop",

@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showDownloadManager = false
     @State private var searchText = ""
+    @AppStorage("apiVersion") private var apiVersion: String = "6"
     
     private var filteredProducts: [Sap] {
         let products = networkManager.saps.values
@@ -35,7 +36,23 @@ struct ContentView: View {
                     .fixedSize()
 
                 Spacer()
-                
+
+                HStack {
+                    Text("API:")
+                        .foregroundColor(.secondary)
+                    Picker("", selection: $apiVersion) {
+                        Text("v4").tag("4")
+                        Text("v5").tag("5")
+                        Text("v6").tag("6")
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+                    .onChange(of: apiVersion) { newValue in
+                        refreshData()
+                    }
+                }
+                .padding(.horizontal, 10)
+
                 HStack(spacing: 8) {
                     SearchField(text: $searchText)
                         .frame(maxWidth: 200)
@@ -169,7 +186,6 @@ struct ContentView: View {
                 .environmentObject(networkManager)
         }
         .onAppear {
-
             if networkManager.saps.isEmpty {
                 refreshData()
             }

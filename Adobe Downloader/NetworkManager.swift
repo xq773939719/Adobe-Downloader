@@ -32,6 +32,7 @@ class NetworkManager: ObservableObject {
     private let installManager = InstallManager()
     @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
     @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
+    @AppStorage("apiVersion") private var apiVersion: String = "6"
     
     enum InstallationState {
         case idle
@@ -55,7 +56,18 @@ class NetworkManager: ObservableObject {
     }
 
     func fetchProducts() async {
-        await fetchProductsWithRetry()
+        loadingState = .loading
+        do {
+            let products = try await fetchProductsWithVersion(apiVersion)
+            await MainActor.run {
+                self.saps = products
+                self.loadingState = .success
+            }
+        } catch {
+            await MainActor.run {
+                self.loadingState = .failed(error)
+            }
+        }
     }
     func startDownload(sap: Sap, selectedVersion: String, language: String, destinationURL: URL) async throws {
         guard let productInfo = self.saps[sap.sapCode]?.versions[selectedVersion] else { 
@@ -365,5 +377,46 @@ class NetworkManager: ObservableObject {
         }
         downloadTasks.append(contentsOf: savedTasks)
         updateDockBadge()
+    }
+
+    private func fetchProductsWithVersion(_ version: String) async throws -> [String: Sap] {
+        var components = URLComponents(string: NetworkConstants.productsXmlURL)
+        components?.queryItems = [
+            URLQueryItem(name: "_type", value: "xml"),
+            URLQueryItem(name: "channel", value: "ccm"),
+            URLQueryItem(name: "channel", value: "sti"),
+            URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
+            URLQueryItem(name: "productType", value: "Desktop"),
+            URLQueryItem(name: "version", value: version)
+        ]
+        
+        guard let url = components?.url else {
+            throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.httpError(httpResponse.statusCode, nil)
+        }
+        
+        guard let xmlString = String(data: data, encoding: .utf8) else {
+            throw NetworkError.invalidData("无法解码XML数据")
+        }
+
+        let result = try await Task.detached(priority: .userInitiated) {
+            let parseResult = try XHXMLParser.parse(xmlString: xmlString)
+            return parseResult.products
+        }.value
+        
+        return result
     }
 }

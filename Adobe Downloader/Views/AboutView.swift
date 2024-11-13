@@ -6,6 +6,27 @@
 
 import SwiftUI
 import Sparkle
+import Combine
+
+struct PulsingCircle: View {
+    let color: Color
+    @State private var scale: CGFloat = 1.0
+    
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 8, height: 8)
+            .scaleEffect(scale)
+            .animation(
+                Animation.easeInOut(duration: 1.0)
+                    .repeatForever(autoreverses: true),
+                value: scale
+            )
+            .onAppear {
+                scale = 1.5
+            }
+    }
+}
 
 struct AboutView: View {
     private let updater: SPUUpdater
@@ -56,6 +77,16 @@ final class GeneralSettingsViewModel: ObservableObject {
     
     @Published var isCancelled = false
     
+    @Published private(set) var helperConnectionStatus: HelperConnectionStatus = .connecting
+    private var cancellables = Set<AnyCancellable>()
+    
+    enum HelperConnectionStatus {
+        case connected
+        case connecting
+        case disconnected
+        case checking
+    }
+    
     let updater: SPUUpdater
     
     init(updater: SPUUpdater) {
@@ -63,6 +94,30 @@ final class GeneralSettingsViewModel: ObservableObject {
         self.automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
         self.automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
         self.setupVersion = ModifySetup.checkComponentVersion()
+
+        self.helperConnectionStatus = .connecting
+
+        PrivilegedHelperManager.shared.$connectionState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                switch state {
+                case .connected:
+                    self?.helperConnectionStatus = .connected
+                case .disconnected:
+                    self?.helperConnectionStatus = .disconnected
+                case .connecting:
+                    self?.helperConnectionStatus = .connecting
+                }
+            }
+            .store(in: &cancellables)
+
+        DispatchQueue.main.async {
+            PrivilegedHelperManager.shared.executeCommand("whoami") { _ in }
+        }
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     func updateAutomaticallyChecksForUpdates(_ newValue: Bool) {
@@ -89,11 +144,40 @@ struct GeneralSettingsView: View {
     @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
     @EnvironmentObject private var networkManager: NetworkManager
     @StateObject private var viewModel: GeneralSettingsViewModel
+    @State private var isReinstallingHelper = false
+    @State private var showHelperAlert = false
+    @State private var helperAlertMessage = ""
+    @State private var helperAlertSuccess = false
+    @AppStorage("apiVersion") private var apiVersion: String = "6"
 
     init(updater: SPUUpdater) {
         _viewModel = StateObject(wrappedValue: GeneralSettingsViewModel(updater: updater))
     }
 
+    private var helperStatusColor: Color {
+        switch viewModel.helperConnectionStatus {
+        case .connected:
+            return .green
+        case .connecting, .checking:
+            return .orange
+        case .disconnected:
+            return .red
+        }
+    }
+    
+    private var helperStatusText: String {
+        switch viewModel.helperConnectionStatus {
+        case .connected:
+            return "运行正常"
+        case .connecting:
+            return "正在连接"
+        case .checking:
+            return "检查中"
+        case .disconnected:
+            return "连接断开"
+        }
+    }
+    
     var body: some View {
         Form {
             GroupBox(label: Text("下载设置").padding(.bottom, 8)) {
@@ -151,11 +235,75 @@ struct GeneralSettingsView: View {
             }
             GroupBox(label: Text("其他设置").padding(.bottom, 8)) {
                 VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Helper 安装状态: ")
+                            if PrivilegedHelperManager.getHelperStatus {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("已安装")
+                            } else {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                                Text("未安装")
+                                    .foregroundColor(.red)
+                            }
+                            Spacer()
+                            
+                            if isReinstallingHelper {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .frame(width: 16, height: 16)
+                            }
+                            
+                            Button(action: {
+                                isReinstallingHelper = true
+                                PrivilegedHelperManager.shared.reinstallHelper { success, message in
+                                    helperAlertSuccess = success
+                                    helperAlertMessage = message
+                                    showHelperAlert = true
+                                    isReinstallingHelper = false
+                                }
+                            }) {
+                                Text("重新安装")
+                            }
+                            .disabled(isReinstallingHelper)
+                        }
+                        
+                        if !PrivilegedHelperManager.getHelperStatus {
+                            Text("Helper未安装将导致无法执行需要管理员权限的操作")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    Divider()
+                    HStack {
+                        Text("Helper 当前状态: ")
+                        PulsingCircle(color: helperStatusColor)
+                            .padding(.horizontal, 4)
+                        Text(helperStatusText)
+                            .foregroundColor(helperStatusColor)
+                        
+                        Spacer()
+
+                        Button(action: {
+                            PrivilegedHelperManager.shared.reconnectHelper { success, message in
+                                helperAlertSuccess = success
+                                helperAlertMessage = message
+                                showHelperAlert = true
+                            }
+                        }) {
+                            Text("重新连接Helper")
+                        }
+                        .disabled(isReinstallingHelper)
+                    }
+                    Divider()
                     HStack {
                         Text("Setup 组件状态: ")
                         if ModifySetup.isSetupBackup() {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
+                            Text("已备份处理")
                         } else {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.red)
@@ -307,6 +455,11 @@ struct GeneralSettingsView: View {
             }
         } message: {
             Text("确定要重新处理 Setup 组件吗？这个操作需要管理员权限。")
+        }
+        .alert(helperAlertSuccess ? "操作成功" : "操作失败", isPresented: $showHelperAlert) {
+            Button("确定") { }
+        } message: {
+            Text(helperAlertMessage)
         }
         .task {
             viewModel.setupVersion = ModifySetup.checkComponentVersion()

@@ -9,6 +9,10 @@ import AppKit
 import Cocoa
 import ServiceManagement
 
+@objc protocol HelperToolProtocol {
+    func executeCommand(_ command: String, withReply reply: @escaping (String) -> Void)
+}
+
 @objcMembers
 class PrivilegedHelperManager: NSObject {
 
@@ -23,10 +27,23 @@ class PrivilegedHelperManager: NSObject {
     var connectionSuccessBlock: (() -> Void)?
 
     private var useLegacyInstall = false
+    private var connection: NSXPCConnection?
+
+    @Published private(set) var connectionState: ConnectionState = .disconnected
+    
+    enum ConnectionState {
+        case connected
+        case disconnected
+        case connecting
+    }
 
     override init() {
         super.init()
         initAuthorizationRef()
+
+        DispatchQueue.main.async { [weak self] in
+            _ = self?.connectToHelper()
+        }
     }
 
     func checkInstall() {
@@ -47,7 +64,7 @@ class PrivilegedHelperManager: NSObject {
                         if alert.runModal() == .alertFirstButtonReturn {
                             SMAppService.openSystemSettingsLoginItems()
                         } else {
-                             self.removeInstallHelper()
+                             removeInstallHelper()
                         }
                     }
                 }
@@ -74,11 +91,7 @@ class PrivilegedHelperManager: NSObject {
         }
     }
 
-
     private func installHelperDaemon() -> DaemonInstallResult {
-        defer {
-
-        }
         var authRef: AuthorizationRef?
         var authStatus = AuthorizationCreate(nil, nil, [], &authRef)
 
@@ -102,9 +115,6 @@ class PrivilegedHelperManager: NSObject {
         }
 
         var error: Unmanaged<CFError>?
-        let helperURL = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LaunchServices/" + PrivilegedHelperManager.machServiceName)
-
-        
         
         if SMJobBless(kSMDomainSystemLaunchd, PrivilegedHelperManager.machServiceName as CFString, authRef, &error) == false {
             if let blessError = error?.takeRetainedValue() {
@@ -117,7 +127,7 @@ class PrivilegedHelperManager: NSObject {
         return .success
     }
 
-    private func getHelperStatus(callback: @escaping ((HelperStatus) -> Void)) {
+    func getHelperStatus(callback: @escaping ((HelperStatus) -> Void)) {
         var called = false
         let reply: ((HelperStatus) -> Void) = {
             status in
@@ -142,13 +152,183 @@ class PrivilegedHelperManager: NSObject {
         reply(.installed)
 
     }
+
+    static var getHelperStatus: Bool {
+        var status = false
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        shared.getHelperStatus { helperStatus in
+            status = helperStatus == .installed
+            semaphore.signal()
+        }
+        
+        semaphore.wait()
+        return status
+    }
+    
+    func reinstallHelper(completion: @escaping (Bool, String) -> Void) {
+        removeInstallHelper()
+        let result = installHelperDaemon()
+        
+        switch result {
+        case .success:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                guard let self = self else { return }
+
+                guard let connection = connectToHelper() else {
+                    completion(false, "无法连接到Helper")
+                    return
+                }
+                
+                guard let helper = connection.remoteObjectProxy as? HelperToolProtocol else {
+                    completion(false, "无法获取Helper代理")
+                    return
+                }
+
+                helper.executeCommand("whoami") { result in
+                    if result.contains("root") {
+                        completion(true, "Helper 重新安装成功")
+                    } else {
+                        completion(false, "Helper未能获取root权限")
+                    }
+                }
+            }
+            
+        case .authorizationFail:
+            completion(false, "获取授权失败")
+        case .getAdminFail:
+            completion(false, "获取管理员权限失败")
+        case let .blessError(code):
+            completion(false, "安装失败: \(result.alertContent)")
+        }
+    }
+
+    func removeInstallHelper() {
+        try? FileManager.default.removeItem(atPath: "/Library/PrivilegedHelperTools/\(PrivilegedHelperManager.machServiceName)")
+        try? FileManager.default.removeItem(atPath: "/Library/LaunchDaemons/\(PrivilegedHelperManager.machServiceName).plist")
+    }
+
+    private func connectToHelper() -> NSXPCConnection? {
+        connectionState = .connecting
+        
+        objc_sync_enter(self)
+        defer { objc_sync_exit(self) }
+
+        if let existingConnection = connection, 
+           existingConnection.remoteObjectProxy != nil {
+            connectionState = .connected
+            return existingConnection
+        }
+
+        connection?.invalidate()
+        connection = nil
+
+        let newConnection = NSXPCConnection(machServiceName: PrivilegedHelperManager.machServiceName, 
+                                          options: .privileged)
+        
+        newConnection.remoteObjectInterface = NSXPCInterface(with: HelperToolProtocol.self)
+        
+        newConnection.interruptionHandler = { [weak self] in
+            DispatchQueue.main.async {
+                self?.connectionState = .disconnected
+                self?.connection?.invalidate()
+                self?.connection = nil
+            }
+        }
+        
+        newConnection.invalidationHandler = { [weak self] in
+            DispatchQueue.main.async {
+                self?.connectionState = .disconnected
+                self?.connection?.invalidate()
+                self?.connection = nil
+            }
+        }
+        
+        newConnection.resume()
+        connection = newConnection
+
+        if let helper = newConnection.remoteObjectProxy as? HelperToolProtocol {
+            helper.executeCommand("whoami") { [weak self] result in
+                if result == "root" {
+                    DispatchQueue.main.async {
+                        self?.connectionState = .connected
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self?.connectionState = .disconnected
+                    }
+                }
+            }
+        }
+        
+        return newConnection
+    }
+
+    func executeCommand(_ command: String, completion: @escaping (String) -> Void) {
+        guard let connection = connectToHelper() else {
+            connectionState = .disconnected
+            completion("Error: Could not connect to helper")
+            return
+        }
+        
+        guard let helper = connection.remoteObjectProxyWithErrorHandler({ error in
+            self.connectionState = .disconnected
+        }) as? HelperToolProtocol else {
+            connectionState = .disconnected
+            completion("Error: Could not get helper proxy")
+            return
+        }
+        
+        helper.executeCommand(command) { [weak self] result in
+            DispatchQueue.main.async {
+                if self?.connection == nil {
+                    self?.connectionState = .disconnected
+                    completion("Error: Connection lost")
+                    return
+                }
+                
+                if result.starts(with: "Error:") {
+                    self?.connectionState = .disconnected
+                } else {
+                    self?.connectionState = .connected
+                }
+                
+                completion(result)
+            }
+        }
+    }
+
+    func reconnectHelper(completion: @escaping (Bool, String) -> Void) {
+        connection?.invalidate()
+        connection = nil
+
+        guard let newConnection = connectToHelper() else {
+            print("重新连接失败")
+            completion(false, "无法连接到 Helper")
+            return
+        }
+
+        guard let helper = newConnection.remoteObjectProxyWithErrorHandler({ error in
+            completion(false, "连接出现错误: \(error.localizedDescription)")
+        }) as? HelperToolProtocol else {
+            completion(false, "无法获取 Helper 代理")
+            return
+        }
+
+        helper.executeCommand("whoami") { result in
+            if result == "root" {
+                completion(true, "Helper 重新连接成功")
+            } else {
+                completion(false, "Helper 响应异常")
+            }
+        }
+    }
 }
 
 extension PrivilegedHelperManager {
     private func notifyInstall() {
         if useLegacyInstall {
             useLegacyInstall = false
-            legacyInstallHelper()
             checkInstall()
             return
         }

@@ -51,6 +51,10 @@ struct Adobe_DownloaderApp: App {
             }
         }
         PrivilegedHelperManager.shared.checkInstall()
+        
+        if UserDefaults.standard.string(forKey: "apiVersion") == nil {
+            UserDefaults.standard.set("6", forKey: "apiVersion")
+        }
     }
     
     var body: some Scene {
@@ -188,6 +192,7 @@ struct Adobe_DownloaderApp: App {
                 CheckForUpdatesView(updater: updaterController.updater)
             }
         }
+        
         Settings {
             AboutView(updater: updaterController.updater)
                 .environmentObject(networkManager)

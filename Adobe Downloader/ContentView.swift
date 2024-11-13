@@ -51,6 +51,7 @@ struct ContentView: View {
                         refreshData()
                     }
                 }
+                .disabled(isRefreshing)
                 .padding(.horizontal, 10)
 
                 HStack(spacing: 8) {

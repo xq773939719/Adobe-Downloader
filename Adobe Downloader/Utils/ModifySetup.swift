@@ -21,28 +21,28 @@ class ModifySetup {
 
     static func checkComponentVersion() -> String {
         let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
-        
+
         guard isSetupExists() else {
             cachedVersion = nil
             return String(localized: "未找到 Setup 组件")
         }
-        
+
         if let cachedVersion = cachedVersion {
             return cachedVersion
         }
-        
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/strings")
         process.arguments = [setupPath]
-        
+
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
-        
+
         do {
             try process.run()
             process.waitUntilExit()
-            
+
             if let output = try pipe.fileHandleForReading.readToEnd(),
                let outputString = String(data: output, encoding: .utf8) {
                 let lines = outputString.components(separatedBy: .newlines)
@@ -56,7 +56,7 @@ class ModifySetup {
                     }
                 }
             }
-            
+
             let message = String(localized: "未知 Setup 组件版本号")
             cachedVersion = message
             return message
@@ -71,71 +71,92 @@ class ModifySetup {
     static func clearVersionCache() {
         cachedVersion = nil
     }
-    
-    static func backupSetupFile(completion: @escaping (Bool, String) -> Void) {
-        let setupQueue = DispatchQueue(label: "com.x1a0he.adobedownloader.setup")
-        
-        setupQueue.async {
-            let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
-            let backupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original"
 
-            let shellScript = """
-#!/bin/bash
-function hex() {
-    echo ''$1'' | perl -0777pe 's|([0-9a-zA-Z]{2}+(?![^\\(]*\\)))|\\\\x${1}|gs'
-}
+    static func backupSetupFile(completion: @escaping (Bool) -> Void) {
+        let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
+        let backupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original"
 
-function replace() {
-    declare -r dom=$(hex "$2")
-    declare -r sub=$(hex "$3")
-    perl -0777pi -e 'BEGIN{$/=\\1e8} s|'$dom'|'$sub'|gs' "$1"
-}
+        if isSetupBackup() {
+            let command = "cp '\(backupPath)' '\(setupPath)'"
+            PrivilegedHelperManager.shared.executeCommand(command) { result in
+                completion(!result.starts(with: "Error:"))
+            }
+        } else {
+            let command = "cp '\(setupPath)' '\(backupPath)'"
+            PrivilegedHelperManager.shared.executeCommand(command) { result in
+                completion(!result.starts(with: "Error:"))
+            }
+        }
+    }
 
-function prep() {
-    codesign --remove-signature "$1"
-    codesign -f -s - --timestamp=none --all-architectures --deep "$1"
-    xattr -cr "$1"
-}
+    static func modifySetupFile(completion: @escaping (Bool) -> Void) {
+        let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
 
-if [ -f '\(backupPath)' ]; then
-    cp '\(backupPath)' '\(setupPath)'
-else
-    cp '\(setupPath)' '\(backupPath)'
-fi
+        let commands = [
+            // 第一个替换命令
+            """
+            perl -0777pi -e 'BEGIN{$/=\\1e8} s|\\x55\\x48\\x89\\xE5\\x53\\x50\\x48\\x89\\xFB\\x48\\x8B\\x05\\x70\\xC7\\x03\\x00\\x48\\x8B\\x00\\x48\\x89\\x45\\xF0\\xE8\\x24\\xD7\\xFE\\xFF\\x48\\x83\\xC3\\x08\\x48\\x39\\xD8\\x0F|\\x6A\\x01\\x58\\xC3\\x53\\x50\\x48\\x89\\xFB\\x48\\x8B\\x05\\x70\\xC7\\x03\\x00\\x48\\x8B\\x00\\x48\\x89\\x45\\xF0\\xE8\\x24\\xD7\\xFE\\xFF\\x48\\x83\\xC3\\x08\\x48\\x39\\xD8\\x0F|gs' '\(setupPath)'
+            """,
 
-replace '\(setupPath)' '554889E553504889FB488B0570C70300488B00488945F0E824D7FEFF4883C3084839D80F' '6A0158C353504889FB488B0570C70300488B00488945F0E824D7FEFF4883C3084839D80F'
-replace '\(setupPath)' 'FFC300D1F44F01A9FD7B02A9FD830091F30300AA1F2003D568A11D58080140F9E80700F9' '200080D2C0035FD6FD7B02A9FD830091F30300AA1F2003D568A11D58080140F9E80700F9'
+            // 第二个替换命令
+            """
+            perl -0777pi -e 'BEGIN{$/=\\1e8} s|\\xFF\\xC3\\x00\\xD1\\xF4\\x4F\\x01\\xA9\\xFD\\x7B\\x02\\xA9\\xFD\\x83\\x00\\x91\\xF3\\x03\\x00\\xAA\\x1F\\x20\\x03\\xD5\\x68\\xA1\\x1D\\x58\\x08\\x01\\x40\\xF9\\xE8\\x07\\x00\\xF9|\\x20\\x00\\x80\\xD2\\xC0\\x03\\x5F\\xD6\\xFD\\x7B\\x02\\xA9\\xFD\\x83\\x00\\x91\\xF3\\x03\\x00\\xAA\\x1F\\x20\\x03\\xD5\\x68\\xA1\\x1D\\x58\\x08\\x01\\x40\\xF9\\xE8\\x07\\x00\\xF9|gs' '\(setupPath)'
+            """,
 
-prep '\(setupPath)'
-"""
+            // 移除签名
+            "codesign --remove-signature '\(setupPath)'",
 
-            let tempScriptPath = FileManager.default.temporaryDirectory.appendingPathComponent("setup_script.sh")
-            do {
-                try shellScript.write(to: tempScriptPath, atomically: true, encoding: .utf8)
+            // 重新签名
+            "codesign -f -s - --timestamp=none --all-architectures --deep '\(setupPath)'",
 
-                let script = """
-                do shell script "sudo chmod 777 '\(tempScriptPath.path)' && sudo '\(tempScriptPath.path)'" with administrator privileges
-                """
+            // 清除扩展属性
+            "xattr -cr '\(setupPath)'"
+        ]
 
-                var scriptError: NSDictionary?
-                DispatchQueue.main.sync {
-                    let appleScript = NSAppleScript(source: script)
-                    scriptError = nil
-                    _ = appleScript?.executeAndReturnError(&scriptError)
+        func executeNextCommand(_ index: Int) {
+            guard index < commands.count else {
+                completion(true)
+                return
+            }
+
+            PrivilegedHelperManager.shared.executeCommand(commands[index]) { result in
+                if result.starts(with: "Error:") {
+                    print("Command failed: \(commands[index])")
+                    completion(false)
+                    return
                 }
-                
-                try? FileManager.default.removeItem(at: tempScriptPath)
+                executeNextCommand(index + 1)
+            }
+        }
 
+        executeNextCommand(0)
+    }
+
+    static func backupAndModifySetupFile(completion: @escaping (Bool, String) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            if !isSetupExists() {
                 DispatchQueue.main.async {
-                    if let error = scriptError {
-                        completion(false, "操作执行时发生错误: \(error)")
-                    } else {
-                        completion(true, "所有操作已成功完成")
+                    completion(false, "未找到 Setup 组件")
+                }
+                return
+            }
+
+            backupSetupFile { backupSuccess in
+                if !backupSuccess {
+                    DispatchQueue.main.async {
+                        completion(false, "备份 Setup 组件失败")
                     }
+                    return
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(false, "创建脚本文件时发生错误: \(error)")
+
+                modifySetupFile { modifySuccess in
+                    DispatchQueue.main.async {
+                        if modifySuccess {
+                            completion(true, "所有操作已成功完成")
+                        } else {
+                            completion(false, "修改 Setup 组件失败")
+                        }
+                    }
                 }
             }
         }

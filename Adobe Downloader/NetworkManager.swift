@@ -58,9 +58,11 @@ class NetworkManager: ObservableObject {
     func fetchProducts() async {
         loadingState = .loading
         do {
-            let products = try await fetchProductsWithVersion(apiVersion)
+            let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(version: apiVersion)
             await MainActor.run {
-                self.saps = products
+                self.saps = saps
+                self.cdn = cdn
+                self.sapCodes = sapCodes
                 self.loadingState = .success
             }
         } catch {
@@ -162,7 +164,7 @@ class NetworkManager: ObservableObject {
         
         while retryCount < maxRetries {
             do {
-                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData()
+                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(version: apiVersion)
 
                 await MainActor.run {
                     self.saps = saps

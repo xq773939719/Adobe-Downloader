@@ -19,29 +19,29 @@ struct Adobe_DownloaderApp: App {
     @State private var backupResultMessage = ""
     @State private var backupSuccess = false
     private let updaterController: SPUStandardUpdaterController
-    
+
     init() {
         updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-        
+
         let isFirstRun = UserDefaults.standard.object(forKey: "downloadAppleSilicon") == nil ||
                         UserDefaults.standard.object(forKey: "useDefaultLanguage") == nil
-        
+
         UserDefaults.standard.set(isFirstRun, forKey: "isFirstLaunch")
 
         if UserDefaults.standard.object(forKey: "downloadAppleSilicon") == nil {
             UserDefaults.standard.set(AppStatics.isAppleSilicon, forKey: "downloadAppleSilicon")
         }
-        
+
         if UserDefaults.standard.object(forKey: "useDefaultLanguage") == nil {
             let systemLanguage = Locale.current.identifier
-            let matchedLanguage = AppStatics.supportedLanguages.first { 
-                systemLanguage.hasPrefix($0.code.prefix(2)) 
+            let matchedLanguage = AppStatics.supportedLanguages.first {
+                systemLanguage.hasPrefix($0.code.prefix(2))
             }?.code ?? "ALL"
 
             UserDefaults.standard.set(true, forKey: "useDefaultLanguage")
             UserDefaults.standard.set(matchedLanguage, forKey: "defaultLanguage")
         }
-        
+
         if UserDefaults.standard.object(forKey: "useDefaultDirectory") == nil {
             if let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first {
                 print(downloadsURL.path)
@@ -51,12 +51,12 @@ struct Adobe_DownloaderApp: App {
             }
         }
         PrivilegedHelperManager.shared.checkInstall()
-        
+
         if UserDefaults.standard.string(forKey: "apiVersion") == nil {
             UserDefaults.standard.set("6", forKey: "apiVersion")
         }
     }
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -68,17 +68,17 @@ struct Adobe_DownloaderApp: App {
                         appDelegate.networkManager = networkManager
                         networkManager.loadSavedTasks()
                     }
-                    
+
                     let needsBackup = !ModifySetup.isSetupBackup()
                     let needsSetup = !ModifySetup.isSetupExists()
-                    
+
                     await MainActor.run {
                         if needsSetup {
                             showCreativeCloudAlert = true
                         } else if needsBackup {
                             showBackupAlert = true
                         }
-                        
+
                         if UserDefaults.standard.bool(forKey: "isFirstLaunch") {
                             showTipsSheet = true
                             UserDefaults.standard.removeObject(forKey: "isFirstLaunch")
@@ -91,7 +91,7 @@ struct Adobe_DownloaderApp: App {
                 }
                 .alert("Setup未备份提示", isPresented: $showBackupAlert) {
                     Button("确定") {
-                        ModifySetup.backupSetupFile { success, message in
+                        ModifySetup.backupAndModifySetupFile { success, message in
                             backupSuccess = success
                             backupResultMessage = message
                             showBackupResultAlert = true
@@ -110,7 +110,7 @@ struct Adobe_DownloaderApp: App {
                     VStack(spacing: 20) {
                         Text("Adobe Downloader 已为你默认设定如下值")
                             .font(.headline)
-                        
+
                         VStack(spacing: 12) {
                             HStack {
                                 Toggle("使用默认语言", isOn: $useDefaultLanguage)
@@ -123,7 +123,7 @@ struct Adobe_DownloaderApp: App {
                                 }
                                 .padding(.trailing, 5)
                             }
-                            
+
                             Divider()
 
                             HStack {
@@ -147,7 +147,7 @@ struct Adobe_DownloaderApp: App {
                                     .padding(.leading, 5)
                                 Spacer()
                             }
-                            
+
                             Divider()
 
                             HStack {
@@ -192,7 +192,7 @@ struct Adobe_DownloaderApp: App {
                 CheckForUpdatesView(updater: updaterController.updater)
             }
         }
-        
+
         Settings {
             AboutView(updater: updaterController.updater)
                 .environmentObject(networkManager)

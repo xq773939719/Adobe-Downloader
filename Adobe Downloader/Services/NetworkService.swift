@@ -1,34 +1,35 @@
 import Foundation
 
 class NetworkService {
-    func fetchProductsData() async throws -> ([String: Sap], String, [SapCodes]) {
+    func fetchProductsData(version: String) async throws -> ([String: Sap], String, [SapCodes]) {
         var components = URLComponents(string: NetworkConstants.productsXmlURL)
         components?.queryItems = [
             URLQueryItem(name: "_type", value: "xml"),
             URLQueryItem(name: "channel", value: "ccm"),
             URLQueryItem(name: "channel", value: "sti"),
             URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
-            URLQueryItem(name: "productType", value: "Desktop")
+            URLQueryItem(name: "productType", value: "Desktop"),
+            URLQueryItem(name: "version", value: version)
         ]
-        
+
         guard let url = components?.url else {
             throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
-        
+
         guard (200...299).contains(httpResponse.statusCode) else {
             throw NetworkError.httpError(httpResponse.statusCode, nil)
         }
-        
+
         guard let xmlString = String(data: data, encoding: .utf8) else {
             throw NetworkError.invalidData("无法解码XML数据")
         }
@@ -57,10 +58,10 @@ class NetworkService {
             }
             return (products, cdn, sapCodes)
         }.value
-        
+
         return result
     }
-    
+
     func getApplicationInfo(buildGuid: String) async throws -> String {
         guard let url = URL(string: NetworkConstants.applicationJsonURL) else {
             throw NetworkError.invalidURL(NetworkConstants.applicationJsonURL)
@@ -68,33 +69,33 @@ class NetworkService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        
+
         var headers = NetworkConstants.adobeRequestHeaders
         headers["x-adobe-build-guid"] = buildGuid
         headers["Cookie"] = generateCookie()
-        
+
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
-        
+
         guard (200...299).contains(httpResponse.statusCode) else {
             throw NetworkError.httpError(httpResponse.statusCode, String(data: data, encoding: .utf8))
         }
-        
+
         guard let jsonString = String(data: data, encoding: .utf8) else {
             throw NetworkError.invalidData("无法将响应数据转换为json符串")
         }
-        
+
         return jsonString
     }
-    
+
     private func generateCookie() -> String {
         let timestamp = Int(Date().timeIntervalSince1970)
         let random = Int.random(in: 100000...999999)
         return "s_cc=true; s_sq=; AMCV_9E1005A551ED61CA0A490D45%40AdobeOrg=1075005958%7CMCIDTS%7C\(timestamp)%7CMCMID%7C\(random)%7CMCAAMLH-1683925272%7C11%7CMCAAMB-1683925272%7CRKhpRz8krg2tLO6pguXWp5olkAcUniQYPHaMWWgdJ3xzPWQmdj0y%7CMCOPTOUT-1683327672s%7CNONE%7CvVersion%7C4.4.1; gpv=cc-search-desktop; s_ppn=cc-search-desktop"
     }
-} 
+}

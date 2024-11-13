@@ -1163,7 +1163,11 @@
         }
       }
     },
+    "确定要下载并安装 Setup 组件吗?" : {
+
+    },
     "确定要下载并安装 Setup 组件吗？这个操作需要管理员权限。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1173,7 +1177,11 @@
         }
       }
     },
+    "确定要重新处理 Setup 组件吗?" : {
+
+    },
     "确定要重新处理 Setup 组件吗？这个操作需要管理员权限。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

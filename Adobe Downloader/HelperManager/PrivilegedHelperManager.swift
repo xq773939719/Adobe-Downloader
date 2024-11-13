@@ -11,6 +11,8 @@ import ServiceManagement
 
 @objc protocol HelperToolProtocol {
     func executeCommand(_ command: String, withReply reply: @escaping (String) -> Void)
+    func startInstallation(_ command: String, withReply reply: @escaping (String) -> Void)
+    func getInstallationOutput(withReply reply: @escaping (String) -> Void)
 }
 
 @objcMembers
@@ -198,7 +200,7 @@ class PrivilegedHelperManager: NSObject {
             completion(false, "获取授权失败")
         case .getAdminFail:
             completion(false, "获取管理员权限失败")
-        case let .blessError(code):
+        case .blessError(_):
             completion(false, "安装失败: \(result.alertContent)")
         }
     }
@@ -321,6 +323,44 @@ class PrivilegedHelperManager: NSObject {
             } else {
                 completion(false, "Helper 响应异常")
             }
+        }
+    }
+
+    func executeInstallation(_ command: String, progress: @escaping (String) -> Void) async throws {
+        guard let connection = connectToHelper() else {
+            throw NSError(domain: "HelperError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not connect to helper"])
+        }
+        
+        guard let helper = connection.remoteObjectProxyWithErrorHandler({ error in
+            self.connectionState = .disconnected
+        }) as? HelperToolProtocol else {
+            throw NSError(domain: "HelperError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Could not get helper proxy"])
+        }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            helper.startInstallation(command) { result in
+                if result == "Started" {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: NSError(domain: "HelperError", code: -3, userInfo: [NSLocalizedDescriptionKey: result]))
+                }
+            }
+        }
+
+        while true {
+            let output = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+                helper.getInstallationOutput { result in
+                    continuation.resume(returning: result)
+                }
+            }
+            
+            if output == "Completed" {
+                break
+            } else if !output.isEmpty {
+                progress(output)
+            }
+            
+            try await Task.sleep(nanoseconds: 100_000_000)
         }
     }
 }

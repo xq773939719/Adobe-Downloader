@@ -14,16 +14,6 @@
         }
       }
     },
-    "(退出代码: %d)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（Exit Code: %d)"
-          }
-        }
-      }
-    },
     "/" : {
 
     },
@@ -612,6 +602,21 @@
         }
       }
     },
+    "安装失败 (退出代码: %lld)" : {
+
+    },
+    "安装失败: Setup 组件未被处理 (退出代码: %lld)" : {
+
+    },
+    "安装失败: 安装文件不完整或损坏 (退出代码: %lld)" : {
+
+    },
+    "安装失败: 权限问题 (退出代码: %lld)" : {
+
+    },
+    "安装失败: 架构或版本不一致 (退出代码: %lld)" : {
+
+    },
     "安装完成" : {
       "localizations" : {
         "en" : {
@@ -638,16 +643,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Installer already exists"
-          }
-        }
-      }
-    },
-    "安装程序调用失败，Setup 组件未被处理，请联系开发者" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The installation program failed to call, please contact developer"
           }
         }
       }
@@ -1031,16 +1026,6 @@
         }
       }
     },
-    "正在准备..." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preparing..."
-          }
-        }
-      }
-    },
     "正在准备安装..." : {
       "localizations" : {
         "en" : {
@@ -1081,25 +1066,8 @@
         }
       }
     },
-    "正在安装包..." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Installing packages..."
-          }
-        }
-      }
-    },
-    "正在重试安装..." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retrying installation..."
-          }
-        }
-      }
+    "正在安装..." : {
+
     },
     "没有写入权限" : {
       "localizations" : {
@@ -1142,17 +1110,6 @@
         }
       }
     },
-    "目录:" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Directory: "
-          }
-        }
-      }
-    },
     "确定" : {
       "localizations" : {
         "en" : {
@@ -1166,30 +1123,8 @@
     "确定要下载并安装 Setup 组件吗?" : {
 
     },
-    "确定要下载并安装 Setup 组件吗？这个操作需要管理员权限。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Are you sure you want to download and install the Setup components? This operation requires administrator privileges."
-          }
-        }
-      }
-    },
     "确定要重新处理 Setup 组件吗?" : {
 
-    },
-    "确定要重新处理 Setup 组件吗？这个操作需要管理员权限。" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Are you sure you want to reprocess the Setup components? This operation requires administrator privileges."
-          }
-        }
-      }
     },
     "确认" : {
       "localizations" : {
@@ -1380,17 +1315,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Self-installation command:"
-          }
-        }
-      }
-    },
-    "语言:" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Language: "
           }
         }
       }

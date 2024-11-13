@@ -50,6 +50,7 @@ struct Adobe_DownloaderApp: App {
                 UserDefaults.standard.set(downloadsURL.path, forKey: "defaultDirectory")
             }
         }
+        PrivilegedHelperManager.shared.checkInstall()
     }
     
     var body: some Scene {

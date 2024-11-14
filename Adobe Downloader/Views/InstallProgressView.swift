@@ -75,8 +75,6 @@ struct InstallProgressView: View {
                 ProgressSection(progress: progress, progressText: progressText)
             }
 
-            LogSection(logs: networkManager.installationLogs)
-
             if isFailed {
                 ErrorSection(
                     status: status, isFailed: isFailed
@@ -91,7 +89,7 @@ struct InstallProgressView: View {
             )
         }
         .padding()
-        .frame(minWidth: 500, minHeight: 400)
+        .frame(minWidth: 500)
         .background(Color(NSColor.windowBackgroundColor))
         .cornerRadius(8)
     }
@@ -113,45 +111,6 @@ private struct ProgressSection: View {
                 .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(.horizontal, 20)
-    }
-}
-
-private struct LogSection: View {
-    let logs: [String]
-    
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(showsIndicators: true) {
-                LazyVStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(logs.suffix(1000).enumerated()), id: \.offset) { index, log in
-                        Text(log)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .id(index)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .textSelection(.enabled)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 8)
-            }
-            .frame(height: 150)
-            .background(Color(NSColor.textBackgroundColor))
-            .cornerRadius(4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
-            .onChange(of: logs) { newValue in
-                if !newValue.isEmpty {
-                    withAnimation {
-                        proxy.scrollTo(newValue.count - 1, anchor: .bottom)
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -301,7 +260,7 @@ private struct CommandPopover: View {
     }
 }
 
-#Preview("安装中带日志") {
+#Preview("安装中") {
     let networkManager = NetworkManager()
     return InstallProgressView(
         productName: "Adobe Photoshop",
@@ -311,26 +270,9 @@ private struct CommandPopover: View {
         onRetry: nil
     )
     .environmentObject(networkManager)
-    .onAppear {
-        let previewLogs = [
-            "正在准备安装...",
-            "Progress: 10%",
-            "Progress: 20%",
-            "Progress: 30%",
-            "Progress: 40%",
-            "Progress: 45%",
-            "正在安装核心组件...",
-        ]
-        
-        for (index, log) in previewLogs.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
-                networkManager.installationLogs.append(log)
-            }
-        }
-    }
 }
 
-#Preview("安装失败带日志") {
+#Preview("安装失败") {
     let networkManager = NetworkManager()
     return InstallProgressView(
         productName: "Adobe Photoshop",
@@ -342,25 +284,10 @@ private struct CommandPopover: View {
     .environmentObject(networkManager)
     .onAppear {
         networkManager.installCommand = "sudo \"/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup\" --install=1 --driverXML=\"/Users/demo/Downloads/Adobe Photoshop/driver.xml\""
-        
-        let previewLogs = [
-            "正在准备安装...",
-            "Progress: 10%",
-            "Progress: 20%",
-            "检查权限...",
-            "权限检查失败",
-            "安装失败: 权限被拒绝"
-        ]
-        
-        for (index, log) in previewLogs.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
-                networkManager.installationLogs.append(log)
-            }
-        }
     }
 }
 
-#Preview("安装完成带日志") {
+#Preview("安装完成") {
     let networkManager = NetworkManager()
     return InstallProgressView(
         productName: "Adobe Photoshop",
@@ -370,26 +297,9 @@ private struct CommandPopover: View {
         onRetry: nil
     )
     .environmentObject(networkManager)
-    .onAppear {
-        let previewLogs = [
-            "正在准备安装...",
-            "Progress: 25%",
-            "Progress: 50%",
-            "Progress: 75%",
-            "Progress: 100%",
-            "正在完成安装...",
-            "安装完成"
-        ]
-        
-        for (index, log) in previewLogs.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
-                networkManager.installationLogs.append(log)
-            }
-        }
-    }
 }
 
-#Preview("在深色模式下带日志") {
+#Preview("在深色模式下") {
     let networkManager = NetworkManager()
     return InstallProgressView(
         productName: "Adobe Photoshop",
@@ -400,19 +310,4 @@ private struct CommandPopover: View {
     )
     .environmentObject(networkManager)
     .preferredColorScheme(.dark)
-    .onAppear {
-        let previewLogs = [
-            "正在准备安装...",
-            "Progress: 25%",
-            "Progress: 50%",
-            "Progress: 75%",
-            "正在安装..."
-        ]
-        
-        for (index, log) in previewLogs.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
-                networkManager.installationLogs.append(log)
-            }
-        }
-    }
 }

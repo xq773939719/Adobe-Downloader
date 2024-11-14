@@ -16,13 +16,13 @@ class ModifySetup {
     }
 
     static func isSetupBackup() -> Bool {
-        return FileManager.default.fileExists(atPath: "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original")
+        return isSetupExists() && FileManager.default.fileExists(atPath: "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup.original")
     }
 
     static func checkComponentVersion() -> String {
         let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
 
-        guard isSetupExists() else {
+        guard FileManager.default.fileExists(atPath: setupPath) else {
             cachedVersion = nil
             return String(localized: "未找到 Setup 组件")
         }
@@ -30,42 +30,42 @@ class ModifySetup {
         if let cachedVersion = cachedVersion {
             return cachedVersion
         }
+        
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: setupPath)) else {
+            return "Unknown"
+        }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/strings")
-        process.arguments = [setupPath]
+        let versionMarkers = ["Version ", "Adobe Setup Version: "]
+        
+        for marker in versionMarkers {
+            if let markerData = marker.data(using: .utf8),
+               let markerRange = data.range(of: markerData) {
+                let versionStart = markerRange.upperBound
+                let searchRange = versionStart..<min(versionStart + 30, data.count)
 
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            if let output = try pipe.fileHandleForReading.readToEnd(),
-               let outputString = String(data: output, encoding: .utf8) {
-                let lines = outputString.components(separatedBy: .newlines)
-                for (index, line) in lines.enumerated() {
-                    if line == "Adobe Setup Version: %s" && index + 1 < lines.count {
-                        let version = lines[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
-                        if version.range(of: "^[0-9.]+$", options: .regularExpression) != nil {
-                            cachedVersion = version
-                            return version
-                        }
-                    }
+                var versionBytes: [UInt8] = []
+                for i in searchRange {
+                    let byte = data[i]
+                    if (byte >= 0x30 && byte <= 0x39) || byte == 0x2E || byte == 0x20 {
+                        versionBytes.append(byte)
+                    } else if byte == 0x28 {
+                        break
+                    } else if versionBytes.isEmpty {
+                        continue
+                    } else { break }
+                }
+                
+                if let version = String(bytes: versionBytes, encoding: .utf8)?.trimmingCharacters(in: .whitespaces),
+                   !version.isEmpty {
+                    cachedVersion = version
+                    return version
                 }
             }
-
-            let message = String(localized: "未知 Setup 组件版本号")
-            cachedVersion = message
-            return message
-        } catch {
-            print("Error checking Setup version: \(error)")
-            let message = String(localized: "未知 Setup 组件版本号")
-            cachedVersion = message
-            return message
         }
+        
+        let message = String(localized: "未知 Setup 组件版本号")
+        cachedVersion = message
+        return message
     }
 
     static func clearVersionCache() {
@@ -150,6 +150,26 @@ class ModifySetup {
                     }
                 }
             }
+        }
+    }
+
+    static func isSetupModified() -> Bool {
+        let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
+        
+        guard FileManager.default.fileExists(atPath: setupPath) else { return false }
+
+        let intelPattern = Data([0x55, 0x48, 0x89, 0xE5, 0x53, 0x50, 0x48, 0x89, 0xFB, 0x48, 0x8B, 0x05, 0x70, 0xC7, 0x03, 0x00, 0x48, 0x8B, 0x00, 0x48, 0x89, 0x45, 0xF0, 0xE8, 0x24, 0xD7, 0xFE, 0xFF, 0x48, 0x83, 0xC3, 0x08, 0x48, 0x39, 0xD8, 0x0F])
+        
+        let armPattern = Data([0xFF, 0xC3, 0x00, 0xD1, 0xF4, 0x4F, 0x01, 0xA9, 0xFD, 0x7B, 0x02, 0xA9, 0xFD, 0x83, 0x00, 0x91, 0xF3, 0x03, 0x00, 0xAA, 0x1F, 0x20, 0x03, 0xD5, 0x68, 0xA1, 0x1D, 0x58, 0x08, 0x01, 0x40, 0xF9, 0xE8, 0x07, 0x00, 0xF9])
+        
+        do {
+            let fileData = try Data(contentsOf: URL(fileURLWithPath: setupPath))
+            if fileData.range(of: intelPattern) != nil || fileData.range(of: armPattern) != nil { return false }
+            return true
+            
+        } catch {
+            print("Error reading Setup file: \(error)")
+            return false
         }
     }
 }

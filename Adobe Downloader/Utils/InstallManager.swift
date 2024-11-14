@@ -34,8 +34,7 @@ actor InstallManager {
     
     private func executeInstallation(
         at appPath: URL,
-        progressHandler: @escaping (Double, String) -> Void,
-        logHandler: @escaping (String) -> Void
+        progressHandler: @escaping (Double, String) -> Void
     ) async throws {
         guard FileManager.default.fileExists(atPath: setupPath) else {
             throw InstallError.setupNotFound
@@ -53,13 +52,13 @@ actor InstallManager {
                 do {
                     try await PrivilegedHelperManager.shared.executeInstallation(installCommand) { output in
                         Task { @MainActor in
-                            logHandler(output)
                             if let range = output.range(of: "Exit Code: (-?[0-9]+)", options: .regularExpression),
                                let codeStr = output[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
                                let exitCode = Int(codeStr) {
                                 
                                 if exitCode == 0 {
                                     progressHandler(1.0, String(localized: "安装完成"))
+                                    PrivilegedHelperManager.shared.executeCommand("pkill -f Setup") { _ in }
                                     continuation.resume()
                                 } else {
                                     let errorMessage: String
@@ -104,13 +103,11 @@ actor InstallManager {
     
     func install(
         at appPath: URL,
-        progressHandler: @escaping (Double, String) -> Void,
-        logHandler: @escaping (String) -> Void
+        progressHandler: @escaping (Double, String) -> Void
     ) async throws {
         try await executeInstallation(
             at: appPath,
-            progressHandler: progressHandler,
-            logHandler: logHandler
+            progressHandler: progressHandler
         )
     }
     
@@ -124,13 +121,11 @@ actor InstallManager {
 
     func retry(
         at appPath: URL,
-        progressHandler: @escaping (Double, String) -> Void,
-        logHandler: @escaping (String) -> Void
+        progressHandler: @escaping (Double, String) -> Void
     ) async throws {
         try await executeInstallation(
             at: appPath,
-            progressHandler: progressHandler,
-            logHandler: logHandler
+            progressHandler: progressHandler
         )
     }
 }

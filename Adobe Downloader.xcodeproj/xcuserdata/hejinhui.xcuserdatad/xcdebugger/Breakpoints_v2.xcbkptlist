@@ -30,9 +30,9 @@
             filePath = "Adobe Downloader/Utils/InstallManager.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "132"
-            endingLineNumber = "132"
-            landmarkName = "retry(at:progressHandler:logHandler:)"
+            startingLineNumber = "128"
+            endingLineNumber = "128"
+            landmarkName = "retry(at:progressHandler:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

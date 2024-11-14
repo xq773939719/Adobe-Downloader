@@ -160,11 +160,11 @@ struct GeneralSettingsView: View {
         Form {
             DownloadSettingsView(viewModel: viewModel)
 
-            OtherSettingsView(viewModel: viewModel,
+            HelperSettingsView(viewModel: viewModel,
                             showHelperAlert: $showHelperAlert,
                             helperAlertMessage: $helperAlertMessage,
                             helperAlertSuccess: $helperAlertSuccess)
-
+            CCSettingsView(viewModel: viewModel)
             UpdateSettingsView(viewModel: viewModel)
         }
         .padding()
@@ -181,7 +181,7 @@ struct GeneralSettingsView: View {
                     viewModel.isDownloadingSetup = true
                     viewModel.isCancelled = false
                     do {
-                        try await networkManager.downloadUtils.downloadSetupComponents(
+                        try await networkManager.downloadUtils.downloadX1a0HeCCPackages(
                             progressHandler: { progress, status in
                                 viewModel.setupDownloadProgress = progress
                                 viewModel.setupDownloadStatus = status
@@ -212,7 +212,7 @@ struct GeneralSettingsView: View {
                     viewModel.isDownloadingSetup = true
                     viewModel.isCancelled = false
                     do {
-                        try await networkManager.downloadUtils.downloadSetupComponents(
+                        try await networkManager.downloadUtils.downloadX1a0HeCCPackages(
                             progressHandler: { progress, status in
                                 viewModel.setupDownloadProgress = progress
                                 viewModel.setupDownloadStatus = status
@@ -234,7 +234,7 @@ struct GeneralSettingsView: View {
                 }
             }
         } message: {
-            Text("确定要下载并安装 Setup 组件吗?")
+            Text("确定要下载并安装 X1a0He CC 吗?")
         }
         .alert("确认重新处理", isPresented: $viewModel.showReprocessConfirmAlert) {
             Button("取消", role: .cancel) { }
@@ -281,19 +281,30 @@ struct DownloadSettingsView: View {
     }
 }
 
-struct OtherSettingsView: View {
+struct HelperSettingsView: View {
     @ObservedObject var viewModel: GeneralSettingsViewModel
     @Binding var showHelperAlert: Bool
     @Binding var helperAlertMessage: String
     @Binding var helperAlertSuccess: Bool
 
     var body: some View {
-        GroupBox(label: Text("其他设置").padding(.bottom, 8)) {
+        GroupBox(label: Text("Helper 设置").padding(.bottom, 8)) {
             VStack(alignment: .leading, spacing: 12) {
                 HelperStatusRow(viewModel: viewModel, showHelperAlert: $showHelperAlert,
                               helperAlertMessage: $helperAlertMessage,
                               helperAlertSuccess: $helperAlertSuccess)
-                Divider()
+            }
+            .padding(8)
+        }
+    }
+}
+
+struct CCSettingsView: View {
+    @ObservedObject var viewModel: GeneralSettingsViewModel
+
+    var body: some View {
+        GroupBox(label: Text("X1a0He CC设置").padding(.bottom, 8)) {
+            VStack(alignment: .leading, spacing: 12) {
                 SetupComponentRow(viewModel: viewModel)
             }
             .padding(8)
@@ -597,11 +608,35 @@ struct SetupComponentRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Setup 组件状态: ")
+                Text("X1a0He CC 备份状态: ")
                 if ModifySetup.isSetupBackup() {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                    Text("已备份处理")
+                    Text("已备份")
+                } else {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.red)
+                    Text("(可能导致处理 Setup 组件失败)")
+                }
+                Spacer()
+
+                Button(action: {
+                    if !ModifySetup.isSetupExists() {
+                        viewModel.showDownloadAlert = true
+                    } else {
+                        viewModel.showReprocessConfirmAlert = true
+                    }
+                }) {
+                    Text("重新备份")
+                }
+            }
+            Divider()
+            HStack {
+                Text("X1a0He CC 处理状态: ")
+                if ModifySetup.isSetupModified() {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("已处理")
                 } else {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
@@ -621,7 +656,7 @@ struct SetupComponentRow: View {
             }
             Divider()
             HStack {
-                Text("Setup 组件版本: \(viewModel.setupVersion)")
+                Text("X1a0He CC 版本信息: \(viewModel.setupVersion)")
                 Spacer()
 
                 if viewModel.isDownloadingSetup {
@@ -637,7 +672,7 @@ struct SetupComponentRow: View {
                     Button(action: {
                         viewModel.showDownloadConfirmAlert = true
                     }) {
-                        Text("从 GitHub 下载 Setup 组件")
+                        Text("下载 X1a0He CC")
                     }
                 }
             }

@@ -505,10 +505,15 @@ class DownloadUtils {
 
         let (manifestData, _) = try await URLSession.shared.data(for: request)
 
-        let manifestXML = try XMLDocument(data: manifestData)
+        #if DEBUG
+        if let manifestString = String(data: manifestData, encoding: .utf8) {
+            print("Manifest内容: \(manifestString)")
+        }
+        #endif
+        let manifestDoc = try XMLDocument(data: manifestData)
 
-        guard let downloadPath = try manifestXML.nodes(forXPath: "//asset_list/asset/asset_path").first?.stringValue,
-              let assetSizeStr = try manifestXML.nodes(forXPath: "//asset_list/asset/asset_size").first?.stringValue,
+        guard let downloadPath = try manifestDoc.nodes(forXPath: "//asset_list/asset/asset_path").first?.stringValue,
+              let assetSizeStr = try manifestDoc.nodes(forXPath: "//asset_list/asset/asset_size").first?.stringValue,
               let assetSize = Int64(assetSizeStr) else {
             throw NetworkError.invalidData("无法从manifest中获取下载信息")
         }
@@ -950,140 +955,181 @@ class DownloadUtils {
         }
     }
 
-    func downloadSetupComponents(
+    func downloadX1a0HeCCPackages(
         progressHandler: @escaping (Double, String) -> Void,
         cancellationHandler: @escaping () -> Bool
     ) async throws {
-        let architecture = AppStatics.isAppleSilicon ? "arm" : "intel"
-        let baseURLs = [
-            "https://github.com/X1a0He/Adobe-Downloader/raw/refs/heads/main/X1a0HeCC/\(architecture)/HDBox/",
-            "https://github.com/X1a0He/Adobe-Downloader/raw/refs/heads/develop/X1a0HeCC/\(architecture)/HDBox/"
-        ]
-
-        let components = [
-            "HDHelper",
-            "HDIM.dylib",
-            "HDPIM.dylib",
-            "HUM.dylib",
-            "Setup"
-        ]
-
-        let targetDirectory = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox"
+        let baseUrl = "https://cdn-ffc.oobesaas.adobe.com/core/v1/applications?name=CreativeCloud&platform=\(AppStatics.isAppleSilicon ? "macarm64" : "osx10")"
 
         let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
 
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempDirectory.path)
-
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 300
+        configuration.httpAdditionalHeaders = NetworkConstants.downloadHeaders
         let session = URLSession(configuration: configuration)
+        
+        do {
+            var request = URLRequest(url: URL(string: baseUrl)!)
+            NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.invalidResponse
+            }
+            
+            let xmlDoc = try XMLDocument(data: data)
 
-        for (index, component) in components.enumerated() {
-            if cancellationHandler() {
-                try? FileManager.default.removeItem(at: tempDirectory)
-                throw NetworkError.cancelled
+            let packageSets = try xmlDoc.nodes(forXPath: "//packageSet[name='ADC']")
+            guard let adcPackageSet = packageSets.first else {
+                throw NetworkError.invalidData("找不到ADC包集")
             }
 
-            await MainActor.run {
-                progressHandler(Double(index) / Double(components.count), "正在下载 \(component)...")
+            let targetPackages = ["HDBox", "IPCBox"]
+            var packagesToDownload: [(name: String, url: URL, size: Int64)] = []
+            
+            for packageName in targetPackages {
+                let packageNodes = try adcPackageSet.nodes(forXPath: ".//package[name='\(packageName)']")
+                guard let package = packageNodes.first else {
+                    print("未找到包: \(packageName)")
+                    continue
+                }
+
+                guard let manifestUrl = try package.nodes(forXPath: ".//manifestUrl").first?.stringValue,
+                      let cdnBase = try xmlDoc.nodes(forXPath: "//cdn/secure").first?.stringValue else {
+                    print("无法获取manifest URL或CDN基础URL")
+                    continue
+                }
+
+                let manifestFullUrl = cdnBase + manifestUrl
+                
+                var manifestRequest = URLRequest(url: URL(string: manifestFullUrl)!)
+                NetworkConstants.downloadHeaders.forEach { manifestRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
+                let (manifestData, manifestResponse) = try await session.data(for: manifestRequest)
+                
+                guard let manifestHttpResponse = manifestResponse as? HTTPURLResponse,
+                      (200...299).contains(manifestHttpResponse.statusCode) else {
+                    print("获取manifest失败: HTTP \(String(describing: (manifestResponse as? HTTPURLResponse)?.statusCode))")
+                    continue
+                }
+                
+                #if DEBUG
+                if let manifestString = String(data: manifestData, encoding: .utf8) {
+                    print("Manifest内容: \(manifestString)")
+                }
+                #endif
+                let manifestDoc = try XMLDocument(data: manifestData)
+                let assetPathNodes = try manifestDoc.nodes(forXPath: "//asset_path")
+                let sizeNodes = try manifestDoc.nodes(forXPath: "//asset_size")
+                guard let assetPath = assetPathNodes.first?.stringValue,
+                      let sizeStr = sizeNodes.first?.stringValue,
+                      let size = Int64(sizeStr),
+                      let downloadUrl = URL(string: assetPath) else {
+                    continue
+                }
+                packagesToDownload.append((packageName, downloadUrl, size))
+            }
+            
+            guard !packagesToDownload.isEmpty else {
+                throw NetworkError.invalidData("没有找到可下载的包")
             }
 
-            var lastError: Error? = nil
-            var downloaded = false
-
-            for baseURL in baseURLs {
-                guard !downloaded else { break }
+            let totalCount = packagesToDownload.count
+            for (index, package) in packagesToDownload.enumerated() {
                 if cancellationHandler() {
                     try? FileManager.default.removeItem(at: tempDirectory)
                     throw NetworkError.cancelled
                 }
+                
+                await MainActor.run {
+                    progressHandler(Double(index) / Double(totalCount), "正在下载 \(package.name)...")
+                }
 
-                let url = URL(string: baseURL + component)!
-                let destinationURL = tempDirectory.appendingPathComponent(component)
-                print(url)
-                do {
-                    let (downloadURL, response) = try await session.download(from: url)
-
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        throw NetworkError.invalidResponse
-                    }
-
-                    if httpResponse.statusCode == 404 {
-                        lastError = NetworkError.fileNotFound(component)
-                        continue
-                    }
-
-                    if !(200...299).contains(httpResponse.statusCode) {
-                        lastError = NetworkError.httpError(httpResponse.statusCode, "下载 \(component) 失败")
-                        continue
-                    }
-
-                    try FileManager.default.moveItem(at: downloadURL, to: destinationURL)
-                    try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationURL.path)
-                    downloaded = true
-
-                } catch URLError.timedOut {
-                    lastError = NetworkError.timeout
-                    continue
-                } catch {
-                    lastError = error is NetworkError ? error : NetworkError.downloadError("下载 \(component) 失败: \(error.localizedDescription)", error)
+                let destinationURL = tempDirectory.appendingPathComponent("\(package.name).zip")
+                var downloadRequest = URLRequest(url: package.url)
+                NetworkConstants.downloadHeaders.forEach { downloadRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
+                let (downloadURL, downloadResponse) = try await session.download(for: downloadRequest)
+                
+                guard let httpResponse = downloadResponse as? HTTPURLResponse,
+                      (200...299).contains(httpResponse.statusCode) else {
+                    print("下载失败: HTTP \(String(describing: (downloadResponse as? HTTPURLResponse)?.statusCode))")
                     continue
                 }
+                
+                try FileManager.default.moveItem(at: downloadURL, to: destinationURL)
             }
 
-            if !downloaded {
-                try? FileManager.default.removeItem(at: tempDirectory)
-                throw lastError ?? NetworkError.downloadError("无法下载 \(component)", nil)
+            await MainActor.run {
+                progressHandler(0.9, "正在安装组件...")
             }
-        }
+            
+            let targetDirectory = "/Library/Application Support/Adobe/Adobe Desktop Common"
 
-        await MainActor.run {
-            progressHandler(1.0, "下载完成，正在安装...")
-        }
+            if !FileManager.default.fileExists(atPath: targetDirectory) {
+                let baseCommands = [
+                    "mkdir -p '\(targetDirectory)'",
+                    "chmod 755 '\(targetDirectory)'"
+                ]
 
-        let commands = [
-            "mkdir -p '\(targetDirectory)'",
-            "chmod 755 '\(targetDirectory)'",
-            "cp -f '\(tempDirectory.path)/'* '\(targetDirectory)/'",
-            "chmod 755 '\(targetDirectory)/'*",
-            "chown -R root:wheel '\(targetDirectory)'"
-        ]
-
-        for command in commands {
-            let result = await withCheckedContinuation { continuation in
-                PrivilegedHelperManager.shared.executeCommand(command) { result in
-                    continuation.resume(returning: result)
+                for command in baseCommands {
+                    let result = await withCheckedContinuation { continuation in
+                        PrivilegedHelperManager.shared.executeCommand(command) { result in
+                            continuation.resume(returning: result)
+                        }
+                    }
+                    
+                    if result.starts(with: "Error:") {
+                        try? FileManager.default.removeItem(at: tempDirectory)
+                        throw NetworkError.installError("创建目录失败: \(result)")
+                    }
                 }
             }
 
-            if result.starts(with: "Error:") {
-                try? FileManager.default.removeItem(at: tempDirectory)
-                throw NSError(domain: "SetupComponentsError",
-                             code: -1,
-                             userInfo: [NSLocalizedDescriptionKey: "安装组件失败: \(result)"])
-            }
-        }
-
-        try await withCheckedThrowingContinuation { continuation in
-            ModifySetup.backupAndModifySetupFile { success, message in
-                if success {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: NSError(domain: "SetupComponentsError",
-                                                       code: -1,
-                                                       userInfo: [NSLocalizedDescriptionKey: message]))
+            for package in packagesToDownload {
+                let packageDir = "\(targetDirectory)/\(package.name)"
+                let packageCommands = [
+                    "mkdir -p '\(packageDir)'",
+                    "unzip -o '\(tempDirectory.path)/\(package.name).zip' -d '\(packageDir)/'",
+                    "chmod -R 755 '\(packageDir)'",
+                    "chown -R root:wheel '\(packageDir)'"
+                ]
+                
+                for command in packageCommands {
+                    let result = await withCheckedContinuation { continuation in
+                        PrivilegedHelperManager.shared.executeCommand(command) { result in
+                            continuation.resume(returning: result)
+                        }
+                    }
+                    
+                    if result.starts(with: "Error:") {
+                        try? FileManager.default.removeItem(at: tempDirectory)
+                        throw NetworkError.installError("安装 \(package.name) 失败: \(result)")
+                    }
                 }
             }
-        }
 
-        try? FileManager.default.removeItem(at: tempDirectory)
+            try await withCheckedThrowingContinuation { continuation in
+                ModifySetup.backupAndModifySetupFile { success, message in
+                    if success {
+                        continuation.resume()
+                    } else {
+                        continuation.resume(throwing: NetworkError.installError(message))
+                    }
+                }
+            }
 
-        ModifySetup.clearVersionCache()
+            ModifySetup.clearVersionCache()
 
-        await MainActor.run {
-            progressHandler(1.0, "安装完成")
+            try? FileManager.default.removeItem(at: tempDirectory)
+            
+            await MainActor.run {
+                progressHandler(1.0, "安装完成")
+            }
+        } catch {
+            print("发生错误: \(error.localizedDescription)")
+            throw error
         }
     }
 }

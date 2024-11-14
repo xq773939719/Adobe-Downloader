@@ -71,6 +71,7 @@ enum NetworkError: Error, LocalizedError {
     case unsupportedPlatform(String)
     case incompatibleVersion(String, String)
     case cancelled
+    case installError(String)
 
     var errorCode: Int {
         switch self {
@@ -97,6 +98,7 @@ enum NetworkError: Error, LocalizedError {
         case .unsupportedPlatform: return 7002
         case .incompatibleVersion: return 7003
         case .cancelled: return 5004
+        case .installError: return 8001
         }
     }
 
@@ -157,6 +159,8 @@ enum NetworkError: Error, LocalizedError {
             return NSLocalizedString("版本不兼容: 当前版本 \(current), 需要版本 \(required)", comment: "Incompatible version")
         case .cancelled:
             return NSLocalizedString("下载已取消", comment: "Download cancelled")
+        case .installError(let message):
+            return NSLocalizedString("安装错误: \(message)", comment: "Install error")
         }
     }
     

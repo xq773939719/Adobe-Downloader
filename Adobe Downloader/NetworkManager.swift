@@ -15,13 +15,6 @@ class NetworkManager: ObservableObject {
     @Published var loadingState: LoadingState = .idle
     @Published var downloadTasks: [NewDownloadTask] = []
     @Published var installationState: InstallationState = .idle
-    @Published var installationLogs: [String] = [] {
-        didSet {
-            if installationLogs.count > 1000 {
-                installationLogs = Array(installationLogs.suffix(1000))
-            }
-        }
-    }
     @Published var installCommand: String = ""
     private let cancelTracker = CancelTracker()
     internal var downloadUtils: DownloadUtils!
@@ -205,7 +198,6 @@ class NetworkManager: ObservableObject {
     func installProduct(at path: URL) async {
         await MainActor.run {
             installationState = .installing(progress: 0, status: "准备安装...")
-            installationLogs.removeAll()
         }
         
         do {
@@ -218,11 +210,6 @@ class NetworkManager: ObservableObject {
                         } else {
                             self.installationState = .installing(progress: progress, status: status)
                         }
-                    }
-                },
-                logHandler: { log in
-                    Task { @MainActor in
-                        self.installationLogs.append(log)
                     }
                 }
             )
@@ -283,11 +270,6 @@ class NetworkManager: ObservableObject {
                         } else {
                             self.installationState = .installing(progress: progress, status: status)
                         }
-                    }
-                },
-                logHandler: { log in
-                    Task { @MainActor in
-                        self.installationLogs.append(log)
                     }
                 }
             )
@@ -379,46 +361,5 @@ class NetworkManager: ObservableObject {
         }
         downloadTasks.append(contentsOf: savedTasks)
         updateDockBadge()
-    }
-
-    private func fetchProductsWithVersion(_ version: String) async throws -> [String: Sap] {
-        var components = URLComponents(string: NetworkConstants.productsXmlURL)
-        components?.queryItems = [
-            URLQueryItem(name: "_type", value: "xml"),
-            URLQueryItem(name: "channel", value: "ccm"),
-            URLQueryItem(name: "channel", value: "sti"),
-            URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
-            URLQueryItem(name: "productType", value: "Desktop"),
-            URLQueryItem(name: "version", value: version)
-        ]
-        
-        guard let url = components?.url else {
-            throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(httpResponse.statusCode, nil)
-        }
-        
-        guard let xmlString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidData("无法解码XML数据")
-        }
-
-        let result = try await Task.detached(priority: .userInitiated) {
-            let parseResult = try XHXMLParser.parse(xmlString: xmlString)
-            return parseResult.products
-        }.value
-        
-        return result
     }
 }

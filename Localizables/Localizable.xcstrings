@@ -4,6 +4,9 @@
     "" : {
 
     },
+    "(可能导致处理 Setup 组件失败)" : {
+
+    },
     "(将导致无法使用安装功能)" : {
       "localizations" : {
         "en" : {
@@ -154,6 +157,9 @@
     "Helper 当前状态: " : {
 
     },
+    "Helper 设置" : {
+
+    },
     "Helper未安装将导致无法执行需要管理员权限的操作" : {
 
     },
@@ -171,6 +177,7 @@
       }
     },
     "Setup 组件版本: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -181,6 +188,7 @@
       }
     },
     "Setup 组件状态: " : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -209,6 +217,18 @@
     "v6" : {
 
     },
+    "X1a0He CC 处理状态: " : {
+
+    },
+    "X1a0He CC 备份状态: " : {
+
+    },
+    "X1a0He CC 版本信息: %@" : {
+
+    },
+    "X1a0He CC设置" : {
+
+    },
     "下载" : {
       "localizations" : {
         "en" : {
@@ -228,6 +248,9 @@
           }
         }
       }
+    },
+    "下载 X1a0He CC" : {
+
     },
     "下载 X1a0He CC 组件" : {
       "localizations" : {
@@ -343,6 +366,7 @@
       }
     },
     "从 GitHub 下载 Setup 组件" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -463,6 +487,7 @@
       }
     },
     "其他设置" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -667,7 +692,10 @@
         }
       }
     },
-    "已备份处理" : {
+    "已处理" : {
+
+    },
+    "已备份" : {
 
     },
     "已复制" : {
@@ -938,7 +966,11 @@
         }
       }
     },
+    "未检测到 Adobe CC 组件" : {
+
+    },
     "未检测到 Adobe Setup 组件" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1120,7 +1152,7 @@
         }
       }
     },
-    "确定要下载并安装 Setup 组件吗?" : {
+    "确定要下载并安装 X1a0He CC 吗?" : {
 
     },
     "确定要重新处理 Setup 组件吗?" : {
@@ -1206,7 +1238,11 @@
         }
       }
     },
+    "程序检测到你的系统中不存在 Adobe CC 组件" : {
+
+    },
     "程序检测到你的系统中不存在 Adobe Setup 组件" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1420,6 +1456,9 @@
           }
         }
       }
+    },
+    "重新备份" : {
+
     },
     "重新安装" : {
 

@@ -23,9 +23,21 @@ class NetworkManager: ObservableObject {
     internal var monitor = NWPathMonitor()
     internal var isFetchingProducts = false
     private let installManager = InstallManager()
-    @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
-    @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
-    @AppStorage("apiVersion") private var apiVersion: String = "6"
+    
+    private var defaultDirectory: String {
+        get { StorageData.shared.defaultDirectory }
+        set { StorageData.shared.defaultDirectory = newValue }
+    }
+    
+    private var useDefaultDirectory: Bool {
+        get { StorageData.shared.useDefaultDirectory }
+        set { StorageData.shared.useDefaultDirectory = newValue }
+    }
+    
+    private var apiVersion: String {
+        get { StorageData.shared.apiVersion }
+        set { StorageData.shared.apiVersion = newValue }
+    }
     
     enum InstallationState {
         case idle
@@ -38,8 +50,9 @@ class NetworkManager: ObservableObject {
 
     init(networkService: NetworkService = NetworkService(),
          downloadUtils: DownloadUtils? = nil) {
-        let useAppleSilicon = UserDefaults.standard.bool(forKey: "downloadAppleSilicon")
-        self.allowedPlatform = useAppleSilicon ? ["macuniversal", "macarm64"] : ["macuniversal", "osx10-64"]
+        self.allowedPlatform = StorageData.shared.downloadAppleSilicon ? 
+            ["macuniversal", "macarm64"] : 
+            ["macuniversal", "osx10-64", "osx10"]
         
         self.networkService = networkService
         self.downloadUtils = downloadUtils ?? DownloadUtils(networkManager: self, cancelTracker: cancelTracker)
@@ -51,7 +64,10 @@ class NetworkManager: ObservableObject {
     func fetchProducts() async {
         loadingState = .loading
         do {
-            let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(version: apiVersion)
+            let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(
+                version: apiVersion,
+                platform: allowedPlatform.joined(separator: ",")
+            )
             await MainActor.run {
                 self.saps = saps
                 self.cdn = cdn
@@ -68,7 +84,7 @@ class NetworkManager: ObservableObject {
         guard let productInfo = self.saps[sap.sapCode]?.versions[selectedVersion] else { 
             throw NetworkError.invalidData("无法获取产品信息") 
         }
-        
+        print(productInfo.apPlatform)
         let task = NewDownloadTask(
             sapCode: sap.sapCode,
             version: selectedVersion,
@@ -157,7 +173,7 @@ class NetworkManager: ObservableObject {
         
         while retryCount < maxRetries {
             do {
-                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(version: apiVersion)
+                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(version: apiVersion, platform: allowedPlatform.joined(separator: ","))
 
                 await MainActor.run {
                     self.saps = saps
@@ -345,11 +361,14 @@ class NetworkManager: ObservableObject {
     }
 
     func updateAllowedPlatform(useAppleSilicon: Bool) {
-        allowedPlatform = useAppleSilicon ? ["macuniversal", "macarm64"] : ["macuniversal", "osx10-64"]
+        allowedPlatform = useAppleSilicon ? 
+            ["macuniversal", "macarm64"] : 
+            ["macuniversal", "osx10-64", "osx10"]
     }
 
     func saveTask(_ task: NewDownloadTask) {
         TaskPersistenceManager.shared.saveTask(task)
+        objectWillChange.send()
     }
 
     func loadSavedTasks() {

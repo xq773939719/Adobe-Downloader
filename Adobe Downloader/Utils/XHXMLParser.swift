@@ -11,29 +11,61 @@ struct ParseResult {
 }
 
 class XHXMLParser {
+    private static let xpathCache = [
+        "cdn": "//channels/channel/cdn/secure",
+        "products": "//channels/channel/products/product",
+        "icons": "productIcons/icon",
+        "platforms": "platforms/platform",
+        "languageSet": "languageSet",
+        "dependencies": "dependencies/dependency",
+        "sapCode": "sapCode",
+        "baseVersion": "baseVersion",
+        "builds": "//builds/build",
+        "appVersion": "nglLicensingInfo/appVersion",
+        "manifestURL": "urls/manifestURL"
+    ]
+
+    private static func createParentMap(_ root: XMLNode?) -> [XMLNode: XMLNode] {
+        var parentMap = [XMLNode: XMLNode](minimumCapacity: 500)
+        
+        func traverse(_ node: XMLNode) {
+            guard let children = node.children else { return }
+            for child in children {
+                parentMap[child] = node
+                traverse(child)
+            }
+        }
+        
+        if let root = root {
+            traverse(root)
+        }
+        return parentMap
+    }
 
     static func parseProductsXML(xmlData: Data) throws -> ParseResult {
         let xml = try XMLDocument(data: xmlData)
 
-        guard let cdn = try xml.nodes(forXPath: "//channels/channel/cdn/secure").first?.stringValue else {
+        guard let cdn = try xml.nodes(forXPath: xpathCache["cdn"]!).first?.stringValue else {
             throw ParserError.missingCDN
         }
 
-        var products: [String: Sap] = [:]
-
-        let productNodes = try xml.nodes(forXPath: "//channels/channel/products/product")
+        var products = [String: Sap](minimumCapacity: 100)
+        
+        let productNodes = try xml.nodes(forXPath: xpathCache["products"]!)
         let parentMap = createParentMap(xml.rootElement())
+
         for productNode in productNodes {
             guard let element = productNode as? XMLElement else { continue }
-
+            
             let sap = element.attribute(forName: "id")?.stringValue ?? ""
             let parentElement = parentMap[parentMap[element] ?? element]
             let hidden = (parentElement as? XMLElement)?.attribute(forName: "name")?.stringValue != "ccm"
+
             let displayName = try element.nodes(forXPath: "displayName").first?.stringValue ?? ""
             var productVersion = element.attribute(forName: "version")?.stringValue ?? ""
-
+            
             if products[sap] == nil {
-                let icons = try element.nodes(forXPath: "productIcons/icon").compactMap { node -> Sap.ProductIcon? in
+                let icons = try element.nodes(forXPath: xpathCache["icons"]!).compactMap { node -> Sap.ProductIcon? in
                     guard let element = node as? XMLElement,
                           let size = element.attribute(forName: "size")?.stringValue,
                           let url = element.stringValue else {
@@ -51,45 +83,40 @@ class XHXMLParser {
                 )
             }
 
-            let platforms = try element.nodes(forXPath: "platforms/platform")
+            let platforms = try element.nodes(forXPath: xpathCache["platforms"]!)
             for platformNode in platforms {
                 guard let platform = platformNode as? XMLElement,
-                      let languageSet = try platform.nodes(forXPath: "languageSet").first as? XMLElement else { continue }
+                      let languageSet = try platform.nodes(forXPath: xpathCache["languageSet"]!).first as? XMLElement else { continue }
                 
                 var baseVersion = languageSet.attribute(forName: "baseVersion")?.stringValue ?? ""
                 var buildGuid = languageSet.attribute(forName: "buildGuid")?.stringValue ?? ""
                 let appPlatform = platform.attribute(forName: "id")?.stringValue ?? ""
 
-                if let existingVersion = products[sap]?.versions[productVersion] {
-                    if existingVersion.apPlatform == "macuniversal" {
-                        break
-                    }
+                if let existingVersion = products[sap]?.versions[productVersion],
+                   existingVersion.apPlatform == "macuniversal" {
+                    break
                 }
-                
-                let dependencies = try languageSet.nodes(forXPath: "dependencies/dependency").compactMap { node -> Sap.Versions.Dependencies? in
-                    guard let element = node as? XMLElement,
-                          let sapCode = try element.nodes(forXPath: "sapCode").first?.stringValue,
-                          let version = try element.nodes(forXPath: "baseVersion").first?.stringValue else {
-                        return nil
-                    }
+
+                let dependencies = try languageSet.nodes(forXPath: xpathCache["dependencies"]!).compactMap { node -> Sap.Versions.Dependencies? in
+                    guard let element = node as? XMLElement else { return nil }
+                    let sapCode = try element.nodes(forXPath: "sapCode").first?.stringValue ?? ""
+                    let version = try element.nodes(forXPath: "baseVersion").first?.stringValue ?? ""
+                    guard !sapCode.isEmpty, !version.isEmpty else { return nil }
                     return Sap.Versions.Dependencies(sapCode: sapCode, version: version)
                 }
 
                 if sap == "APRO" {
                     baseVersion = productVersion
-                    let buildNodes = try xml.nodes(forXPath: "//builds/build")
-                    for buildNode in buildNodes {
-                        guard let buildElement = buildNode as? XMLElement,
-                              buildElement.attribute(forName: "id")?.stringValue == sap,
-                              buildElement.attribute(forName: "version")?.stringValue == baseVersion else {
-                            continue
-                        }
-                        if let appVersion = try buildElement.nodes(forXPath: "nglLicensingInfo/appVersion").first?.stringValue {
+                    if let buildNode = try xml.nodes(forXPath: xpathCache["builds"]!).first(where: { node in
+                        guard let element = node as? XMLElement else { return false }
+                        return element.attribute(forName: "id")?.stringValue == sap &&
+                               element.attribute(forName: "version")?.stringValue == baseVersion
+                    }) as? XMLElement {
+                        if let appVersion = try buildNode.nodes(forXPath: xpathCache["appVersion"]!).first?.stringValue {
                             productVersion = appVersion
-                            break
                         }
                     }
-                    buildGuid = try languageSet.nodes(forXPath: "urls/manifestURL").first?.stringValue ?? ""
+                    buildGuid = try languageSet.nodes(forXPath: xpathCache["manifestURL"]!).first?.stringValue ?? ""
                 }
                 
                 if !buildGuid.isEmpty {
@@ -107,23 +134,6 @@ class XHXMLParser {
         }
         
         return ParseResult(products: products, cdn: cdn)
-    }
-
-    private static func createParentMap(_ root: XMLNode?) -> [XMLNode: XMLNode] {
-        var parentMap: [XMLNode: XMLNode] = [:]
-        
-        func traverse(_ node: XMLNode) {
-            for child in node.children ?? [] {
-                parentMap[child] = node
-                traverse(child)
-            }
-        }
-        
-        if let root = root {
-            traverse(root)
-        }
-        
-        return parentMap
     }
 }
 

@@ -1,14 +1,30 @@
 # Change Log
 
-## 2024-11-13 00:00 更新日志
+## 2024-11-14 15:30 更新日志
 
 ```markdown
-1. 新增可选API版本 (v4, v5, v6)
+1. 新增可选API版本 (v4, v5, v6)【更老的API意味着更长的等待时间】
 2. 引入 Privilege Helper 来处理所有需要权限的操作
 3. 修改从 Github 下载 Setup 组件功能，改为从官方下载简化版CC，称为 X1a0He CC
 4. 调整 CC 组件备份与处理状态检测，分离二者的检测机制
 5. 移除了安装日志显示
 6. 调整 Setup 组件版本号的获取方式
+7. 修复了当任务下载完成后，AppCardView 仍显示下载中的问题
+8. 修复了 Intel 架构下，安装时因架构文件错误出现错误代码 107 的问题
+
+PS: CC 组件的来源均为 Adobe Creative Cloud 官方提取，可随时下载到最新版，但处理可能会失败
+====================
+
+1. Added optional API versions (v4, v5, v6) (Older API means longer waiting time)
+2. Introduced Privilege Helper to handle all operations that require permissions
+3. Modified the function of downloading the Setup component from Github to downloading a simplified version of CC from
+   the official website, called X1a0He CC
+4. Adjusted the detection of CC component backup and processing status, and separated the detection mechanism of the two
+5. Removed the installation log display
+6. Adjusted the way to obtain the version number of the Setup component
+
+PS: CC components are all from Adobe Creative Cloud official extraction, you can download the latest version at any
+time, but the processing may fail
 ```
 
 ## 2024-11-11 21:00 更新日志

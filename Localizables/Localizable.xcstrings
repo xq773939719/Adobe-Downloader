@@ -5,7 +5,14 @@
 
     },
     "(可能导致处理 Setup 组件失败)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(May failed to processing the Setup)"
+          }
+        }
+      }
     },
     "(将导致无法使用安装功能)" : {
       "localizations" : {
@@ -132,13 +139,23 @@
         }
       }
     },
+    "Adobe Downloader 需要通过后台Daemon进程来安装与移动文件，请在\"系统偏好设置->登录项->允许在后台 中\"允许当前App" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adobe Downloader needs to use the background Daemon process to install and move files. Please allow the current App in \"System Preferences->Login Items->Allow in the Background\""
+          }
+        }
+      }
+    },
     "API:" : {
 
     },
-    "By X1a0He. ❤️ Love from China. ❤️" : {
+    "Apple Silicon" : {
 
     },
-    "Github: Adobe Downloader" : {
+    "By X1a0He. ❤️ Love from China. 🇨🇳" : {
 
     },
     "GNU通用公共许可证GPL v3." : {
@@ -151,17 +168,99 @@
         }
       }
     },
+    "Helper 响应异常" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper response exception"
+          }
+        }
+      }
+    },
+    "Helper 安装失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper installation failed"
+          }
+        }
+      }
+    },
     "Helper 安装状态: " : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper installation status:"
+          }
+        }
+      }
     },
     "Helper 当前状态: " : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper Current status:"
+          }
+        }
+      }
+    },
+    "Helper 未安装或未连接，请先在设置中安装并连接 Helper" : {
 
     },
     "Helper 设置" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper Settings"
+          }
+        }
+      }
+    },
+    "Helper 重新安装成功" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper reinstalled successfully"
+          }
+        }
+      }
+    },
+    "Helper 重新连接成功" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper reconnected successfully"
+          }
+        }
+      }
     },
     "Helper未安装将导致无法执行需要管理员权限的操作" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper is not installed and cannot perform operations that require administrator privileges"
+          }
+        }
+      }
+    },
+    "HTTP错误 %d: %@" : {
+      "comment" : "HTTP error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HTTP error %1$d: %2$@"
+          }
+        }
+      }
     },
     "OK" : {
 
@@ -172,28 +271,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Setup component not processed"
-          }
-        }
-      }
-    },
-    "Setup 组件版本: %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setup version: %@"
-          }
-        }
-      }
-    },
-    "Setup 组件状态: " : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Setup status:"
           }
         }
       }
@@ -218,16 +295,44 @@
 
     },
     "X1a0He CC 处理状态: " : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X1a0He CC processing status:"
+          }
+        }
+      }
     },
     "X1a0He CC 备份状态: " : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X1a0He CC backup status:"
+          }
+        }
+      }
     },
-    "X1a0He CC 版本信息: %@" : {
-
+    "X1a0He CC 版本信息: %@ [%@]" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X1a0He CC version info: %1$@ [%2$@]"
+          }
+        }
+      }
     },
     "X1a0He CC设置" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X1a0He CC settings"
+          }
+        }
+      }
     },
     "下载" : {
       "localizations" : {
@@ -250,9 +355,6 @@
       }
     },
     "下载 X1a0He CC" : {
-
-    },
-    "下载 X1a0He CC 组件" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -272,12 +374,32 @@
         }
       }
     },
+    "下载中..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading…"
+          }
+        }
+      }
+    },
     "下载失败" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Download failed"
+          }
+        }
+      }
+    },
+    "下载失败: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download failed： %@"
           }
         }
       }
@@ -345,6 +467,18 @@
         }
       }
     },
+    "下载错误, 错误原因: %@, %@" : {
+      "comment" : "Download error with cause",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
     "不使用安装功能" : {
       "localizations" : {
         "en" : {
@@ -355,23 +489,23 @@
         }
       }
     },
+    "不支持的平台: %@" : {
+      "comment" : "Unsupported platform",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unsupported platform: %@"
+          }
+        }
+      }
+    },
     "产品和包列表" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Products and Packages"
-          }
-        }
-      }
-    },
-    "从 GitHub 下载 Setup 组件" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download Setup from GitHub"
           }
         }
       }
@@ -392,16 +526,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Are you sure you don't want to install apps?"
-          }
-        }
-      }
-    },
-    "使用现有程序" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use existing"
           }
         }
       }
@@ -486,13 +610,13 @@
         }
       }
     },
-    "其他设置" : {
-      "extractionState" : "stale",
+    "准备中: %@" : {
+      "comment" : "Download status preparing",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Other settings"
+            "value" : "Preparing: %@"
           }
         }
       }
@@ -588,6 +712,7 @@
       }
     },
     "失败" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -598,11 +723,22 @@
       }
     },
     "失败: %@" : {
+      "comment" : "Download status failed",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Failed: %@"
+          }
+        }
+      }
+    },
+    "如果在设置里没找到当前App，可以尝试重置守护程序" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you can't find the current app in the settings, you can try resetting the guardian"
           }
         }
       }
@@ -617,6 +753,17 @@
         }
       }
     },
+    "存储空间不足: 需要 %lld字节, 可用 %lld字节" : {
+      "comment" : "Insufficient storage",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insufficient storage space: %1$lld bytes needed, %2$lld bytes available"
+          }
+        }
+      }
+    },
     "安装" : {
       "localizations" : {
         "en" : {
@@ -627,20 +774,83 @@
         }
       }
     },
-    "安装失败 (退出代码: %lld)" : {
+    "安装失败" : {
 
+    },
+    "安装失败 (退出代码: %lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed (Exit Code: %lld)"
+          }
+        }
+      }
+    },
+    "安装失败: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: %@"
+          }
+        }
+      }
     },
     "安装失败: Setup 组件未被处理 (退出代码: %lld)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: Setup was not processed. (Exit Code: %lld)"
+          }
+        }
+      }
     },
     "安装失败: 安装文件不完整或损坏 (退出代码: %lld)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: Incomplete file (Exit Code: %lld)"
+          }
+        }
+      }
     },
     "安装失败: 权限问题 (退出代码: %lld)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: Permission denied (Exit Code: %lld)"
+          }
+        }
+      }
+    },
+    "安装失败: 架构不一致或安装文件被损坏 (退出代码: %lld)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: architecture inconsistency or installation file is corrupted (exit code: %lld)"
+          }
+        }
+      }
     },
     "安装失败: 架构或版本不一致 (退出代码: %lld)" : {
 
+    },
+    "安装失败: 磁盘空间不足 (退出代码: %lld)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: insufficient disk space (exit code: %lld)"
+          }
+        }
+      }
     },
     "安装完成" : {
       "localizations" : {
@@ -672,6 +882,28 @@
         }
       }
     },
+    "安装错误: %@" : {
+      "comment" : "Install error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install error: %@"
+          }
+        }
+      }
+    },
+    "客户端错误: %d" : {
+      "comment" : "Client error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Client error: %@"
+          }
+        }
+      }
+    },
     "尝试使用不同的搜索关键词" : {
       "localizations" : {
         "en" : {
@@ -693,10 +925,24 @@
       }
     },
     "已处理" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Processed"
+          }
+        }
+      }
     },
     "已备份" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backed up"
+          }
+        }
+      }
     },
     "已复制" : {
       "localizations" : {
@@ -718,8 +964,15 @@
         }
       }
     },
-    "已安装" : {
-
+    "已安装 (build %@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installed (build %@)"
+          }
+        }
+      }
     },
     "已完成" : {
       "localizations" : {
@@ -727,6 +980,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Completed"
+          }
+        }
+      }
+    },
+    "已完成 (用时: %@)" : {
+      "comment" : "Download status completed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completed (Time: %@)"
           }
         }
       }
@@ -742,32 +1006,55 @@
         }
       }
     },
+    "已暂停: %@" : {
+      "comment" : "Download status paused with reason",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused: %@"
+          }
+        }
+      }
+    },
+    "已连接" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected"
+          }
+        }
+      }
+    },
+    "应用信息错误: %@" : {
+      "comment" : "Application info error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Application info error: %@"
+          }
+        }
+      }
+    },
+    "应用信息错误(%@): %@" : {
+      "comment" : "Application info error with cause",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Application info error with cause(%1$@): %2$@"
+          }
+        }
+      }
+    },
     "当前架构: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Current Architecture: %@"
-          }
-        }
-      }
-    },
-    "感谢 Drovosek01: adobe-packager" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thanks Drovosek01: adobe-packager"
-          }
-        }
-      }
-    },
-    "感谢 QiuChenly: InjectLib" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thanks QiuChenly: InjectLib"
           }
         }
       }
@@ -852,12 +1139,162 @@
         }
       }
     },
+    "数据无效: %@" : {
+      "comment" : "Invalid data",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid data: %@"
+          }
+        }
+      }
+    },
+    "数据验证失败: %@" : {
+      "comment" : "Data validation error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data validation error: %@"
+          }
+        }
+      }
+    },
+    "文件不存在: %@" : {
+      "comment" : "File not found",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File not found: %@"
+          }
+        }
+      }
+    },
+    "文件已存在: %@" : {
+      "comment" : "File exists",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File exists: %@"
+          }
+        }
+      }
+    },
+    "文件系统错误: %@" : {
+      "comment" : "File system error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File system error: %@"
+          }
+        }
+      }
+    },
+    "文件系统错误(%@): %@" : {
+      "comment" : "File system error with cause",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "文件系统错误(%1$@): %2$@"
+          }
+        }
+      }
+    },
+    "文件访问权限被拒绝: %@" : {
+      "comment" : "File permission denied",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File permission denied: %@"
+          }
+        }
+      }
+    },
+    "无效的URL: %@" : {
+      "comment" : "Invalid URL",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid URL: %@"
+          }
+        }
+      }
+    },
+    "无效的请求: %@" : {
+      "comment" : "Invalid request",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid request: %@"
+          }
+        }
+      }
+    },
     "无法将响应数据转换为json字符串" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unable to convert response data to json string"
+          }
+        }
+      }
+    },
+    "无法获取 Helper 代理" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to get Helper proxy"
+          }
+        }
+      }
+    },
+    "无法获取Helper代理" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to get Helper proxy"
+          }
+        }
+      }
+    },
+    "无法连接到 Helper" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to connect to Helper"
+          }
+        }
+      }
+    },
+    "无法连接到Helper" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to connect to Helper"
+          }
+        }
+      }
+    },
+    "无法连接到服务器: %@" : {
+      "comment" : "Server unreachable",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server unreachable: %@"
           }
         }
       }
@@ -918,7 +1355,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Invalid server response"
+            "value" : "Invalid response"
           }
         }
       }
@@ -933,8 +1370,26 @@
         }
       }
     },
+    "服务器错误: %d" : {
+      "comment" : "Server error",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server error: %d"
+          }
+        }
+      }
+    },
     "未安装" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Installed"
+          }
+        }
+      }
     },
     "未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理" : {
       "localizations" : {
@@ -967,15 +1422,11 @@
       }
     },
     "未检测到 Adobe CC 组件" : {
-
-    },
-    "未检测到 Adobe Setup 组件" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adobe Setup component not detected"
+            "value" : "Adobe CC components not detected"
           }
         }
       }
@@ -1007,12 +1458,32 @@
         }
       }
     },
+    "未连接" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnected"
+          }
+        }
+      }
+    },
     "权限被拒绝" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Permission denied"
+          }
+        }
+      }
+    },
+    "检查中" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking..."
           }
         }
       }
@@ -1053,7 +1524,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Downloading %1$@ (%2$d/%3$d)"
+            "value" : "Downloadind %1$@ (%2$d/%3$d)"
           }
         }
       }
@@ -1099,7 +1570,24 @@
       }
     },
     "正在安装..." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installing…"
+          }
+        }
+      }
+    },
+    "正在连接" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting…"
+          }
+        }
+      }
     },
     "没有写入权限" : {
       "localizations" : {
@@ -1121,23 +1609,23 @@
         }
       }
     },
-    "没有网络连接" : {
-      "comment" : "Network error",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Network error"
-          }
-        }
-      }
-    },
     "清理已完成" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cleanup Completed"
+          }
+        }
+      }
+    },
+    "版本不兼容: 当前版本 %@, 需要版本 %@" : {
+      "comment" : "Incompatible version",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incompatible version: Current version %1$@, required version %2$@"
           }
         }
       }
@@ -1153,10 +1641,24 @@
       }
     },
     "确定要下载并安装 X1a0He CC 吗?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to download and install X1a0He CC?"
+          }
+        }
+      }
     },
     "确定要重新处理 Setup 组件吗?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to reprocess the Setup component?"
+          }
+        }
+      }
     },
     "确认" : {
       "localizations" : {
@@ -1239,15 +1741,11 @@
       }
     },
     "程序检测到你的系统中不存在 Adobe CC 组件" : {
-
-    },
-    "程序检测到你的系统中不存在 Adobe Setup 组件" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Detected that the Adobe Setup component is not present on your system"
+            "value" : "Detected that Adobe CC components are not present on your Mac"
           }
         }
       }
@@ -1268,6 +1766,16 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
+            "value" : "Waiting"
+          }
+        }
+      }
+    },
+    "等待中..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "Waiting…"
           }
         }
@@ -1279,7 +1787,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System hibernation"
+            "value" : "System sleep"
           }
         }
       }
@@ -1300,7 +1808,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Network interrupt"
+            "value" : "Network outage"
+          }
+        }
+      }
+    },
+    "网络无连接" : {
+      "comment" : "Network error",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Network error"
           }
         }
       }
@@ -1311,16 +1831,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Network connection lost"
-          }
-        }
-      }
-    },
-    "联系 @X1a0He" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contact @X1a0He"
           }
         }
       }
@@ -1355,13 +1865,85 @@
         }
       }
     },
+    "获取授权失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to obtain authorization"
+          }
+        }
+      }
+    },
+    "获取管理员授权失败，用户主动取消授权！" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to obtain administrator authorization, the user actively canceled the authorization!"
+          }
+        }
+      }
+    },
+    "获取管理员权限失败" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to obtain administrator privileges"
+          }
+        }
+      }
+    },
+    "解析错误: %@ - %@" : {
+      "comment" : "Parsing error",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Parsing error: %1$@ - %2$@"
+          }
+        }
+      }
+    },
     "请求超时，请检查网络连接后重试" : {
       "comment" : "Network timeout",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Request timed out, please check the network connection and try again"
+            "value" : "Network timeout"
+          }
+        }
+      }
+    },
+    "运行正常" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Working…"
+          }
+        }
+      }
+    },
+    "连接出现错误: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error connecting: %@"
+          }
+        }
+      }
+    },
+    "连接断开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnected"
           }
         }
       }
@@ -1427,16 +2009,6 @@
         }
       }
     },
-    "重新下载" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-download"
-          }
-        }
-      }
-    },
     "重新下载时需要确认" : {
       "localizations" : {
         "en" : {
@@ -1457,21 +2029,32 @@
         }
       }
     },
-    "重新备份" : {
-
-    },
     "重新安装" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reinstall"
+          }
+        }
+      }
     },
     "重新连接Helper" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect to Helper"
+          }
+        }
+      }
     },
     "重试" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "retry"
+            "value" : "Retry"
           }
         }
       }

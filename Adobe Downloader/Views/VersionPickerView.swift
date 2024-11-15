@@ -5,11 +5,26 @@
 //
 import SwiftUI
 
+
+private enum VersionPickerConstants {
+    static let headerPadding: CGFloat = 5
+    static let viewWidth: CGFloat = 400
+    static let viewHeight: CGFloat = 500
+    static let iconSize: CGFloat = 32
+    static let verticalSpacing: CGFloat = 8
+    static let horizontalSpacing: CGFloat = 12
+    static let cornerRadius: CGFloat = 8
+    static let buttonPadding: CGFloat = 8
+    
+    static let titleFontSize: CGFloat = 14
+    static let captionFontSize: CGFloat = 12
+}
+
 struct VersionPickerView: View {
     @EnvironmentObject private var networkManager: NetworkManager
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
-    @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
+    @StorageValue(\.defaultLanguage) private var defaultLanguage
+    @StorageValue(\.downloadAppleSilicon) private var downloadAppleSilicon
     @State private var expandedVersions: Set<String> = []
     
     private let sap: Sap
@@ -22,143 +37,287 @@ struct VersionPickerView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            VStack {
-                HStack {
-                    Text("\(sap.displayName)")
-                        .font(.headline)
-                    Text("选择版本")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-                .padding(.bottom, 5)
-                Text("🔔 即将下载 \(downloadAppleSilicon ? "Apple Silicon" : "Intel") (\(networkManager.allowedPlatform.joined(separator: ", "))) 版本 🔔")
-                    .font(.caption)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal)
-            .padding(.top)
-            .background(Color(NSColor.windowBackgroundColor))
-            
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 12) {
-                    ForEach(Array(sap.versions.sorted { $0.key > $1.key }), id: \.key) { version, info in
-                        if networkManager.allowedPlatform.contains(info.apPlatform) {
-                            VStack(spacing: 0) {
-                                Button(action: {
-                                    if info.dependencies.isEmpty {
-                                        onSelect(version)
-                                        dismiss()
-                                    } else {
-                                        withAnimation {
-                                            if expandedVersions.contains(version) {
-                                                expandedVersions.remove(version)
-                                            } else {
-                                                expandedVersions.insert(version)
-                                            }
-                                        }
-                                    }
-                                }) {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(version)
-                                                .font(.headline)
-                                            Text(info.apPlatform)
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        if let existingPath = networkManager.isVersionDownloaded(
-                                            sap: sap,
-                                            version: version,
-                                            language: defaultLanguage
-                                        ) {
-                                            Button(action: {
-                                                let path = existingPath.path
-                                                NSWorkspace.shared.selectFile(
-                                                    path,
-                                                    inFileViewerRootedAtPath: URL(fileURLWithPath: path).deletingLastPathComponent().path
-                                                )
-                                            }) {
-                                                Text("已存在")
-                                                    .font(.caption)
-                                                    .foregroundColor(.white)
-                                                    .padding(.horizontal, 8)
-                                                    .padding(.vertical, 4)
-                                                    .background(Color.blue)
-                                                    .cornerRadius(4)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                        
-                                        if !info.dependencies.isEmpty {
-                                            Image(systemName: expandedVersions.contains(version) ? "chevron.down" : "chevron.right")
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                    .padding(.vertical, 8)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                
-                                if expandedVersions.contains(version) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("依赖包:")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .padding(.top, 8)
-                                            .padding(.leading, 16)
-                                        
-                                        ForEach(info.dependencies, id: \.sapCode) { dependency in
-                                            HStack(spacing: 8) {
-                                                Image(systemName: "cube.box")
-                                                    .foregroundColor(.blue)
-                                                    .frame(width: 16)
-                                                Text("\(dependency.sapCode) (\(dependency.version))")
-                                                    .font(.caption)
-                                                Spacer()
-                                            }
-                                            .padding(.leading, 24)
-                                        }
-                                        
-                                        Button("下载此版本") {
-                                            onSelect(version)
-                                            dismiss()
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .padding(.top, 8)
-                                        .padding(.leading, 16)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.bottom, 8)
-                                }
-                            }
-                            .padding(.horizontal)
-                            .background(Color(NSColor.controlBackgroundColor))
-                            .cornerRadius(8)
-                        }
-                    }
-                }
-                .padding()
-            }
-            .background(Color(NSColor.windowBackgroundColor))
+            HeaderView(sap: sap, downloadAppleSilicon: downloadAppleSilicon)
+            VersionListView(
+                sap: sap,
+                expandedVersions: $expandedVersions,
+                onSelect: onSelect,
+                dismiss: dismiss
+            )
         }
-        .frame(width: 400, height: 500)
+        .frame(width: VersionPickerConstants.viewWidth, height: VersionPickerConstants.viewHeight)
     }
 }
 
-#Preview {
-    let networkManager = NetworkManager()
+private struct HeaderView: View {
+    let sap: Sap
+    let downloadAppleSilicon: Bool
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var networkManager: NetworkManager
     
-    return VersionPickerView(
-        sap: Sap(
+    var body: some View {
+        VStack {
+            HStack {
+                Text("\(sap.displayName)")
+                    .font(.headline)
+                Text("选择版本")
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("取消") {
+                    dismiss()
+                }
+            }
+            .padding(.bottom, VersionPickerConstants.headerPadding)
+            
+            Text("🔔 即将下载 \(downloadAppleSilicon ? "Apple Silicon" : "Intel") (\(platformText)) 版本 🔔")
+                .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal)
+        .padding(.top)
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+    
+    private var platformText: String {
+        networkManager.allowedPlatform.joined(separator: ", ")
+    }
+}
+
+private struct VersionListView: View {
+    @EnvironmentObject private var networkManager: NetworkManager
+    let sap: Sap
+    @Binding var expandedVersions: Set<String>
+    let onSelect: (String) -> Void
+    let dismiss: DismissAction
+    
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: VersionPickerConstants.verticalSpacing) {
+                ForEach(filteredVersions, id: \.key) { version, info in
+                    VersionRow(
+                        sap: sap,
+                        version: version,
+                        info: info,
+                        isExpanded: expandedVersions.contains(version),
+                        onSelect: handleVersionSelect,
+                        onToggle: handleVersionToggle
+                    )
+                }
+            }
+            .padding()
+        }
+        .background(Color(NSColor.windowBackgroundColor))
+    }
+    
+    private var filteredVersions: [(key: String, value: Sap.Versions)] {
+        sap.versions
+            .filter { networkManager.allowedPlatform.contains($0.value.apPlatform) }
+            .sorted { $0.key > $1.key }
+    }
+    
+    private func handleVersionSelect(_ version: String) {
+        onSelect(version)
+        dismiss()
+    }
+    
+    private func handleVersionToggle(_ version: String) {
+        withAnimation {
+            if expandedVersions.contains(version) {
+                expandedVersions.remove(version)
+            } else {
+                expandedVersions.insert(version)
+            }
+        }
+    }
+}
+
+private struct VersionRow: View {
+    @EnvironmentObject private var networkManager: NetworkManager
+    @StorageValue(\.defaultLanguage) private var defaultLanguage
+    
+    let sap: Sap
+    let version: String
+    let info: Sap.Versions
+    let isExpanded: Bool
+    let onSelect: (String) -> Void
+    let onToggle: (String) -> Void
+    
+    private var existingPath: URL? {
+        networkManager.isVersionDownloaded(
+            sap: sap,
+            version: version,
+            language: defaultLanguage
+        )
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            VersionHeader(
+                version: version,
+                info: info,
+                isExpanded: isExpanded,
+                hasExistingPath: existingPath != nil,
+                onSelect: handleSelect,
+                onToggle: { onToggle(version) }
+            )
+            
+            if isExpanded {
+                VersionDetails(
+                    info: info,
+                    version: version,
+                    onSelect: onSelect
+                )
+            }
+        }
+        .padding(.horizontal)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(VersionPickerConstants.cornerRadius)
+    }
+    
+    private func handleSelect() {
+        if info.dependencies.isEmpty {
+            onSelect(version)
+        } else {
+            onToggle(version)
+        }
+    }
+}
+
+private struct VersionHeader: View {
+    let version: String
+    let info: Sap.Versions
+    let isExpanded: Bool
+    let hasExistingPath: Bool
+    let onSelect: () -> Void
+    let onToggle: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            HStack {
+                VersionInfo(version: version, platform: info.apPlatform)
+                Spacer()
+                ExistingPathButton(isVisible: hasExistingPath)
+                ExpandButton(
+                    isExpanded: isExpanded,
+                    hasDependencies: !info.dependencies.isEmpty
+                )
+            }
+            .padding(.vertical, VersionPickerConstants.buttonPadding)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct VersionInfo: View {
+    let version: String
+    let platform: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(version)
+                .font(.headline)
+            Text(platform)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+private struct ExistingPathButton: View {
+    let isVisible: Bool
+    
+    var body: some View {
+        if isVisible {
+            Text("已存在")
+                .font(.caption)
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue)
+                .cornerRadius(4)
+        }
+    }
+}
+
+private struct ExpandButton: View {
+    let isExpanded: Bool
+    let hasDependencies: Bool
+    
+    var body: some View {
+        Image(systemName: iconName)
+            .foregroundColor(.secondary)
+    }
+    
+    private var iconName: String {
+        if !hasDependencies {
+            return "chevron.right"
+        }
+        return isExpanded ? "chevron.down" : "chevron.right"
+    }
+}
+
+private struct VersionDetails: View {
+    let info: Sap.Versions
+    let version: String
+    let onSelect: (String) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: VersionPickerConstants.verticalSpacing) {
+            Text("依赖包:")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 8)
+                .padding(.leading, 16)
+            
+            DependenciesList(dependencies: info.dependencies)
+            
+            DownloadButton(version: version, onSelect: onSelect)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 8)
+    }
+}
+
+private struct DependenciesList: View {
+    let dependencies: [Sap.Versions.Dependencies]
+    
+    var body: some View {
+        ForEach(dependencies, id: \.sapCode) { dependency in
+            HStack(spacing: 8) {
+                Image(systemName: "cube.box")
+                    .foregroundColor(.blue)
+                    .frame(width: 16)
+                Text("\(dependency.sapCode) (\(dependency.version))")
+                    .font(.caption)
+                Spacer()
+            }
+            .padding(.leading, 24)
+        }
+    }
+}
+
+private struct DownloadButton: View {
+    let version: String
+    let onSelect: (String) -> Void
+    
+    var body: some View {
+        Button("下载此版本") {
+            onSelect(version)
+        }
+        .buttonStyle(.borderedProminent)
+        .padding(.top, 8)
+        .padding(.leading, 16)
+    }
+}
+
+struct VersionPickerView_Previews: PreviewProvider {
+    static var previews: some View {
+        let networkManager = NetworkManager()
+        networkManager.allowedPlatform = ["macuniversal", "macarm64"]
+        networkManager.cdn = "https://example.cdn.adobe.com"
+        
+        let previewSap = Sap(
             hidden: false,
             displayName: "Photoshop",
             sapCode: "PHSP",
@@ -195,14 +354,11 @@ struct VersionPickerView: View {
                     buildGuid: "q1w2e3r4-t5y6-u7i8-o9p0-a1s2d3f4g5h6"
                 )
             ],
-            icons: [
-                Sap.ProductIcon(
-                    size: "192x192",
-                    url: "https://ffc-static-cdn.oobesaas.adobe.com/icons/PHSP/26.0.0/192x192.png"
-                )
-            ]
-        ),
-        onSelect: { version in }
-    )
-    .environmentObject(networkManager)
+            icons: []
+        )
+        
+        return VersionPickerView(sap: previewSap) { _ in }
+            .environmentObject(networkManager)
+            .previewDisplayName("Version Picker")
+    }
 }

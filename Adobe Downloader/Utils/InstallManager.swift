@@ -5,9 +5,10 @@
 //
 /*
     Adobe Exit Code
-    107: 架构或者版本不一致
+    107: 架构不一致或安装文件被损坏
     103: 权限问题
     182: 可能是文件不全或者出错了
+    133: 磁盘空间不足
  */
 import Foundation
 
@@ -32,6 +33,44 @@ actor InstallManager {
     private var progressHandler: ((Double, String) -> Void)?
     private let setupPath = "/Library/Application Support/Adobe/Adobe Desktop Common/HDBox/Setup"
     
+    actor InstallationState {
+        var isCompleted = false
+        var error: Error?
+        var hasExitCode0 = false
+        var lastOutputTime = Date()
+        
+        func markCompleted() {
+            isCompleted = true
+        }
+        
+        func setError(_ error: Error) {
+            if !isCompleted {
+                self.error = error
+                isCompleted = true
+            }
+        }
+        
+        func setExitCode0() {
+            hasExitCode0 = true
+        }
+        
+        func updateLastOutputTime() {
+            lastOutputTime = Date()
+        }
+        
+        func getTimeSinceLastOutput() -> TimeInterval {
+            return Date().timeIntervalSince(lastOutputTime)
+        }
+        
+        var shouldContinue: Bool {
+            !isCompleted
+        }
+        
+        var hasReceivedExitCode0: Bool {
+            hasExitCode0
+        }
+    }
+    
     private func executeInstallation(
         at appPath: URL,
         progressHandler: @escaping (Double, String) -> Void
@@ -41,7 +80,7 @@ actor InstallManager {
         }
 
         let driverPath = appPath.appendingPathComponent("driver.xml").path
-        let installCommand = "\"\(setupPath)\" --install=1 --driverXML=\"\(driverPath)\""
+        let installCommand = "sudo \"\(setupPath)\" --install=1 --driverXML=\"\(driverPath)\""
         
         await MainActor.run {
             progressHandler(0.0, String(localized: "正在准备安装..."))
@@ -64,7 +103,7 @@ actor InstallManager {
                                     let errorMessage: String
                                     switch exitCode {
                                     case 107:
-                                            errorMessage = String(localized: "安装失败: 架构或版本不一致 (退出代码: \(exitCode))")
+                                        errorMessage = String(localized: "安装失败: 架构或版本不一致 (退出代码: \(exitCode))")
                                     case 103:
                                         errorMessage = String(localized: "安装失败: 权限问题 (退出代码: \(exitCode))")
                                     case 182:
@@ -123,6 +162,9 @@ actor InstallManager {
         at appPath: URL,
         progressHandler: @escaping (Double, String) -> Void
     ) async throws {
+        cancel()
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        
         try await executeInstallation(
             at: appPath,
             progressHandler: progressHandler

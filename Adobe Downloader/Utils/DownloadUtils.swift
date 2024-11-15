@@ -26,6 +26,8 @@ class DownloadUtils {
         var fileName: String
         private var hasCompleted = false
         private let completionLock = NSLock()
+        private var lastUpdateTime = Date()
+        private var lastBytes: Int64 = 0
 
         init(destinationDirectory: URL,
              fileName: String,
@@ -92,13 +94,29 @@ class DownloadUtils {
                        totalBytesExpectedToWrite: Int64) {
             guard totalBytesExpectedToWrite > 0 else { return }
             guard bytesWritten > 0 else { return }
-
-            progressHandler?(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
+            
+            handleProgressUpdate(
+                bytesWritten: bytesWritten,
+                totalBytesWritten: totalBytesWritten,
+                totalBytesExpectedToWrite: totalBytesExpectedToWrite
+            )
         }
 
         func cleanup() {
             completionHandler = { _, _, _ in }
             progressHandler = nil
+        }
+
+        private func handleProgressUpdate(bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+            let now = Date()
+            let timeDiff = now.timeIntervalSince(lastUpdateTime)
+            
+            guard timeDiff >= NetworkConstants.progressUpdateInterval else { return }
+
+            progressHandler?(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
+            
+            lastUpdateTime = now
+            lastBytes = totalBytesWritten
         }
     }
 
@@ -194,32 +212,15 @@ class DownloadUtils {
         """
     }
 
-    func clearExtendedAttributes(at url: URL) async throws {
-        let escapedPath = url.path.replacingOccurrences(of: "'", with: "'\\''")
-        let script = """
-        do shell script "sudo xattr -cr '\(escapedPath)'" with administrator privileges
-        """
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-
-            if process.terminationStatus != 0 {
-                let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
-                if let output = String(data: data, encoding: .utf8) {
-                    print("xattr command output:", output)
+    private func executePrivilegedCommand(_ command: String) async throws -> String {
+        return await withCheckedContinuation { continuation in
+            PrivilegedHelperManager.shared.executeCommand(command) { result in
+                if result.starts(with: "Error:") {
+                    continuation.resume(returning: result)
+                } else {
+                    continuation.resume(returning: result)
                 }
             }
-        } catch {
-            print("Error executing xattr command:", error.localizedDescription)
         }
     }
 
@@ -505,11 +506,6 @@ class DownloadUtils {
 
         let (manifestData, _) = try await URLSession.shared.data(for: request)
 
-        #if DEBUG
-        if let manifestString = String(data: manifestData, encoding: .utf8) {
-            print("Manifest内容: \(manifestString)")
-        }
-        #endif
         let manifestDoc = try XMLDocument(data: manifestData)
 
         guard let downloadPath = try manifestDoc.nodes(forXPath: "//asset_list/asset/asset_path").first?.stringValue,
@@ -662,28 +658,23 @@ class DownloadUtils {
 
         for dependency in productInfo.dependencies {
             if let dependencyVersions = saps[dependency.sapCode]?.versions {
-                let sortedVersions = dependencyVersions.sorted { first, second in
-                    first.value.productVersion.compare(second.value.productVersion, options: .numeric) == .orderedDescending
+
+                let matchingVersions = dependencyVersions.filter { 
+                    $0.value.baseVersion == dependency.version 
                 }
 
-                var firstGuid = "", buildGuid = ""
 
-                for (_, versionInfo) in sortedVersions where versionInfo.baseVersion == dependency.version {
-                    if firstGuid.isEmpty { firstGuid = versionInfo.buildGuid }
-
-                    if allowedPlatform.contains(versionInfo.apPlatform) {
-                        buildGuid = versionInfo.buildGuid
-                        break
-                    }
+                var selectedVersion: (key: String, value: Sap.Versions)? = matchingVersions.first { 
+                    allowedPlatform.contains($0.value.apPlatform)
                 }
+                
+                selectedVersion = selectedVersion ?? matchingVersions.first
 
-                if buildGuid.isEmpty { buildGuid = firstGuid }
-
-                if !buildGuid.isEmpty {
+                if let version = selectedVersion {
                     productsToDownload.append(ProductsToDownload(
                         sapCode: dependency.sapCode,
                         version: dependency.version,
-                        buildGuid: buildGuid
+                        buildGuid: version.value.buildGuid
                     ))
                 }
             }
@@ -1130,6 +1121,69 @@ class DownloadUtils {
         } catch {
             print("发生错误: \(error.localizedDescription)")
             throw error
+        }
+    }
+
+    private func handleDownloadError(_ error: Error, task: URLSessionTask) -> Error {
+        let nsError = error as NSError
+        switch nsError.code {
+        case NSURLErrorCancelled:
+            return NetworkError.cancelled
+        case NSURLErrorTimedOut:
+            return NetworkError.timeout
+        case NSURLErrorNotConnectedToInternet:
+            return NetworkError.noConnection
+        case NSURLErrorCannotWriteToFile:
+            if let expectedSize = task.response?.expectedContentLength {
+                let fileManager = FileManager.default
+                if let availableSpace = try? fileManager.attributesOfFileSystem(forPath: NSHomeDirectory())[.systemFreeSize] as? Int64 {
+                    return NetworkError.insufficientStorage(expectedSize, availableSpace)
+                }
+            }
+            return NetworkError.downloadError("存储空间不足", error)
+        default:
+            return NetworkError.downloadError("下载失败: \(error.localizedDescription)", error)
+        }
+    }
+
+    private func moveDownloadedFile(from location: URL, to destination: URL) throws {
+        let fileManager = FileManager.default
+        let destinationDirectory = destination.deletingLastPathComponent()
+        
+        do {
+            if !fileManager.fileExists(atPath: destinationDirectory.path) {
+                try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+            }
+            
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
+            }
+            
+            try fileManager.moveItem(at: location, to: destination)
+        } catch {
+            switch (error as NSError).code {
+            case NSFileWriteNoPermissionError:
+                throw NetworkError.filePermissionDenied(destination.path)
+            case NSFileWriteOutOfSpaceError:
+                throw NetworkError.insufficientStorage(
+                    try fileManager.attributesOfItem(atPath: location.path)[.size] as? Int64 ?? 0,
+                    try fileManager.attributesOfFileSystem(forPath: NSHomeDirectory())[.systemFreeSize] as? Int64 ?? 0
+                )
+            default:
+                throw NetworkError.fileSystemError("移动文件失败", error)
+            }
+        }
+    }
+
+    private func createDownloadTask(url: URL?, resumeData: Data?, session: URLSession) throws -> URLSessionDownloadTask {
+        if let resumeData = resumeData {
+            return session.downloadTask(withResumeData: resumeData)
+        } else if let url = url {
+            var request = URLRequest(url: url)
+            NetworkConstants.downloadHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+            return session.downloadTask(with: request)
+        } else {
+            throw NetworkError.invalidData("Neither URL nor resume data provided")
         }
     }
 }

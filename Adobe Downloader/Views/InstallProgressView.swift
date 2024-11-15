@@ -18,7 +18,7 @@ struct InstallProgressView: View {
     }
     
     private var isFailed: Bool {
-        status.contains(String(localized: "失败"))
+        status.contains(String(localized: "安装失败"))
     }
     
     private var progressText: String {
@@ -77,7 +77,8 @@ struct InstallProgressView: View {
 
             if isFailed {
                 ErrorSection(
-                    status: status, isFailed: isFailed
+                    status: status,
+                    isFailed: true
                 )
             }
 
@@ -119,7 +120,6 @@ private struct ErrorSection: View {
     let isFailed: Bool
 
     var body: some View {
-
         VStack(alignment: .leading, spacing: 8) {
             Text("错误详情:")
                 .font(.caption)
@@ -163,7 +163,7 @@ private struct CommandSection: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .textSelection(.enabled)
-                    .frame(maxWidth: .infinity,alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(minHeight: 200)
                     .padding(8)
                     .background(Color.secondary.opacity(0.1))

@@ -118,7 +118,7 @@ private struct ButtonsView: View {
             if isDownloading {
                 downloadProgressView
             } else {
-                Label("下载 X1a0He CC 组件", systemImage: "arrow.down")
+                Label("下载 X1a0He CC", systemImage: "arrow.down")
                     .frame(minWidth: 0, maxWidth: 360)
                     .frame(height: 32)
                     .font(.system(size: 14))

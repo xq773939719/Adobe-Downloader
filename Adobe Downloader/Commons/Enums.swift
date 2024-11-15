@@ -15,28 +15,11 @@ enum PackageStatus: Equatable, Codable {
 
     var description: LocalizedStringKey {
         switch self {
-        case .waiting: return "等待中"
-        case .downloading: return "下载中"
-        case .paused: return "已暂停"
-        case .completed: return "已完成"
-        case .failed(let message): return "失败: \(message)"
-        }
-    }
-    
-    static func == (lhs: PackageStatus, rhs: PackageStatus) -> Bool {
-        switch (lhs, rhs) {
-        case (.waiting, .waiting):
-            return true
-        case (.downloading, .downloading):
-            return true
-        case (.paused, .paused):
-            return true
-        case (.completed, .completed):
-            return true
-        case (.failed(let lhsMessage), .failed(let rhsMessage)):
-            return lhsMessage == rhsMessage
-        default:
-            return false
+        case .waiting: return LocalizedStringKey("等待中...")
+        case .downloading: return LocalizedStringKey("下载中...")
+        case .paused: return LocalizedStringKey("已暂停")
+        case .completed: return LocalizedStringKey("已完成")
+        case .failed(let message): return LocalizedStringKey("下载失败: \(message)")
         }
     }
 }
@@ -61,6 +44,7 @@ enum NetworkError: Error, LocalizedError {
     case downloadError(String, Error?)
     case downloadCancelled
     case insufficientStorage(Int64, Int64)
+    case cancelled
 
     case fileSystemError(String, Error?)
     case fileExists(String)
@@ -70,97 +54,112 @@ enum NetworkError: Error, LocalizedError {
     case applicationInfoError(String, Error?)
     case unsupportedPlatform(String)
     case incompatibleVersion(String, String)
-    case cancelled
     case installError(String)
 
-    var errorCode: Int {
+    private var errorGroup: Int {
         switch self {
-        case .noConnection: return 1001
-        case .timeout: return 1002
-        case .serverUnreachable: return 1003
-        case .invalidURL: return 2001
-        case .invalidRequest: return 2002
-        case .invalidResponse: return 2003
-        case .invalidData: return 3001
-        case .parsingError: return 3002
-        case .dataValidationError: return 3003
-        case .httpError: return 4001
-        case .serverError: return 4002
-        case .clientError: return 4003
-        case .downloadError: return 5001
-        case .downloadCancelled: return 5002
-        case .insufficientStorage: return 5003
-        case .fileSystemError: return 6001
-        case .fileExists: return 6002
-        case .fileNotFound: return 6003
-        case .filePermissionDenied: return 6004
-        case .applicationInfoError: return 7001
-        case .unsupportedPlatform: return 7002
-        case .incompatibleVersion: return 7003
-        case .cancelled: return 5004
-        case .installError: return 8001
+        case .noConnection, .timeout, .serverUnreachable: return 1000
+        case .invalidURL, .invalidRequest, .invalidResponse: return 2000
+        case .invalidData, .parsingError, .dataValidationError: return 3000
+        case .httpError, .serverError, .clientError: return 4000
+        case .downloadError, .downloadCancelled, .insufficientStorage, .cancelled: return 5000
+        case .fileSystemError, .fileExists, .fileNotFound, .filePermissionDenied: return 6000
+        case .applicationInfoError, .unsupportedPlatform, .incompatibleVersion, .installError: return 7000
         }
+    }
+
+    private var errorOffset: Int {
+        switch self {
+        case .noConnection: return 1
+        case .timeout: return 2
+        case .serverUnreachable: return 3
+        case .invalidURL: return 1
+        case .invalidRequest: return 2
+        case .invalidResponse: return 3
+        case .invalidData: return 1
+        case .parsingError: return 2
+        case .dataValidationError: return 3
+        case .httpError: return 1
+        case .serverError: return 2
+        case .clientError: return 3
+        case .downloadError: return 1
+        case .downloadCancelled: return 2
+        case .insufficientStorage: return 3
+        case .cancelled: return 4
+        case .fileSystemError: return 1
+        case .fileExists: return 2
+        case .fileNotFound: return 3
+        case .filePermissionDenied: return 4
+        case .applicationInfoError: return 1
+        case .unsupportedPlatform: return 2
+        case .incompatibleVersion: return 3
+        case .installError: return 4
+        }
+    }
+
+    var errorCode: Int {
+        return errorGroup + errorOffset
     }
 
     var errorDescription: String? {
         switch self {
-        case .noConnection:
-            return NSLocalizedString("没有网络连接", comment: "Network error")
-        case .timeout:
-            return NSLocalizedString("请求超时，请检查网络连接后重试", comment: "Network timeout")
-        case .serverUnreachable(let server):
-            return NSLocalizedString("无法连接到服务器: \(server)", comment: "Server unreachable")
-        case .invalidURL(let url):
-            return NSLocalizedString("无效的URL: \(url)", comment: "Invalid URL")
-        case .invalidRequest(let reason):
-            return NSLocalizedString("无效的请求: \(reason)", comment: "Invalid request")
-        case .invalidResponse:
-            return NSLocalizedString("服务器响应无效", comment: "Invalid response")
-        case .invalidData(let detail):
-            return NSLocalizedString("数据无效: \(detail)", comment: "Invalid data")
-        case .parsingError(let error, let context):
-            return NSLocalizedString("解析错误: \(context) - \(error.localizedDescription)", comment: "Parsing error")
-        case .dataValidationError(let reason):
-            return NSLocalizedString("数据验证失败: \(reason)", comment: "Data validation error")
-        case .httpError(let code, let message):
-            return NSLocalizedString("HTTP错误 \(code): \(message ?? "")", comment: "HTTP error")
-        case .serverError(let code):
-            return NSLocalizedString("服务器错误: \(code)", comment: "Server error")
-        case .clientError(let code):
-            return NSLocalizedString("客户端错误: \(code)", comment: "Client error")
-        case .downloadError(let message, let error):
-            if let error = error {
-                return NSLocalizedString("\(message): \(error.localizedDescription)", comment: "Download error")
-            }
-            return NSLocalizedString(message, comment: "Download error")
-        case .downloadCancelled:
-            return NSLocalizedString("下载已取消", comment: "Download cancelled")
-        case .insufficientStorage(let needed, let available):
-            return NSLocalizedString("存储空间不足: 需要 \(needed)字节, 可用 \(available)字节", comment: "Insufficient storage")
-        case .fileSystemError(let operation, let error):
-            if let error = error {
-                return NSLocalizedString("文件系统错误(\(operation)): \(error.localizedDescription)", comment: "File system error")
-            }
-            return NSLocalizedString("文件系统错误: \(operation)", comment: "File system error")
-        case .fileExists(let path):
-            return NSLocalizedString("文件已存在: \(path)", comment: "File exists")
-        case .fileNotFound(let path):
-            return NSLocalizedString("文件不存在: \(path)", comment: "File not found")
-        case .filePermissionDenied(let path):
-            return NSLocalizedString("文件访问权限被拒绝: \(path)", comment: "File permission denied")
-        case .applicationInfoError(let message, let error):
-            if let error = error {
-                return NSLocalizedString("应用信息错误(\(message)): \(error.localizedDescription)", comment: "Application info error")
-            }
-            return NSLocalizedString("应用信息错误: \(message)", comment: "Application info error")
-        case .unsupportedPlatform(let platform):
-            return NSLocalizedString("不支持的平台: \(platform)", comment: "Unsupported platform")
-        case .incompatibleVersion(let current, let required):
-            return NSLocalizedString("版本不兼容: 当前版本 \(current), 需要版本 \(required)", comment: "Incompatible version")
-        case .cancelled:
-            return NSLocalizedString("下载已取消", comment: "Download cancelled")
-        case .installError(let message):
-            return NSLocalizedString("安装错误: \(message)", comment: "Install error")
+            case .noConnection:
+                return NSLocalizedString("网络无连接", value: "Network error", comment: "Network error")
+            case .timeout:
+                return NSLocalizedString("请求超时，请检查网络连接后重试", value: "请求超时，请检查网络连接后重试", comment: "Network timeout")
+            case .serverUnreachable(let server):
+                return String(format: NSLocalizedString("无法连接到服务器: %@", value: "无法连接到服务器: %@",comment: "Server unreachable"), server)
+            case .invalidURL(let url):
+                return String(format: NSLocalizedString("无效的URL: %@", value: "无效的URL: %@", comment: "Invalid URL"), url)
+            case .invalidRequest(let reason):
+                return String(format: NSLocalizedString("无效的请求: %@", value: "无效的请求: %@", comment: "Invalid request"), reason)
+            case .invalidResponse:
+                return NSLocalizedString("服务器响应无效", value: "服务器响应无效", comment: "Invalid response")
+            case .invalidData(let detail):
+                return String(format: NSLocalizedString("数据无效: %@", value: "数据无效: %@", comment: "Invalid data"), detail)
+            case .parsingError(let error, let context):
+                return String(format: NSLocalizedString("解析错误: %@ - %@", value: "Parsing error: %@ - %@", comment: "Parsing error"), context, error.localizedDescription)
+            case .dataValidationError(let reason):
+                return String(format: NSLocalizedString("数据验证失败: %@", value: "数据验证失败: %@", comment: "Data validation error"), reason)
+            case .httpError(let code, let message):
+                return String(format: NSLocalizedString("HTTP错误 %d: %@", value: "HTTP错误 %d: %@", comment: "HTTP error"), code, message ?? "")
+            case .serverError(let code):
+                return String(format: NSLocalizedString("服务器错误: %d", value: "服务器错误: %d", comment: "Server error"), code)
+            case .clientError(let code):
+                return String(format: NSLocalizedString("客户端错误: %d", value: "客户端错误: %d", comment: "Client error"), code)
+            case .downloadError(let message, let error):
+                if let error = error {
+                    return String(format: NSLocalizedString("下载错误, 错误原因: %@, %@", value: "%@: %@", comment: "Download error with cause"), message, error.localizedDescription)
+                }
+                return NSLocalizedString(message, value: message, comment: "Download error")
+            case .downloadCancelled:
+                return NSLocalizedString("下载已取消", value: "下载已取消", comment: "Download cancelled")
+            case .insufficientStorage(let needed, let available):
+                return String(format: NSLocalizedString("存储空间不足: 需要 %lld字节, 可用 %lld字节", value: "存储空间不足: 需要 %lld字节, 可用 %lld字节", comment: "Insufficient storage"), needed, available)
+            case .fileSystemError(let operation, let error):
+                if let error = error {
+                    return String(format: NSLocalizedString("文件系统错误(%@): %@", value: "文件系统错误(%@): %@", comment: "File system error with cause"), operation, error.localizedDescription)
+                }
+                return String(format: NSLocalizedString("文件系统错误: %@", value: "文件系统错误: %@", comment: "File system error"), operation)
+            case .fileExists(let path):
+                return String(format: NSLocalizedString("文件已存在: %@", value: "文件已存在: %@", comment: "File exists"), path)
+            case .fileNotFound(let path):
+                return String(format: NSLocalizedString("文件不存在: %@", value: "文件不存在: %@", comment: "File not found"), path)
+            case .filePermissionDenied(let path):
+                return String(format: NSLocalizedString("文件访问权限被拒绝: %@", value: "文件访问权限被拒绝: %@", comment: "File permission denied"), path)
+            case .applicationInfoError(let message, let error):
+                if let error = error {
+                    return String(format: NSLocalizedString("应用信息错误(%@): %@", value: "应用信息错误(%@): %@", comment: "Application info error with cause"), message, error.localizedDescription)
+                }
+                return String(format: NSLocalizedString("应用信息错误: %@", value: "应用信息错误: %@", comment: "Application info error"), message)
+            case .unsupportedPlatform(let platform):
+                return String(format: NSLocalizedString("不支持的平台: %@", value: "不支持的平台: %@", comment: "Unsupported platform"), platform)
+            case .incompatibleVersion(let current, let required):
+                return String(format: NSLocalizedString("版本不兼容: 当前版本 %@, 需要版本 %@", value: "版本不兼容: 当前版本 %@, 需要版本 %@", comment: "Incompatible version"), current, required)
+            case .cancelled:
+                return NSLocalizedString("下载已取消", value: "下载已取消", comment: "Download cancelled")
+            case .installError(let message):
+                return String(format: NSLocalizedString("安装错误: %@", value: "安装错误: %@", comment: "Install error"), message)
         }
     }
     
@@ -334,30 +333,31 @@ enum DownloadStatus: Equatable, Codable {
     var description: String {
         switch self {
         case .waiting:
-            return NSLocalizedString("等待中", comment: "Download status waiting")
+            return NSLocalizedString("等待中", value: "等待中", comment: "Download status waiting")
         case .preparing(let info):
-            return NSLocalizedString("准备中: \(info.message)", comment: "Download status preparing")
+            return String(format: NSLocalizedString("准备中: %@", value: "准备中: %@", comment: "Download status preparing"), info.message)
         case .downloading(let info):
-            return String(format: NSLocalizedString("正在下载 %@ (%d/%d)", comment: "Download status downloading"),
+            return String(format: NSLocalizedString("正在下载 %@ (%d/%d)", value: "正在下载 %@ (%d/%d)", comment: "Download status downloading"),
                         info.fileName, info.currentPackageIndex + 1, info.totalPackages)
         case .paused(let info):
             switch info.reason {
             case .userRequested:
-                return NSLocalizedString("已暂停", comment: "Download status paused")
+                return NSLocalizedString("已暂停", value: "已暂停", comment: "Download status paused")
             case .networkIssue:
-                return NSLocalizedString("网络中断", comment: "Download status network paused")
+                return NSLocalizedString("网络中断", value: "网络中断", comment: "Download status network paused")
             case .systemSleep:
-                return NSLocalizedString("系统休眠", comment: "Download status system sleep")
+                return NSLocalizedString("系统休眠", value: "系统休眠", comment: "Download status system sleep")
             case .other(let reason):
-                return NSLocalizedString("已暂停: \(reason)", comment: "Download status paused with reason")
+                return String(format: NSLocalizedString("已暂停: %@", value: "已暂停: %@", comment: "Download status paused with reason"), reason)
             }
         case .completed(let info):
-            let duration = formatDuration(info.totalTime)
-            return NSLocalizedString("已完成 (用时: \(duration))", comment: "Download status completed")
+            return String(format: NSLocalizedString("已完成 (用时: %@)", value: "已完成 (用时: %@)", comment: "Download status completed"),
+                        info.totalTime.formatDuration())
         case .failed(let info):
-            return NSLocalizedString("失败: \(info.message)", comment: "Download status failed")
+            return String(format: NSLocalizedString("失败: %@", value: "失败: %@", comment: "Download status failed"),
+                        info.message)
         case .retrying(let info):
-            return String(format: NSLocalizedString("重试中 (%d/%d)", comment: "Download status retrying"),
+            return String(format: NSLocalizedString("重试中 (%d/%d)", value: "重试中 (%d/%d)", comment: "Download status retrying"),
                         info.attempt, info.maxAttempts)
         }
     }
@@ -393,12 +393,10 @@ enum DownloadStatus: Equatable, Codable {
     }
     
     var canRetry: Bool {
-        switch self {
-        case .failed(let info):
+        if case .failed(let info) = self {
             return info.recoverable
-        default:
-            return false
         }
+        return false
     }
     
     var canPause: Bool {
@@ -411,92 +409,26 @@ enum DownloadStatus: Equatable, Codable {
     }
     
     var canResume: Bool {
-        switch self {
-        case .paused(let info):
+        if case .paused(let info) = self {
             return info.resumable
-        default:
-            return false
         }
+        return false
     }
 }
 
-extension DownloadStatus {
-    static func == (lhs: DownloadStatus, rhs: DownloadStatus) -> Bool {
-        switch (lhs, rhs) {
-        case (.waiting, .waiting):
-            return true
-        case (.preparing(let lInfo), .preparing(let rInfo)):
-            return lInfo.message == rInfo.message && 
-                   lInfo.timestamp == rInfo.timestamp &&
-                   lInfo.stage == rInfo.stage
-        case (.downloading(let lInfo), .downloading(let rInfo)):
-            return lInfo.fileName == rInfo.fileName &&
-                   lInfo.currentPackageIndex == rInfo.currentPackageIndex &&
-                   lInfo.totalPackages == rInfo.totalPackages
-        case (.paused(let lInfo), .paused(let rInfo)):
-            return lInfo.reason == rInfo.reason &&
-                   lInfo.timestamp == rInfo.timestamp &&
-                   lInfo.resumable == rInfo.resumable
-        case (.completed(let lInfo), .completed(let rInfo)):
-            return lInfo.timestamp == rInfo.timestamp &&
-                   lInfo.totalTime == rInfo.totalTime &&
-                   lInfo.totalSize == rInfo.totalSize
-        case (.failed(let lInfo), .failed(let rInfo)):
-            return lInfo.message == rInfo.message &&
-                   lInfo.timestamp == rInfo.timestamp &&
-                   lInfo.recoverable == rInfo.recoverable
-        case (.retrying(let lInfo), .retrying(let rInfo)):
-            return lInfo.attempt == rInfo.attempt &&
-                   lInfo.maxAttempts == rInfo.maxAttempts &&
-                   lInfo.reason == rInfo.reason &&
-                   lInfo.nextRetryDate == rInfo.nextRetryDate
-        default:
-            return false
-        }
-    }
-}
+extension DownloadStatus.PrepareInfo: Equatable {}
+extension DownloadStatus.PrepareInfo.PrepareStage: Equatable {}
+extension DownloadStatus.PauseInfo.PauseReason: Equatable {}
+extension DownloadStatus.DownloadInfo: Equatable {}
+extension DownloadStatus.PauseInfo: Equatable {}
+extension DownloadStatus.CompletionInfo: Equatable {}
+extension DownloadStatus.RetryInfo: Equatable {}
 
-extension DownloadStatus.PrepareInfo: Equatable {
-    static func == (lhs: DownloadStatus.PrepareInfo, rhs: DownloadStatus.PrepareInfo) -> Bool {
+extension DownloadStatus.FailureInfo: Equatable {
+    static func == (lhs: DownloadStatus.FailureInfo, rhs: DownloadStatus.FailureInfo) -> Bool {
         return lhs.message == rhs.message &&
                lhs.timestamp == rhs.timestamp &&
-               lhs.stage == rhs.stage
-    }
-}
-
-extension DownloadStatus.PrepareInfo.PrepareStage: Equatable {
-    static func == (lhs: DownloadStatus.PrepareInfo.PrepareStage, rhs: DownloadStatus.PrepareInfo.PrepareStage) -> Bool {
-        switch (lhs, rhs) {
-        case (.initializing, .initializing):
-            return true
-        case (.creatingInstaller, .creatingInstaller):
-            return true
-        case (.signingApp, .signingApp):
-            return true
-        case (.fetchingInfo, .fetchingInfo):
-            return true
-        case (.validatingSetup, .validatingSetup):
-            return true
-        default:
-            return false
-        }
-    }
-}
-
-extension DownloadStatus.PauseInfo.PauseReason: Equatable {
-    static func == (lhs: DownloadStatus.PauseInfo.PauseReason, rhs: DownloadStatus.PauseInfo.PauseReason) -> Bool {
-        switch (lhs, rhs) {
-        case (.userRequested, .userRequested):
-            return true
-        case (.networkIssue, .networkIssue):
-            return true
-        case (.systemSleep, .systemSleep):
-            return true
-        case (.other(let lhsReason), .other(let rhsReason)):
-            return lhsReason == rhsReason
-        default:
-            return false
-        }
+               lhs.recoverable == rhs.recoverable
     }
 }
 
@@ -508,13 +440,9 @@ enum LoadingState: Equatable {
     
     static func == (lhs: LoadingState, rhs: LoadingState) -> Bool {
         switch (lhs, rhs) {
-        case (.idle, .idle):
+        case (.idle, .idle), (.loading, .loading), (.success, .success):
             return true
-        case (.loading, .loading):
-            return true
-        case (.success, .success):
-            return true
-        case (.failed(let lError), .failed(let rError)):
+        case let (.failed(lError), .failed(rError)):
             return lError.localizedDescription == rError.localizedDescription
         default:
             return false
@@ -522,60 +450,19 @@ enum LoadingState: Equatable {
     }
 }
 
-private func formatDuration(_ seconds: TimeInterval) -> String {
-    if seconds < 60 {
-        return String(format: "%.1f秒", seconds)
-    } else if seconds < 3600 {
-        let minutes = Int(seconds / 60)
-        let remainingSeconds = Int(seconds.truncatingRemainder(dividingBy: 60))
-        return "\(minutes)分\(remainingSeconds)秒"
-    } else {
-        let hours = Int(seconds / 3600)
-        let minutes = Int((seconds.truncatingRemainder(dividingBy: 3600)) / 60)
-        let remainingSeconds = Int(seconds.truncatingRemainder(dividingBy: 60))
-        return "\(hours)小时\(minutes)分\(remainingSeconds)秒"
-    }
-}
-
-extension DownloadStatus.DownloadInfo: Equatable {
-    static func == (lhs: DownloadStatus.DownloadInfo, rhs: DownloadStatus.DownloadInfo) -> Bool {
-        return lhs.fileName == rhs.fileName &&
-               lhs.currentPackageIndex == rhs.currentPackageIndex &&
-               lhs.totalPackages == rhs.totalPackages &&
-               lhs.startTime == rhs.startTime &&
-               lhs.estimatedTimeRemaining == rhs.estimatedTimeRemaining
-    }
-}
-
-extension DownloadStatus.PauseInfo: Equatable {
-    static func == (lhs: DownloadStatus.PauseInfo, rhs: DownloadStatus.PauseInfo) -> Bool {
-        return lhs.reason == rhs.reason &&
-               lhs.timestamp == rhs.timestamp &&
-               lhs.resumable == rhs.resumable
-    }
-}
-
-extension DownloadStatus.CompletionInfo: Equatable {
-    static func == (lhs: DownloadStatus.CompletionInfo, rhs: DownloadStatus.CompletionInfo) -> Bool {
-        return lhs.timestamp == rhs.timestamp &&
-               lhs.totalTime == rhs.totalTime &&
-               lhs.totalSize == rhs.totalSize
-    }
-}
-
-extension DownloadStatus.FailureInfo: Equatable {
-    static func == (lhs: DownloadStatus.FailureInfo, rhs: DownloadStatus.FailureInfo) -> Bool {
-        return lhs.message == rhs.message &&
-               lhs.timestamp == rhs.timestamp &&
-               lhs.recoverable == rhs.recoverable
-    }
-}
-
-extension DownloadStatus.RetryInfo: Equatable {
-    static func == (lhs: DownloadStatus.RetryInfo, rhs: DownloadStatus.RetryInfo) -> Bool {
-        return lhs.attempt == rhs.attempt &&
-               lhs.maxAttempts == rhs.maxAttempts &&
-               lhs.reason == rhs.reason &&
-               lhs.nextRetryDate == rhs.nextRetryDate
+private extension TimeInterval {
+    func formatDuration() -> String {
+        if self < 60 {
+            return String(format: "%.1f秒", self)
+        } else if self < 3600 {
+            let minutes = Int(self / 60)
+            let remainingSeconds = Int(self.truncatingRemainder(dividingBy: 60))
+            return "\(minutes)分\(remainingSeconds)秒"
+        } else {
+            let hours = Int(self / 3600)
+            let minutes = Int((self.truncatingRemainder(dividingBy: 3600)) / 60)
+            let remainingSeconds = Int(self.truncatingRemainder(dividingBy: 60))
+            return "\(hours)小时\(minutes)分\(remainingSeconds)秒"
+        }
     }
 } 

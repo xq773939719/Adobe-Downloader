@@ -120,10 +120,17 @@ struct DownloadProgressView: View {
                             if !ModifySetup.isSetupBackup() {
                                 showSetupBackupAlert = true
                             } else {
-                                showInstallPrompt = false
-                                isInstalling = true
-                                Task {
-                                    await networkManager.installProduct(at: task.directory)
+                                print("正在连接 Helper...")
+                                if PrivilegedHelperManager.shared.connectToHelper() != nil {
+                                    print("Helper 连接成功，开始安装...")
+                                    showInstallPrompt = false
+                                    isInstalling = true
+                                    Task {
+                                        await networkManager.installProduct(at: task.directory)
+                                    }
+                                } else {
+                                    print("Helper 连接失败")
+                                    showSetupBackupAlert = true
                                 }
                             }
                         }) {
@@ -134,8 +141,13 @@ struct DownloadProgressView: View {
                         .alert("Setup 组件未处理", isPresented: $showSetupBackupAlert) {
                             Button("确定") { }
                         } message: {
-                            Text("未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理")
-                                .font(.system(size: 18))
+                            if !ModifySetup.isSetupBackup() {
+                                Text("未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理")
+                                    .font(.system(size: 18))
+                            } else {
+                                Text("Helper 未安装或未连接，请先在设置中安装并连接 Helper")
+                                    .font(.system(size: 18))
+                            }
                         }
                     }
                     

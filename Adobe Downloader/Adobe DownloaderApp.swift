@@ -9,51 +9,42 @@ struct Adobe_DownloaderApp: App {
     @State private var showTipsSheet = false
     @State private var showLanguagePicker = false
     @State private var showCreativeCloudAlert = false
-    @AppStorage("useDefaultLanguage") private var useDefaultLanguage: Bool = true
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "ALL"
-    @AppStorage("downloadAppleSilicon") private var downloadAppleSilicon: Bool = true
-    @AppStorage("confirmRedownload") private var confirmRedownload: Bool = true
-    @AppStorage("useDefaultDirectory") private var useDefaultDirectory: Bool = true
-    @AppStorage("defaultDirectory") private var defaultDirectory: String = ""
+    @StorageValue(\.useDefaultLanguage) private var useDefaultLanguage
+    @StorageValue(\.defaultLanguage) private var defaultLanguage
+    @StorageValue(\.downloadAppleSilicon) private var downloadAppleSilicon
+    @StorageValue(\.confirmRedownload) private var confirmRedownload
+    @StorageValue(\.useDefaultDirectory) private var useDefaultDirectory
+    @StorageValue(\.defaultDirectory) private var defaultDirectory
     @State private var showBackupResultAlert = false
     @State private var backupResultMessage = ""
     @State private var backupSuccess = false
     private let updaterController: SPUStandardUpdaterController
 
     init() {
-        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-
-        let isFirstRun = UserDefaults.standard.object(forKey: "downloadAppleSilicon") == nil ||
-                        UserDefaults.standard.object(forKey: "useDefaultLanguage") == nil
-
-        UserDefaults.standard.set(isFirstRun, forKey: "isFirstLaunch")
-
-        if UserDefaults.standard.object(forKey: "downloadAppleSilicon") == nil {
-            UserDefaults.standard.set(AppStatics.isAppleSilicon, forKey: "downloadAppleSilicon")
+        if StorageData.shared.installedHelperBuild == "0" {
+            StorageData.shared.installedHelperBuild = "0"
         }
 
-        if UserDefaults.standard.object(forKey: "useDefaultLanguage") == nil {
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+
+        if StorageData.shared.isFirstLaunch {
+            StorageData.shared.downloadAppleSilicon = AppStatics.isAppleSilicon
+
             let systemLanguage = Locale.current.identifier
             let matchedLanguage = AppStatics.supportedLanguages.first {
                 systemLanguage.hasPrefix($0.code.prefix(2))
             }?.code ?? "ALL"
+            StorageData.shared.defaultLanguage = matchedLanguage
+            StorageData.shared.useDefaultLanguage = true
 
-            UserDefaults.standard.set(true, forKey: "useDefaultLanguage")
-            UserDefaults.standard.set(matchedLanguage, forKey: "defaultLanguage")
-        }
-
-        if UserDefaults.standard.object(forKey: "useDefaultDirectory") == nil {
             if let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first {
-                print(downloadsURL.path)
-                defaultDirectory = downloadsURL.path
-                UserDefaults.standard.set(true, forKey: "useDefaultDirectory")
-                UserDefaults.standard.set(downloadsURL.path, forKey: "defaultDirectory")
+                StorageData.shared.defaultDirectory = downloadsURL.path
+                StorageData.shared.useDefaultDirectory = true
             }
         }
-        PrivilegedHelperManager.shared.checkInstall()
 
-        if UserDefaults.standard.string(forKey: "apiVersion") == nil {
-            UserDefaults.standard.set("6", forKey: "apiVersion")
+        if StorageData.shared.apiVersion == "6" {
+            StorageData.shared.apiVersion = "6"
         }
     }
 
@@ -64,6 +55,8 @@ struct Adobe_DownloaderApp: App {
                 .frame(width: 850, height: 800)
                 .tint(.blue)
                 .task {
+                    PrivilegedHelperManager.shared.checkInstall()
+                    
                     await MainActor.run {
                         appDelegate.networkManager = networkManager
                         networkManager.loadSavedTasks()
@@ -79,9 +72,9 @@ struct Adobe_DownloaderApp: App {
                             showBackupAlert = true
                         }
 
-                        if UserDefaults.standard.bool(forKey: "isFirstLaunch") {
+                        if StorageData.shared.isFirstLaunch {
                             showTipsSheet = true
-                            UserDefaults.standard.removeObject(forKey: "isFirstLaunch")
+                            StorageData.shared.isFirstLaunch = false
                         }
                     }
                 }
@@ -113,8 +106,14 @@ struct Adobe_DownloaderApp: App {
 
                         VStack(spacing: 12) {
                             HStack {
-                                Toggle("使用默认语言", isOn: $useDefaultLanguage)
-                                    .padding(.leading, 5)
+                                Toggle("使用默认语言", isOn: Binding(
+                                    get: { useDefaultLanguage },
+                                    set: { 
+                                        useDefaultLanguage = $0
+                                        StorageData.shared.useDefaultLanguage = $0
+                                    }
+                                ))
+                                .padding(.leading, 5)
                                 Spacer()
                                 Text(getLanguageName(code: defaultLanguage))
                                     .foregroundColor(.secondary)
@@ -127,8 +126,14 @@ struct Adobe_DownloaderApp: App {
                             Divider()
 
                             HStack {
-                                Toggle("使用默认目录", isOn: $useDefaultDirectory)
-                                    .padding(.leading, 5)
+                                Toggle("使用默认目录", isOn: Binding(
+                                    get: { useDefaultDirectory },
+                                    set: { 
+                                        useDefaultDirectory = $0
+                                        StorageData.shared.useDefaultDirectory = $0
+                                    }
+                                ))
+                                .padding(.leading, 5)
                                 Spacer()
                                 Text(formatPath(defaultDirectory))
                                     .foregroundColor(.secondary)
@@ -143,24 +148,35 @@ struct Adobe_DownloaderApp: App {
                             Divider()
 
                             HStack {
-                                Toggle("重新下载时需要确认", isOn: $confirmRedownload)
-                                    .padding(.leading, 5)
+                                Toggle("重新下载时需要确认", isOn: Binding(
+                                    get: { confirmRedownload },
+                                    set: { 
+                                        confirmRedownload = $0
+                                        StorageData.shared.confirmRedownload = $0
+                                        NotificationCenter.default.post(name: .storageDidChange, object: nil)
+                                    }
+                                ))
+                                .padding(.leading, 5)
                                 Spacer()
                             }
 
                             Divider()
 
                             HStack {
-                                Toggle("下载 Apple Silicon 架构", isOn: $downloadAppleSilicon)
-                                    .padding(.leading, 5)
+                                Toggle("下载 Apple Silicon 架构", isOn: Binding(
+                                    get: { downloadAppleSilicon },
+                                    set: { 
+                                        downloadAppleSilicon = $0
+                                        StorageData.shared.downloadAppleSilicon = $0
+                                        networkManager.updateAllowedPlatform(useAppleSilicon: $0)
+                                    }
+                                ))
+                                .padding(.leading, 5)
                                 Spacer()
                                 Text("当前架构: \(AppStatics.cpuArchitecture)")
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
-                            }
-                            .onChange(of: downloadAppleSilicon) { newValue in
-                                networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
                             }
                         }
                         .padding()
@@ -180,6 +196,7 @@ struct Adobe_DownloaderApp: App {
                     .sheet(isPresented: $showLanguagePicker) {
                         LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
                             defaultLanguage = language
+                            StorageData.shared.defaultLanguage = language
                             showLanguagePicker = false
                         }
                     }

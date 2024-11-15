@@ -6,7 +6,15 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showDownloadManager = false
     @State private var searchText = ""
-    @AppStorage("apiVersion") private var apiVersion: String = "6"
+    @State private var currentApiVersion = StorageData.shared.apiVersion
+    
+    private var apiVersion: String {
+        get { StorageData.shared.apiVersion }
+        set {
+            StorageData.shared.apiVersion = newValue
+            refreshData()
+        }
+    }
     
     private var filteredProducts: [Sap] {
         let products = networkManager.saps.values
@@ -36,18 +44,37 @@ struct ContentView: View {
                     .fixedSize()
 
                 Spacer()
+                
+                HStack {
+                    Toggle(isOn: Binding(
+                        get: { StorageData.shared.downloadAppleSilicon },
+                        set: { newValue in
+                            StorageData.shared.downloadAppleSilicon = newValue
+                            networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
+                            Task {
+                                await networkManager.fetchProducts()
+                            }
+                        }
+                    )) {
+                        Text("Apple Silicon")
+                    }
+                    .toggleStyle(.switch)
+                    .tint(.green)
+                    .disabled(isRefreshing)
+                }
+                .padding(.horizontal, 10)
 
                 HStack {
                     Text("API:")
-                        .foregroundColor(.secondary)
-                    Picker("", selection: $apiVersion) {
+                    Picker("", selection: $currentApiVersion) {
                         Text("v4").tag("4")
                         Text("v5").tag("5")
                         Text("v6").tag("6")
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 150)
-                    .onChange(of: apiVersion) { newValue in
+                    .onChange(of: currentApiVersion) { newValue in
+                        StorageData.shared.apiVersion = newValue
                         refreshData()
                     }
                 }

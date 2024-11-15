@@ -7,7 +7,23 @@
 import SwiftUI
 import Combine
 
-class IconCache {
+private enum AppCardConstants {
+    static let cardWidth: CGFloat = 250
+    static let cardHeight: CGFloat = 200
+    static let iconSize: CGFloat = 64
+    static let cornerRadius: CGFloat = 10
+    static let buttonHeight: CGFloat = 32
+    static let titleFontSize: CGFloat = 16
+    static let buttonFontSize: CGFloat = 14
+    
+    static let shadowOpacity: Double = 0.05
+    static let shadowRadius: CGFloat = 2
+    static let strokeOpacity: Double = 0.1
+    static let strokeWidth: CGFloat = 2
+    static let backgroundOpacity: Double = 0.05
+}
+
+final class IconCache {
     static let shared = IconCache()
     private var cache = NSCache<NSString, NSImage>()
     
@@ -20,7 +36,8 @@ class IconCache {
     }
 }
 
-class AppCardViewModel: ObservableObject {
+@MainActor
+final class AppCardViewModel: ObservableObject {
     @Published var iconImage: NSImage?
     @Published var showError = false
     @Published var errorMessage = ""
@@ -40,12 +57,12 @@ class AppCardViewModel: ObservableObject {
     @Published var isDownloading = false
     private let userDefaults = UserDefaults.standard
     
-    var useDefaultDirectory: Bool {
-        get { userDefaults.bool(forKey: "useDefaultDirectory") }
+    private var useDefaultDirectory: Bool {
+        StorageData.shared.useDefaultDirectory
     }
     
-    var defaultDirectory: String {
-        get { userDefaults.string(forKey: "defaultDirectory") ?? "" }
+    private var defaultDirectory: String {
+        StorageData.shared.defaultDirectory
     }
     
     private var cancellables = Set<AnyCancellable>()
@@ -54,10 +71,28 @@ class AppCardViewModel: ObservableObject {
         self.sap = sap
         self.networkManager = networkManager
         
-        setupObservers()
+        Task { @MainActor in
+            setupObservers()
+        }
     }
     
+    @MainActor
     private func setupObservers() {
+        networkManager?.$downloadTasks
+            .receive(on: RunLoop.main)
+            .sink { [weak self] tasks in
+                guard let self = self else { return }
+                let hasActiveTask = tasks.contains { 
+                    $0.sapCode == self.sap.sapCode && self.isTaskActive($0.status)
+                }
+                
+                if hasActiveTask != self.isDownloading {
+                    self.isDownloading = hasActiveTask
+                    self.objectWillChange.send()
+                }
+            }
+            .store(in: &cancellables)
+        
         networkManager?.objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -66,31 +101,34 @@ class AppCardViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    func updateDownloadingStatus() {
-        guard let networkManager = networkManager else {
-            Task { @MainActor in
-                self.isDownloading = false
-            }
-            return
-        }
-        
-        Task { @MainActor in
-            let isActive = networkManager.downloadTasks.contains { task in
-                task.sapCode == sap.sapCode && isTaskActive(task.status)
-            }
-            self.isDownloading = isActive
-        }
-    }
-    
     private func isTaskActive(_ status: DownloadStatus) -> Bool {
         switch status {
-        case .downloading, .preparing, .paused, .waiting, .retrying(_):
+        case .downloading, .preparing, .waiting, .retrying:
             return true
+        case .paused:
+            return false
         case .completed, .failed:
             return false
         }
     }
-
+    
+    @MainActor
+    func updateDownloadingStatus() {
+        guard let networkManager = networkManager else {
+            self.isDownloading = false
+            return
+        }
+        
+        let hasActiveTask = networkManager.downloadTasks.contains { 
+            $0.sapCode == sap.sapCode && isTaskActive($0.status)
+        }
+        
+        if hasActiveTask != self.isDownloading {
+            self.isDownloading = hasActiveTask
+            self.objectWillChange.send()
+        }
+    }
+    
     func getDestinationURL(version: String, language: String) async throws -> URL {
         let platform = sap.versions[version]?.apPlatform ?? "unknown"
         let installerName = sap.sapCode == "APRO" 
@@ -185,7 +223,7 @@ class AppCardViewModel: ObservableObject {
     
     func checkAndStartDownload(version: String, language: String) async {
         if let networkManager = networkManager {
-            if let existingPath = await networkManager.isVersionDownloaded(sap: sap, version: version, language: language) {
+            if let existingPath = networkManager.isVersionDownloaded(sap: sap, version: version, language: language) {
                 await MainActor.run {
                     existingFilePath = existingPath
                     pendingVersion = version
@@ -212,7 +250,7 @@ class AppCardViewModel: ObservableObject {
         guard let networkManager = networkManager,
               let productInfo = sap.versions[pendingVersion] else { return }
 
-        let existingTask = await networkManager.downloadTasks.first { task in
+        let existingTask = networkManager.downloadTasks.first { task in
             return task.sapCode == sap.sapCode && 
                    task.version == pendingVersion && 
                    task.language == pendingLanguage &&
@@ -232,14 +270,14 @@ class AppCardViewModel: ObservableObject {
         productsToDownload.append(mainProduct)
 
         for dependency in productInfo.dependencies {
-            if let dependencyVersions = await networkManager.saps[dependency.sapCode]?.versions {
+            if let dependencyVersions = networkManager.saps[dependency.sapCode]?.versions {
                 let sortedVersions = dependencyVersions.sorted { first, second in
                     first.value.productVersion.compare(second.value.productVersion, options: .numeric) == .orderedDescending
                 }
                 
                 var buildGuid = ""
                 for (_, versionInfo) in sortedVersions where versionInfo.baseVersion == dependency.version {
-                    if await networkManager.allowedPlatform.contains(versionInfo.apPlatform) {
+                    if networkManager.allowedPlatform.contains(versionInfo.apPlatform) {
                         buildGuid = versionInfo.buildGuid
                         break
                     }
@@ -289,95 +327,81 @@ class AppCardViewModel: ObservableObject {
         }
         return 0
     }
+    
+    var hasValidIcon: Bool {
+        iconImage != nil
+    }
+    
+    var canDownload: Bool {
+        !isDownloading
+    }
+    
+    var downloadButtonTitle: String {
+        isDownloading ? String(localized: "下载中") : String(localized: "下载")
+    }
+    
+    var downloadButtonIcon: String {
+        isDownloading ? "hourglass.circle.fill" : "arrow.down.circle"
+    }
 }
 
 struct AppCardView: View {
     @StateObject private var viewModel: AppCardViewModel
     @EnvironmentObject private var networkManager: NetworkManager
-    @AppStorage("useDefaultLanguage") private var useDefaultLanguage = true
-    @AppStorage("defaultLanguage") private var defaultLanguage: String = "zh_CN"
+    @StorageValue(\.useDefaultLanguage) private var useDefaultLanguage
+    @StorageValue(\.defaultLanguage) private var defaultLanguage
     
     init(sap: Sap) {
         _viewModel = StateObject(wrappedValue: AppCardViewModel(sap: sap, networkManager: nil))
     }
     
     var body: some View {
-        CardContent(
-            sap: viewModel.sap,
-            iconImage: viewModel.iconImage,
-            loadIcon: viewModel.loadIcon,
-            dependenciesCount: viewModel.dependenciesCount,
-            isDownloading: viewModel.isDownloading,
-            showVersionPicker: $viewModel.showVersionPicker
-        )
-        .padding()
-        .frame(width: 250, height: 200)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.05)))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.1), lineWidth: 2)
-        )
+        CardContainer {
+            VStack {
+                IconView(viewModel: viewModel)
+                ProductInfoView(viewModel: viewModel)
+                Spacer()
+                DownloadButtonView(viewModel: viewModel)
+            }
+        }
+        .modifier(CardModifier())
+        .modifier(SheetModifier(viewModel: viewModel, networkManager: networkManager))
         .modifier(AlertModifier(viewModel: viewModel, confirmRedownload: true))
-        .sheet(isPresented: $viewModel.showVersionPicker) {
-            VersionPickerView(sap: viewModel.sap) { version in
-                Task {
-                    await viewModel.handleDownloadRequest(version, useDefaultLanguage: useDefaultLanguage, defaultLanguage: defaultLanguage)
-                }
-            }
-            .environmentObject(networkManager)
-        }
-        .sheet(isPresented: $viewModel.showLanguagePicker) {
-            LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
-                Task {
-                    await viewModel.checkAndStartDownload(version: viewModel.selectedVersion, language: language)
-                }
-            }
-        }
-        .onAppear {
-            viewModel.networkManager = networkManager
-            viewModel.updateDownloadingStatus()
-        }
-        .onChange(of: networkManager.downloadTasks) { _ in
-            viewModel.updateDownloadingStatus()
-        }
+        .onAppear(perform: setupViewModel)
+        .onChange(of: networkManager.downloadTasks, perform: updateDownloadStatus)
+    }
+    
+    private func setupViewModel() {
+        viewModel.networkManager = networkManager
+        viewModel.updateDownloadingStatus()
+    }
+    
+    private func updateDownloadStatus(_ _: [NewDownloadTask]) {
+        viewModel.updateDownloadingStatus()
     }
 }
 
-private struct CardContent: View {
-    let sap: Sap
-    let iconImage: NSImage?
-    let loadIcon: () -> Void
-    let dependenciesCount: Int
-    let isDownloading: Bool
-    @Binding var showVersionPicker: Bool
+private struct CardContainer<Content: View>: View {
+    let content: Content
+    
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
     
     var body: some View {
-        VStack {
-            IconView(iconImage: iconImage, loadIcon: loadIcon)
-            ProductInfoView(sap: sap, dependenciesCount: dependenciesCount)
-            Spacer()
-            DownloadButton(
-                isDownloading: isDownloading,
-                showVersionPicker: $showVersionPicker
-            )
-        }
-    }
-}
-
-private extension View {
-    func applyModifiers(viewModel: AppCardViewModel) -> some View {
-        self.modifier(AlertModifier(viewModel: viewModel, confirmRedownload: true))
+        content
+            .padding()
+            .frame(width: AppCardConstants.cardWidth, height: AppCardConstants.cardHeight)
     }
 }
 
 private struct IconView: View {
-    let iconImage: NSImage?
-    let loadIcon: () -> Void
+    @ObservedObject var viewModel: AppCardViewModel
     
     var body: some View {
         Group {
-            if let iconImage = iconImage {
-                Image(nsImage: iconImage)
+            if viewModel.hasValidIcon {
+                Image(nsImage: viewModel.iconImage!)
                     .resizable()
                     .interpolation(.high)
                     .scaledToFit()
@@ -388,27 +412,26 @@ private struct IconView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .frame(width: 64, height: 64)
-        .onAppear(perform: loadIcon)
+        .frame(width: AppCardConstants.iconSize, height: AppCardConstants.iconSize)
+        .onAppear(perform: viewModel.loadIcon)
     }
 }
 
 private struct ProductInfoView: View {
-    let sap: Sap
-    let dependenciesCount: Int
+    @ObservedObject var viewModel: AppCardViewModel
     
     var body: some View {
         VStack {
-            Text(sap.displayName)
-                .font(.system(size: 16))
+            Text(viewModel.sap.displayName)
+                .font(.system(size: AppCardConstants.titleFontSize))
                 .fontWeight(.bold)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
-
+            
             HStack(spacing: 4) {
-                Text("可用版本: \(sap.versions.count)")
+                Text("可用版本: \(viewModel.sap.versions.count)")
                 Text("|")
-                Text("依赖包: \(dependenciesCount)")
+                Text("依赖包: \(viewModel.dependenciesCount)")
             }
             .font(.caption)
             .foregroundColor(.secondary)
@@ -417,21 +440,74 @@ private struct ProductInfoView: View {
     }
 }
 
-private struct DownloadButton: View {
-    let isDownloading: Bool
-    @Binding var showVersionPicker: Bool
+private struct DownloadButtonView: View {
+    @ObservedObject var viewModel: AppCardViewModel
     
     var body: some View {
-        Button(action: { showVersionPicker = true }) {
-            Label(isDownloading ? "下载中" : "下载",
-                  systemImage: isDownloading ? "hourglass.circle.fill" : "arrow.down.circle")
-                .font(.system(size: 14))
+        Button(action: { viewModel.showVersionPicker = true }) {
+            Label(viewModel.downloadButtonTitle,
+                  systemImage: viewModel.downloadButtonIcon)
+                .font(.system(size: AppCardConstants.buttonFontSize))
                 .frame(minWidth: 0, maxWidth: .infinity)
-                .frame(height: 32)
+                .frame(height: AppCardConstants.buttonHeight)
         }
         .buttonStyle(.borderedProminent)
-        .tint(isDownloading ? .gray : .blue)
-        .disabled(isDownloading)
+        .tint(viewModel.isDownloading ? .gray : .blue)
+        .disabled(!viewModel.canDownload)
+    }
+}
+
+private struct CardModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: AppCardConstants.cornerRadius)
+                    .fill(Color.black.opacity(AppCardConstants.backgroundOpacity))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppCardConstants.cornerRadius)
+                    .stroke(Color.gray.opacity(AppCardConstants.strokeOpacity), 
+                           lineWidth: AppCardConstants.strokeWidth)
+            )
+            .shadow(
+                color: Color.primary.opacity(AppCardConstants.shadowOpacity),
+                radius: AppCardConstants.shadowRadius,
+                x: 0,
+                y: 1
+            )
+    }
+}
+
+private struct SheetModifier: ViewModifier {
+    @ObservedObject var viewModel: AppCardViewModel
+    let networkManager: NetworkManager
+    @StorageValue(\.useDefaultLanguage) private var useDefaultLanguage
+    @StorageValue(\.defaultLanguage) private var defaultLanguage
+    
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $viewModel.showVersionPicker) {
+                VersionPickerView(sap: viewModel.sap) { version in
+                    Task {
+                        await viewModel.handleDownloadRequest(
+                            version,
+                            useDefaultLanguage: useDefaultLanguage,
+                            defaultLanguage: defaultLanguage
+                        )
+                    }
+                }
+                .environmentObject(networkManager)
+            }
+            .sheet(isPresented: $viewModel.showLanguagePicker) {
+                LanguagePickerView(languages: AppStatics.supportedLanguages) { language in
+                    Task {
+                        await viewModel.checkAndStartDownload(
+                            version: viewModel.selectedVersion,
+                            language: language
+                        )
+                    }
+                }
+            }
     }
 }
 
@@ -481,7 +557,14 @@ struct AlertModifier: ViewModifier {
                             viewModel.showExistingFileAlert = false
                             if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
                                 Task {
-                                    await viewModel.createCompletedTask(path)
+                                    if let networkManager = viewModel.networkManager,
+                                       !networkManager.downloadTasks.contains(where: { task in
+                                           task.sapCode == viewModel.sap.sapCode &&
+                                           task.version == viewModel.pendingVersion &&
+                                           task.language == viewModel.pendingLanguage
+                                       }) {
+                                        await viewModel.createCompletedTask(path)
+                                    }
                                 }
                             }
                         },
@@ -492,10 +575,7 @@ struct AlertModifier: ViewModifier {
                                     viewModel.showRedownloadConfirm = true
                                 } else {
                                     Task {
-                                        await viewModel.checkAndStartDownload(
-                                            version: viewModel.pendingVersion,
-                                            language: viewModel.pendingLanguage
-                                        )
+                                        await startRedownload()
                                     }
                                 }
                             }
@@ -505,20 +585,13 @@ struct AlertModifier: ViewModifier {
                         },
                         iconImage: viewModel.iconImage
                     )
-                    .background(Color.black.opacity(0.3))
-                    .ignoresSafeArea()
                 }
             }
             .alert("确认重新下载", isPresented: $viewModel.showRedownloadConfirm) {
                 Button("取消", role: .cancel) { }
                 Button("确认") {
-                    if !viewModel.pendingVersion.isEmpty && !viewModel.pendingLanguage.isEmpty {
-                        Task {
-                            await viewModel.checkAndStartDownload(
-                                version: viewModel.pendingVersion,
-                                language: viewModel.pendingLanguage
-                            )
-                        }
+                    Task {
+                        await startRedownload()
                     }
                 }
             } message: {
@@ -539,5 +612,35 @@ struct AlertModifier: ViewModifier {
             } message: {
                 Text(viewModel.errorMessage)
             }
+    }
+    
+    private func startRedownload() async {
+        guard let networkManager = viewModel.networkManager else { return }
+        
+        do {
+            networkManager.downloadTasks.removeAll { task in
+                task.sapCode == viewModel.sap.sapCode &&
+                task.version == viewModel.pendingVersion &&
+                task.language == viewModel.pendingLanguage
+            }
+            
+            if let existingPath = viewModel.existingFilePath {
+                try? FileManager.default.removeItem(at: existingPath)
+            }
+            
+            let destinationURL = try await viewModel.getDestinationURL(
+                version: viewModel.pendingVersion,
+                language: viewModel.pendingLanguage
+            )
+            
+            try await networkManager.startDownload(
+                sap: viewModel.sap,
+                selectedVersion: viewModel.pendingVersion,
+                language: viewModel.pendingLanguage,
+                destinationURL: destinationURL
+            )
+        } catch {
+            viewModel.handleError(error)
+        }
     }
 }

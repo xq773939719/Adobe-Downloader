@@ -1,25 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <dict>
-        <key>CFBundleIdentifier</key>
-        <string>com.x1a0he.macOS.Adobe-Downloader.helper</string>
-        <key>CFBundleInfoDictionaryVersion</key>
-        <string>1.0</string>
-        <key>CFBundleName</key>
-        <string>com.x1a0he.macOS.Adobe-Downloader.helper</string>
-        <key>CFBundleShortVersionString</key>
-        <string>1.0.0</string>
-        <key>CFBundleVersion</key>
-        <string>100</string>
-        <key>SMAuthorizedClients</key>
-        <array>
-            <string>identifier "com.x1a0he.macOS.Adobe-Downloader" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: x1a0he0907@gmail.com (LFN2762T4F)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
-        </array>
-        <key>MachServices</key>
-        <dict>
-            <key>com.x1a0he.macOS.Adobe-Downloader.helper</key>
-            <true/>
-        </dict>
-    </dict>
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.x1a0he.macOS.Adobe-Downloader.helper</string>
+	<key>CFBundleName</key>
+	<string>com.x1a0he.macOS.Adobe-Downloader.helper</string>
+	<key>SMAuthorizedClients</key>
+	<array>
+		<string>identifier "com.x1a0he.macOS.Adobe-Downloader" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: x1a0he@outlook.com (LFN2762T4F)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
+	</array>
+	<key>MachServices</key>
+	<dict>
+		<key>com.x1a0he.macOS.Adobe-Downloader.helper</key>
+		<true/>
+	</dict>
+</dict>
 </plist>

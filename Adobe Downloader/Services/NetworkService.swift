@@ -1,7 +1,9 @@
 import Foundation
 
 class NetworkService {
-    func fetchProductsData(version: String) async throws -> ([String: Sap], String, [SapCodes]) {
+    typealias ProductsData = (products: [String: Sap], cdn: String, sapCodes: [SapCodes])
+
+    private func makeProductsURL(version: String) throws -> URL {
         var components = URLComponents(string: NetworkConstants.productsXmlURL)
         components?.queryItems = [
             URLQueryItem(name: "_type", value: "xml"),
@@ -15,10 +17,19 @@ class NetworkService {
         guard let url = components?.url else {
             throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
         }
+        print(url)
+        return url
+    }
 
+    private func configureRequest(_ request: inout URLRequest, headers: [String: String]) {
+        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+    }
+
+    func fetchProductsData(version: String, platform: String) async throws -> ProductsData {
+        let url = try makeProductsURL(version: version)
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        NetworkConstants.adobeRequestHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        configureRequest(&request, headers: NetworkConstants.adobeRequestHeaders)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -34,7 +45,7 @@ class NetworkService {
             throw NetworkError.invalidData("无法解码XML数据")
         }
 
-        let result: ([String: Sap], String, [SapCodes]) = try await Task.detached(priority: .userInitiated) {
+        let result: ProductsData = try await Task.detached(priority: .userInitiated) {
             let parseResult = try XHXMLParser.parse(xmlString: xmlString)
             let products = parseResult.products, cdn = parseResult.cdn
             var sapCodes: [SapCodes] = []

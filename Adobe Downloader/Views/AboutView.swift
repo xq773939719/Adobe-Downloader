@@ -8,10 +8,113 @@ import SwiftUI
 import Sparkle
 import Combine
 
+
+private enum AboutViewConstants {
+    static let appIconSize: CGFloat = 96
+    static let titleFontSize: CGFloat = 18
+    static let subtitleFontSize: CGFloat = 14
+    static let linkFontSize: CGFloat = 14
+    static let licenseFontSize: CGFloat = 12
+    
+    static let verticalSpacing: CGFloat = 12
+    static let formPadding: CGFloat = 8
+    
+    static let links: [(title: String, url: String)] = [
+        ("@X1a0He", "https://t.me/X1a0He"),
+        ("Github: Adobe Downloader", "https://github.com/X1a0He/Adobe-Downloader"),
+        ("Drovosek01: adobe-packager", "https://github.com/Drovosek01/adobe-packager"),
+        ("QiuChenly: InjectLib", "https://github.com/QiuChenly/InjectLib")
+    ]
+}
+
+struct ExternalLinkView: View {
+    let title: String
+    let url: String
+    
+    var body: some View {
+        Link(title, destination: URL(string: url)!)
+            .font(.system(size: AboutViewConstants.linkFontSize))
+            .foregroundColor(.blue)
+    }
+}
+
+struct AboutView: View {
+    private let updater: SPUUpdater
+    
+    init(updater: SPUUpdater) {
+        self.updater = updater
+    }
+    
+    var body: some View {
+        TabView {
+            GeneralSettingsView(updater: updater)
+                .tabItem {
+                    Label("通用", systemImage: "gear")
+                }
+                .id("general_settings")
+            
+            AboutAppView()
+                .tabItem {
+                    Label("关于", systemImage: "info.circle")
+                }
+                .id("about_app")
+        }
+        .background(Color(NSColor.windowBackgroundColor))
+        .frame(width: 600)
+    }
+}
+
+struct AboutAppView: View {
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+    }
+    
+    var body: some View {
+        VStack(spacing: AboutViewConstants.verticalSpacing) {
+            appIconSection
+            appInfoSection
+            linksSection
+            licenseSection
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private var appIconSection: some View {
+        Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .frame(width: AboutViewConstants.appIconSize, height: AboutViewConstants.appIconSize)
+    }
+    
+    private var appInfoSection: some View {
+        Group {
+            Text("Adobe Downloader \(appVersion)")
+                .font(.system(size: AboutViewConstants.titleFontSize))
+                .bold()
+            
+            Text("By X1a0He. ❤️ Love from China. 🇨🇳")
+                .font(.system(size: AboutViewConstants.subtitleFontSize))
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    private var linksSection: some View {
+        ForEach(AboutViewConstants.links, id: \.url) { link in
+            ExternalLinkView(title: link.title, url: link.url)
+        }
+    }
+    
+    private var licenseSection: some View {
+        Text("GNU通用公共许可证GPL v3.")
+            .font(.system(size: AboutViewConstants.licenseFontSize))
+            .foregroundColor(.secondary)
+    }
+}
+
 struct PulsingCircle: View {
     let color: Color
     @State private var scale: CGFloat = 1.0
-
+    
     var body: some View {
         Circle()
             .fill(color)
@@ -28,32 +131,6 @@ struct PulsingCircle: View {
     }
 }
 
-struct AboutView: View {
-    private let updater: SPUUpdater
-
-    init(updater: SPUUpdater) {
-        self.updater = updater
-    }
-
-    var body: some View {
-        TabView {
-            GeneralSettingsView(updater: updater)
-                .tabItem {
-                    Label("通用", systemImage: "gear")
-                }
-                .id("general_settings")
-
-            AboutAppView()
-                .tabItem {
-                    Label("关于", systemImage: "info.circle")
-                }
-                .id("about_app")
-        }
-        .background(Color(NSColor.windowBackgroundColor))
-        .frame(width: 600)
-    }
-}
-
 final class GeneralSettingsViewModel: ObservableObject {
     @Published var setupVersion: String = ""
     @Published var isDownloadingSetup = false
@@ -67,18 +144,40 @@ final class GeneralSettingsViewModel: ObservableObject {
     @Published var showDownloadConfirmAlert = false
     @Published var showReprocessConfirmAlert = false
     @Published var isProcessing = false
-    @Published var helperConnectionStatus: HelperConnectionStatus = .connecting
+    @Published var helperConnectionStatus: HelperConnectionStatus = .disconnected
     @Published var downloadAppleSilicon: Bool {
         didSet {
-            UserDefaults.standard.set(downloadAppleSilicon, forKey: "downloadAppleSilicon")
+            StorageData.shared.downloadAppleSilicon = downloadAppleSilicon
         }
     }
 
-    @AppStorage("defaultLanguage") var defaultLanguage: String = "ALL"
-    @AppStorage("defaultDirectory") var defaultDirectory: String = ""
-    @AppStorage("useDefaultLanguage") var useDefaultLanguage: Bool = true
-    @AppStorage("useDefaultDirectory") var useDefaultDirectory: Bool = true
-    @AppStorage("confirmRedownload") var confirmRedownload: Bool = true
+    var defaultLanguage: String {
+        get { StorageData.shared.defaultLanguage }
+        set { StorageData.shared.defaultLanguage = newValue }
+    }
+    
+    var defaultDirectory: String {
+        get { StorageData.shared.defaultDirectory }
+        set { StorageData.shared.defaultDirectory = newValue }
+    }
+    
+    var useDefaultLanguage: Bool {
+        get { StorageData.shared.useDefaultLanguage }
+        set { StorageData.shared.useDefaultLanguage = newValue }
+    }
+    
+    var useDefaultDirectory: Bool {
+        get { StorageData.shared.useDefaultDirectory }
+        set { StorageData.shared.useDefaultDirectory = newValue }
+    }
+    
+    var confirmRedownload: Bool {
+        get { StorageData.shared.confirmRedownload }
+        set { 
+            StorageData.shared.confirmRedownload = newValue
+            objectWillChange.send()
+        }
+    }
 
     @Published var automaticallyChecksForUpdates: Bool
     @Published var automaticallyDownloadsUpdates: Bool
@@ -99,10 +198,10 @@ final class GeneralSettingsViewModel: ObservableObject {
         self.updater = updater
         self.automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
         self.automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
-        self.downloadAppleSilicon = UserDefaults.standard.bool(forKey: "downloadAppleSilicon")
-
+        self.downloadAppleSilicon = StorageData.shared.downloadAppleSilicon
+        
         self.helperConnectionStatus = .connecting
-
+        
         PrivilegedHelperManager.shared.$connectionState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
@@ -116,10 +215,15 @@ final class GeneralSettingsViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
-
-        DispatchQueue.main.async {
-            PrivilegedHelperManager.shared.executeCommand("whoami") { _ in }
-        }
+        
+        PrivilegedHelperManager.shared.executeCommand("whoami") { _ in }
+        
+        NotificationCenter.default.publisher(for: .storageDidChange)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -159,7 +263,6 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             DownloadSettingsView(viewModel: viewModel)
-
             HelperSettingsView(viewModel: viewModel,
                             showHelperAlert: $showHelperAlert,
                             helperAlertMessage: $helperAlertMessage,
@@ -259,6 +362,9 @@ struct GeneralSettingsView: View {
             viewModel.setupVersion = ModifySetup.checkComponentVersion()
             networkManager.updateAllowedPlatform(useAppleSilicon: viewModel.downloadAppleSilicon)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .storageDidChange)) { _ in
+            viewModel.objectWillChange.send()
+        }
     }
 }
 
@@ -327,56 +433,6 @@ struct UpdateSettingsView: View {
     }
 }
 
-struct AboutAppView: View {
-    private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
-        // let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
-        // return "Version \(version) (\(build))"
-        return "\(version)"
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .frame(width: 96, height: 96)
-
-            Text("Adobe Downloader \(appVersion)")
-                .font(.title2)
-                .bold()
-
-            Text("By X1a0He. ❤️ Love from China. ❤️")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Link("联系 @X1a0He",
-                 destination: URL(string: "https://t.me/X1a0He")!)
-                .font(.caption)
-                .foregroundColor(.blue)
-            Link("Github: Adobe Downloader",
-                 destination: URL(string: "https://github.com/X1a0He/Adobe-Downloader")!)
-                .font(.caption)
-                .foregroundColor(.blue)
-
-            Link("感谢 Drovosek01: adobe-packager",
-                 destination: URL(string: "https://github.com/Drovosek01/adobe-packager")!)
-                .font(.caption)
-                .foregroundColor(.blue)
-
-            Link("感谢 QiuChenly: InjectLib",
-                 destination: URL(string: "https://github.com/QiuChenly/InjectLib")!)
-                .font(.caption)
-                .foregroundColor(.blue)
-
-            Text("GNU通用公共许可证GPL v3.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
 #Preview("About Tab") {
     AboutAppView()
 }
@@ -394,7 +450,7 @@ private class PreviewUpdater: SPUUpdater {
         let hostBundle = Bundle.main
         let applicationBundle = Bundle.main
         let userDriver = SPUStandardUserDriver(hostBundle: hostBundle, delegate: nil)
-
+        
         super.init(
             hostBundle: hostBundle,
             applicationBundle: applicationBundle,
@@ -402,12 +458,12 @@ private class PreviewUpdater: SPUUpdater {
             delegate: nil
         )
     }
-
+    
     override var automaticallyChecksForUpdates: Bool {
         get { true }
         set { }
     }
-
+    
     override var automaticallyDownloadsUpdates: Bool {
         get { true }
         set { }
@@ -419,7 +475,10 @@ struct LanguageSettingRow: View {
 
     var body: some View {
         HStack {
-            Toggle("使用默认语言", isOn: $viewModel.useDefaultLanguage)
+            Toggle("使用默认语言", isOn: Binding(
+                get: { viewModel.useDefaultLanguage },
+                set: { viewModel.useDefaultLanguage = $0 }
+            ))
                 .padding(.leading, 5)
             Spacer()
             Text(getLanguageName(code: viewModel.defaultLanguage))
@@ -500,6 +559,7 @@ struct ArchitectureSettingRow: View {
         HStack {
             Toggle("下载 Apple Silicon 架构", isOn: $viewModel.downloadAppleSilicon)
                 .padding(.leading, 5)
+                .disabled(networkManager.loadingState == .loading)
             Spacer()
             Text("当前架构: \(AppStatics.cpuArchitecture)")
                 .foregroundColor(.secondary)
@@ -508,6 +568,9 @@ struct ArchitectureSettingRow: View {
         }
         .onChange(of: viewModel.downloadAppleSilicon) { newValue in
             networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
+            Task {
+                await networkManager.fetchProducts()
+            }
         }
     }
 }
@@ -518,6 +581,7 @@ struct HelperStatusRow: View {
     @Binding var helperAlertMessage: String
     @Binding var helperAlertSuccess: Bool
     @State private var isReinstallingHelper = false
+    @State private var installationTask: Task<Void, Error>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -526,7 +590,7 @@ struct HelperStatusRow: View {
                 if PrivilegedHelperManager.getHelperStatus {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                    Text("已安装")
+                    Text("已安装 (build \(UserDefaults.standard.string(forKey: "InstalledHelperBuild") ?? "0"))")
                 } else {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
@@ -594,10 +658,10 @@ struct HelperStatusRow: View {
 
     private var helperStatusText: String {
         switch viewModel.helperConnectionStatus {
-        case .connected: return "运行正常"
-        case .connecting: return "正在连接"
-        case .checking: return "检查中"
-        case .disconnected: return "连接断开"
+        case .connected: return String(localized: "运行正常")
+        case .connecting: return String(localized: "正在连接")
+        case .checking: return String(localized: "检查中")
+        case .disconnected: return String(localized: "连接断开")
         }
     }
 }
@@ -617,17 +681,6 @@ struct SetupComponentRow: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.red)
                     Text("(可能导致处理 Setup 组件失败)")
-                }
-                Spacer()
-
-                Button(action: {
-                    if !ModifySetup.isSetupExists() {
-                        viewModel.showDownloadAlert = true
-                    } else {
-                        viewModel.showReprocessConfirmAlert = true
-                    }
-                }) {
-                    Text("重新备份")
                 }
             }
             Divider()
@@ -656,7 +709,7 @@ struct SetupComponentRow: View {
             }
             Divider()
             HStack {
-                Text("X1a0He CC 版本信息: \(viewModel.setupVersion)")
+                Text("X1a0He CC 版本信息: \(viewModel.setupVersion) [\(AppStatics.cpuArchitecture)]")
                 Spacer()
 
                 if viewModel.isDownloadingSetup {
@@ -706,3 +759,4 @@ struct AutoDownloadRow: View {
         .disabled(viewModel.isAutomaticallyDownloadsUpdatesDisabled)
     }
 }
+

@@ -3,15 +3,14 @@ import Foundation
 class NetworkService {
     typealias ProductsData = (products: [String: Sap], cdn: String, sapCodes: [SapCodes])
 
-    private func makeProductsURL(version: String) throws -> URL {
+    private func makeProductsURL() throws -> URL {
         var components = URLComponents(string: NetworkConstants.productsXmlURL)
         components?.queryItems = [
             URLQueryItem(name: "_type", value: "xml"),
             URLQueryItem(name: "channel", value: "ccm"),
             URLQueryItem(name: "channel", value: "sti"),
             URLQueryItem(name: "platform", value: "osx10-64,osx10,macarm64,macuniversal"),
-            URLQueryItem(name: "productType", value: "Desktop"),
-            URLQueryItem(name: "version", value: version)
+            URLQueryItem(name: "productType", value: "Desktop")
         ]
 
         guard let url = components?.url else {
@@ -25,8 +24,8 @@ class NetworkService {
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
     }
 
-    func fetchProductsData(version: String, platform: String) async throws -> ProductsData {
-        let url = try makeProductsURL(version: version)
+    func fetchProductsData(platform: String) async throws -> ProductsData {
+        let url = try makeProductsURL()
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         configureRequest(&request, headers: NetworkConstants.adobeRequestHeaders)

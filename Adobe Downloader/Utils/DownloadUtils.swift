@@ -658,27 +658,48 @@ class DownloadUtils {
 
         for dependency in productInfo.dependencies {
             if let dependencyVersions = saps[dependency.sapCode]?.versions {
+                var firstGuid: String?
+                var buildGuid: String?
 
-                let matchingVersions = dependencyVersions.filter { 
-                    $0.value.baseVersion == dependency.version 
+                let sortedVersions = dependencyVersions.sorted { version1, version2 in
+                    let v1Components = version1.key.split(separator: ".").compactMap { Int($0) }
+                    let v2Components = version2.key.split(separator: ".").compactMap { Int($0) }
+
+                    for i in 0..<min(v1Components.count, v2Components.count) {
+                        if v1Components[i] != v2Components[i] {
+                            return v1Components[i] > v2Components[i]
+                        }
+                    }
+                    return v1Components.count > v2Components.count
                 }
 
+                for version in sortedVersions {
+                    if version.value.baseVersion == dependency.version {
+                        if firstGuid == nil { firstGuid = version.value.buildGuid }
 
-                var selectedVersion: (key: String, value: Sap.Versions)? = matchingVersions.first { 
-                    allowedPlatform.contains($0.value.apPlatform)
+                        // print("\(version.value.sapCode), \(version.key), \(allowedPlatform), \(version.value.apPlatform), \(allowedPlatform.contains(version.value.apPlatform))")
+
+                        if allowedPlatform.contains(version.value.apPlatform) {
+                            buildGuid = version.value.buildGuid
+                            break
+                        }
+                    }
                 }
-                
-                selectedVersion = selectedVersion ?? matchingVersions.first
 
-                if let version = selectedVersion {
+                if buildGuid == nil { buildGuid = firstGuid }
+                if let finalBuildGuid = buildGuid {
                     productsToDownload.append(ProductsToDownload(
                         sapCode: dependency.sapCode,
                         version: dependency.version,
-                        buildGuid: version.value.buildGuid
+                        buildGuid: finalBuildGuid
                     ))
                 }
             }
         }
+
+//        for product in productsToDownload {
+//            print("\(product.sapCode), \(product.version), \(product.buildGuid)")
+//        }
 
         for product in productsToDownload {
             await MainActor.run {
@@ -689,11 +710,11 @@ class DownloadUtils {
                 )))
             }
 
+            let jsonString = try await getApplicationInfo(buildGuid: product.buildGuid)
             let productDir = task.directory.appendingPathComponent("\(product.sapCode)")
             if !FileManager.default.fileExists(atPath: productDir.path) {
                 try FileManager.default.createDirectory(at: productDir, withIntermediateDirectories: true)
             }
-            let jsonString = try await getApplicationInfo(buildGuid: product.buildGuid)
             let jsonURL = productDir.appendingPathComponent("application.json")
             try jsonString.write(to: jsonURL, atomically: true, encoding: .utf8)
 
@@ -704,7 +725,15 @@ class DownloadUtils {
                 throw NetworkError.invalidData("无法解析产品信息")
             }
 
+            var corePackageCount = 0
+            var nonCorePackageCount = 0
+            
             for package in packageArray {
+                let packageType = package["Type"] as? String ?? "non-core"
+                let isCore = packageType == "core"
+
+                guard let downloadURL = package["Path"] as? String, !downloadURL.isEmpty else { continue }
+
                 let fullPackageName: String
                 if let name = package["fullPackageName"] as? String, !name.isEmpty {
                     fullPackageName = name
@@ -712,33 +741,18 @@ class DownloadUtils {
                     fullPackageName = "\(name).zip"
                 } else { continue }
 
-                let packageType = package["Type"] as? String ?? "non-core"
-                let isLanguageSuitable: Bool
-                if packageType == "core" {
-                    isLanguageSuitable = true
-                } else {
-                    let condition = package["Condition"] as? String ?? ""
-                    let osLang = Locale.current.identifier
-                    isLanguageSuitable = (
-                        task.language == "ALL" || condition.isEmpty ||
-                        !condition.contains("[installLanguage]") || condition.contains("[installLanguage]==\(task.language)") ||
-                        condition.contains("[installLanguage]==\(osLang)")
-                    )
-                }
-
-                if isLanguageSuitable {
-                    let downloadSize: Int64
-                    if let sizeNumber = package["DownloadSize"] as? NSNumber {
-                        downloadSize = sizeNumber.int64Value
-                    } else if let sizeString = package["DownloadSize"] as? String,
-                              let parsedSize = Int64(sizeString) {
-                        downloadSize = parsedSize
-                    } else if let sizeInt = package["DownloadSize"] as? Int {
-                        downloadSize = Int64(sizeInt)
-                    } else { continue }
-
-                    guard let downloadURL = package["Path"] as? String, !downloadURL.isEmpty else { continue }
-
+                let downloadSize: Int64
+                if let sizeNumber = package["DownloadSize"] as? NSNumber {
+                    downloadSize = sizeNumber.int64Value
+                } else if let sizeString = package["DownloadSize"] as? String,
+                          let parsedSize = Int64(sizeString) {
+                    downloadSize = parsedSize
+                } else if let sizeInt = package["DownloadSize"] as? Int {
+                    downloadSize = Int64(sizeInt)
+                } else { continue }
+                
+                if isCore {
+                    corePackageCount += 1
                     let newPackage = Package(
                         type: packageType,
                         fullPackageName: fullPackageName,
@@ -746,6 +760,31 @@ class DownloadUtils {
                         downloadURL: downloadURL
                     )
                     product.packages.append(newPackage)
+                } else {
+                    let languageIsSuitable: Bool
+                    if task.language == "ALL" {
+                        languageIsSuitable = true
+                    } else if !package.keys.contains("Condition") {
+                        languageIsSuitable = true
+                    } else if let condition = package["Condition"] as? String {
+                        let matchesTaskLang = condition.contains("[installLanguage]==\(task.language)")
+                        let matchesOSLang = condition.contains("[installLanguage]==en_US")
+                        languageIsSuitable = matchesTaskLang || matchesOSLang
+                    } else {
+                        languageIsSuitable = false
+                    }
+                    
+                    if languageIsSuitable {
+                        nonCorePackageCount += 1
+                        let newPackage = Package(
+                            type: packageType,
+                            fullPackageName: fullPackageName,
+                            downloadSize: downloadSize,
+                            downloadURL: downloadURL
+                        )
+                        product.packages.append(newPackage)
+                    } else {
+                    }
                 }
             }
         }

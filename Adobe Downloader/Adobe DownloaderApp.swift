@@ -28,7 +28,12 @@ struct Adobe_DownloaderApp: App {
         updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
         if StorageData.shared.isFirstLaunch {
-            StorageData.shared.downloadAppleSilicon = AppStatics.isAppleSilicon
+            let shouldDownloadAppleSilicon = AppStatics.isAppleSilicon
+            StorageData.shared.downloadAppleSilicon = shouldDownloadAppleSilicon
+            _downloadAppleSilicon.wrappedValue = shouldDownloadAppleSilicon
+
+            StorageData.shared.confirmRedownload = true
+            _confirmRedownload.wrappedValue = true
 
             let systemLanguage = Locale.current.identifier
             let matchedLanguage = AppStatics.supportedLanguages.first {

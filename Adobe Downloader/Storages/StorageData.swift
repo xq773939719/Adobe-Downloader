@@ -83,6 +83,14 @@ final class StorageData: ObservableObject {
     }
     
     private init() {
+        let isFirstLaunchKey = "isFirstLaunch"
+        if !UserDefaults.standard.contains(key: isFirstLaunchKey) {
+            self.isFirstLaunch = true
+            UserDefaults.standard.set(true, forKey: isFirstLaunchKey)
+        } else {
+            self.isFirstLaunch = UserDefaults.standard.bool(forKey: isFirstLaunchKey)
+        }
+        
         self.installedHelperBuild = UserDefaults.standard.string(forKey: "InstalledHelperBuild") ?? "0"
         self.downloadAppleSilicon = UserDefaults.standard.bool(forKey: "downloadAppleSilicon")
         self.useDefaultLanguage = UserDefaults.standard.bool(forKey: "useDefaultLanguage")
@@ -91,7 +99,6 @@ final class StorageData: ObservableObject {
         self.defaultDirectory = UserDefaults.standard.string(forKey: "defaultDirectory") ?? ""
         self.confirmRedownload = UserDefaults.standard.bool(forKey: "confirmRedownload")
         self.apiVersion = UserDefaults.standard.string(forKey: "apiVersion") ?? "6"
-        self.isFirstLaunch = UserDefaults.standard.bool(forKey: "isFirstLaunch")
     }
 }
 
@@ -121,5 +128,11 @@ struct StorageValue<T>: DynamicProperty {
 
 extension Notification.Name {
     static let storageDidChange = Notification.Name("storageDidChange")
+}
+
+extension UserDefaults {
+    func contains(key: String) -> Bool {
+        return object(forKey: key) != nil
+    }
 }
 

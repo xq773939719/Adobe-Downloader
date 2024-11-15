@@ -65,7 +65,6 @@ class NetworkManager: ObservableObject {
         loadingState = .loading
         do {
             let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(
-                version: apiVersion,
                 platform: allowedPlatform.joined(separator: ",")
             )
             await MainActor.run {
@@ -173,7 +172,7 @@ class NetworkManager: ObservableObject {
         
         while retryCount < maxRetries {
             do {
-                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(version: apiVersion, platform: allowedPlatform.joined(separator: ","))
+                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(platform: allowedPlatform.joined(separator: ","))
 
                 await MainActor.run {
                     self.saps = saps

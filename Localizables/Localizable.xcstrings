@@ -168,12 +168,12 @@
         }
       }
     },
-    "Helper 响应异常" : {
+    "Helper 响应异常: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Helper response exception"
+            "value" : "Helper response exception: %@"
           }
         }
       }
@@ -189,6 +189,7 @@
       }
     },
     "Helper 安装状态: " : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -199,6 +200,7 @@
       }
     },
     "Helper 当前状态: " : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -208,7 +210,20 @@
         }
       }
     },
+    "Helper 未安装将导致无法执行需要管理员权限的操作" : {
+
+    },
     "Helper 未安装或未连接，请先在设置中安装并连接 Helper" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper is not installed or connected. Please install and connect Helper in the settings first."
+          }
+        }
+      }
+    },
+    "Helper 状态: " : {
 
     },
     "Helper 设置" : {
@@ -220,6 +235,9 @@
           }
         }
       }
+    },
+    "Helper 连接状态: " : {
+
     },
     "Helper 重新安装成功" : {
       "localizations" : {
@@ -242,6 +260,7 @@
       }
     },
     "Helper未安装将导致无法执行需要管理员权限的操作" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -711,17 +730,6 @@
         }
       }
     },
-    "失败" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed"
-          }
-        }
-      }
-    },
     "失败: %@" : {
       "comment" : "Download status failed",
       "localizations" : {
@@ -775,7 +783,14 @@
       }
     },
     "安装失败" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed"
+          }
+        }
+      }
     },
     "安装失败 (退出代码: %lld)" : {
       "localizations" : {
@@ -827,27 +842,12 @@
         }
       }
     },
-    "安装失败: 架构不一致或安装文件被损坏 (退出代码: %lld)" : {
-      "extractionState" : "stale",
+    "安装失败: 架构或本不一致 (退出代码: %lld)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install failed: architecture inconsistency or installation file is corrupted (exit code: %lld)"
-          }
-        }
-      }
-    },
-    "安装失败: 架构或版本不一致 (退出代码: %lld)" : {
-
-    },
-    "安装失败: 磁盘空间不足 (退出代码: %lld)" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Install failed: insufficient disk space (exit code: %lld)"
+            "value" : "Install failed: architecture inconsistency (exit code: %lld)"
           }
         }
       }
@@ -893,6 +893,9 @@
         }
       }
     },
+    "完全卸载并重新安装 Helper" : {
+
+    },
     "客户端错误: %d" : {
       "comment" : "Client error",
       "localizations" : {
@@ -923,6 +926,9 @@
           }
         }
       }
+    },
+    "尝试重新连接到已安装的 Helper" : {
+
     },
     "已处理" : {
       "localizations" : {
@@ -2039,7 +2045,11 @@
         }
       }
     },
+    "重新连接" : {
+
+    },
     "重新连接Helper" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

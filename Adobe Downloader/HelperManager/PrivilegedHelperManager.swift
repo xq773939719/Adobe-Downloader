@@ -34,7 +34,6 @@ class PrivilegedHelperManager: NSObject {
     @Published private(set) var connectionState: ConnectionState = .disconnected {
         didSet {
             if oldValue != connectionState {
-                print("Helper 连接状态: \(connectionState.description)")
                 if connectionState == .disconnected {
                     connection?.invalidate()
                     connection = nil
@@ -68,6 +67,19 @@ class PrivilegedHelperManager: NSObject {
         super.init()
         initAuthorizationRef()
         setupAutoReconnect()
+
+        NotificationCenter.default.addObserver(self, 
+                                             selector: #selector(handleConnectionInvalidation), 
+                                             name: .NSXPCConnectionInvalid, 
+                                             object: nil)
+    }
+
+    @objc private func handleConnectionInvalidation() {
+        DispatchQueue.main.async { [weak self] in
+            self?.connectionState = .disconnected
+            self?.connection?.invalidate()
+            self?.connection = nil
+        }
     }
 
     func checkInstall() {
@@ -250,71 +262,64 @@ class PrivilegedHelperManager: NSObject {
     }
 
     func connectToHelper() -> NSXPCConnection? {
-        connectionState = .connecting
-        
         return connectionQueue.sync {
-            connection?.invalidate()
-            connection = nil
-            
-            let newConnection = NSXPCConnection(machServiceName: PrivilegedHelperManager.machServiceName, 
-                                              options: .privileged)
-            
-            newConnection.remoteObjectInterface = NSXPCInterface(with: HelperToolProtocol.self)
-            
-            newConnection.interruptionHandler = { [weak self] in
-                DispatchQueue.main.async {
-                    self?.connectionState = .disconnected
-                    self?.connection?.invalidate()
-                    self?.connection = nil
-                }
-            }
-            
-            newConnection.invalidationHandler = { [weak self] in
-                DispatchQueue.main.async {
-                    self?.connectionState = .disconnected
-                    self?.connection?.invalidate()
-                    self?.connection = nil
-                }
-            }
-            
-            newConnection.resume()
-            connection = newConnection
-            
-            let semaphore = DispatchSemaphore(value: 0)
-            var isConnected = false
-            
-            if let helper = newConnection.remoteObjectProxy as? HelperToolProtocol {
-                helper.executeCommand("whoami") { [weak self] result in
-                    if result == "root" {
-                        isConnected = true
-                        DispatchQueue.main.async {
-                            self?.connectionState = .connected
-                        }
-                    } else {
-                        DispatchQueue.main.async {
-                            self?.connectionState = .disconnected
-                            self?.connection?.invalidate()
-                            self?.connection = nil
-                        }
-                    }
-                    semaphore.signal()
-                }
-                
-                _ = semaphore.wait(timeout: .now() + 1.0)
-                
-                if !isConnected {
-                    connectionState = .disconnected
-                    connection?.invalidate()
-                    connection = nil
-                    return nil
-                }
-            } else {
-                connectionState = .disconnected
-                return nil
-            }
-            
-            return connection
+            createConnection()
         }
+    }
+
+    private func createConnection() -> NSXPCConnection? {
+        DispatchQueue.main.async {
+            self.connectionState = .connecting
+        }
+        
+        let newConnection = NSXPCConnection(machServiceName: PrivilegedHelperManager.machServiceName, 
+                                          options: .privileged)
+        
+        newConnection.remoteObjectInterface = NSXPCInterface(with: HelperToolProtocol.self)
+
+        newConnection.interruptionHandler = { [weak self] in
+            DispatchQueue.main.async {
+                self?.connectionState = .disconnected
+            }
+        }
+        
+        newConnection.invalidationHandler = { [weak self] in
+            DispatchQueue.main.async {
+                self?.connectionState = .disconnected
+                self?.connection = nil
+            }
+        }
+
+        newConnection.resume()
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var isConnected = false
+        
+        if let helper = newConnection.remoteObjectProxy as? HelperToolProtocol {
+            helper.executeCommand("whoami") { [weak self] result in
+                if result == "root" {
+                    isConnected = true
+                    DispatchQueue.main.async {
+                        self?.connection?.invalidate()
+                        self?.connection = newConnection
+                        self?.connectionState = .connected
+                    }
+                }
+                semaphore.signal()
+            }
+            
+            _ = semaphore.wait(timeout: .now() + 1.0)
+        }
+        
+        if !isConnected {
+            newConnection.invalidate()
+            DispatchQueue.main.async {
+                self.connectionState = .disconnected
+            }
+            return nil
+        }
+        
+        return newConnection
     }
 
     func executeCommand(_ command: String, completion: @escaping (String) -> Void) {
@@ -337,52 +342,66 @@ class PrivilegedHelperManager: NSObject {
     }
 
     func reconnectHelper(completion: @escaping (Bool, String) -> Void) {
-        connectionState = .disconnected
-        connection?.invalidate()
-        connection = nil
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
-            guard let newConnection = self.connectToHelper() else {
-                completion(false, String(localized: "无法连接到 Helper"))
-                return
-            }
 
-            guard let helper = newConnection.remoteObjectProxyWithErrorHandler({ error in
-                completion(false, String(localized: "连接出现错误: \(error.localizedDescription)"))
-            }) as? HelperToolProtocol else {
-                completion(false, String(localized: "无法获取 Helper 代理"))
-                return
-            }
+            self.connectionState = .disconnected
+            self.connection?.invalidate()
+            self.connection = nil
 
-            helper.executeCommand("whoami") { result in
-                if result == "root" {
-                    completion(true, String(localized: "Helper 重新连接成功"))
-                } else {
-                    completion(false, String(localized: "Helper 响应异常"))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                do {
+                    let helper = try self.getHelperProxy()
+
+                    helper.executeCommand("whoami") { result in
+                        DispatchQueue.main.async {
+                            if result == "root" {
+                                self.connectionState = .connected
+                                completion(true, String(localized: "Helper 重新连接成功"))
+                            } else {
+                                self.connectionState = .disconnected
+                                completion(false, String(localized: "Helper 响应异常: \(result)"))
+                            }
+                        }
+                    }
+                } catch HelperError.connectionFailed {
+                    completion(false, String(localized: "无法连接到 Helper"))
+                } catch HelperError.proxyError {
+                    completion(false, String(localized: "无法获取 Helper 代理"))
+                } catch {
+                    completion(false, String(localized: "连接出现错误: \(error.localizedDescription)"))
                 }
             }
         }
     }
 
     func executeInstallation(_ command: String, progress: @escaping (String) -> Void) async throws {
-        guard let connection = connectToHelper() else {
-            throw NSError(domain: "HelperError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not connect to helper"])
+        
+        let helper: HelperToolProtocol = try connectionQueue.sync {
+            if let existingConnection = connection,
+               let proxy = existingConnection.remoteObjectProxy as? HelperToolProtocol {
+                return proxy
+            }
+            
+            guard let newConnection = createConnection() else {
+                throw HelperError.connectionFailed
+            }
+            
+            connection = newConnection
+            
+            guard let proxy = newConnection.remoteObjectProxy as? HelperToolProtocol else {
+                throw HelperError.proxyError
+            }
+            
+            return proxy
         }
         
-        guard let helper = connection.remoteObjectProxyWithErrorHandler({ error in
-            self.connectionState = .disconnected
-        }) as? HelperToolProtocol else {
-            throw NSError(domain: "HelperError", code: -2, userInfo: [NSLocalizedDescriptionKey: "Could not get helper proxy"])
-        }
-
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             helper.startInstallation(command) { result in
                 if result == "Started" {
                     continuation.resume()
                 } else {
-                    continuation.resume(throwing: NSError(domain: "HelperError", code: -3, userInfo: [NSLocalizedDescriptionKey: result]))
+                    continuation.resume(throwing: HelperError.installationFailed(result))
                 }
             }
         }
@@ -517,7 +536,6 @@ extension PrivilegedHelperManager {
         Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             if self.connectionState == .disconnected {
-                print("尝试重新连接 Helper...")
                 _ = self.connectToHelper()
             }
         }
@@ -545,7 +563,7 @@ enum HelperError: LocalizedError {
 }
 
 extension PrivilegedHelperManager {
-    private func getHelperProxy() throws -> HelperToolProtocol {
+    public func getHelperProxy() throws -> HelperToolProtocol {
         if connectionState != .connected {
             guard let newConnection = connectToHelper() else {
                 throw HelperError.connectionFailed
@@ -561,4 +579,8 @@ extension PrivilegedHelperManager {
         
         return helper
     }
+}
+
+extension Notification.Name {
+    static let NSXPCConnectionInvalid = Notification.Name("NSXPCConnectionInvalidNotification")
 }

@@ -120,16 +120,14 @@ struct DownloadProgressView: View {
                             if !ModifySetup.isSetupBackup() {
                                 showSetupBackupAlert = true
                             } else {
-                                print("正在连接 Helper...")
-                                if PrivilegedHelperManager.shared.connectToHelper() != nil {
-                                    print("Helper 连接成功，开始安装...")
+                                do {
+                                    _ = try PrivilegedHelperManager.shared.getHelperProxy()
                                     showInstallPrompt = false
                                     isInstalling = true
                                     Task {
                                         await networkManager.installProduct(at: task.directory)
                                     }
-                                } else {
-                                    print("Helper 连接失败")
+                                } catch {
                                     showSetupBackupAlert = true
                                 }
                             }

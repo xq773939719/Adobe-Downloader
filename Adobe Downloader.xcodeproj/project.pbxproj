@@ -424,6 +424,7 @@
 				DEVELOPMENT_TEAM = TG862GVKHK;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Adobe Downloader";
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "需要访问下载文件夹来保存Adobe安装文件";
@@ -457,6 +458,7 @@
 				DEVELOPMENT_TEAM = TG862GVKHK;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Adobe Downloader";
 				INFOPLIST_KEY_NSDownloadsFolderUsageDescription = "需要访问下载文件夹来保存Adobe安装文件";

@@ -1,11 +1,5 @@
-//
-//  main.swift
-//  AdobeDownloaderHelperTool
-//
-//  Created by X1a0He on 11/12/24.
-//
-
 import Foundation
+import os.log
 
 @objc(HelperToolProtocol) protocol HelperToolProtocol {
     func executeCommand(_ command: String, withReply reply: @escaping (String) -> Void)
@@ -18,70 +12,104 @@ class HelperTool: NSObject, HelperToolProtocol {
     private var connections: Set<NSXPCConnection> = []
     private var currentTask: Process?
     private var outputPipe: Pipe?
-    
+    private let logger = Logger(subsystem: "com.x1a0he.macOS.Adobe-Downloader.helper", category: "Helper")
+
     override init() {
         listener = NSXPCListener(machServiceName: "com.x1a0he.macOS.Adobe-Downloader.helper")
         super.init()
         listener.delegate = self
+        logger.notice("HelperTool 初始化完成")
     }
     
     func run() {
+        logger.notice("Helper 服务开始运行")
         ProcessInfo.processInfo.disableSuddenTermination()
         ProcessInfo.processInfo.disableAutomaticTermination("Helper is running")
 
         listener.resume()
+        logger.notice("XPC Listener 已启动")
 
         RunLoop.current.run()
     }
 
     func executeCommand(_ command: String, withReply reply: @escaping (String) -> Void) {
-        print("[Adobe Downloader Helper] 收到执行命令请求: \(command)")
+        logger.notice("收到命令执行请求: \(command, privacy: .public)")
         
         let task = Process()
-        let pipe = Pipe()
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
         
-        task.standardOutput = pipe
-        task.standardError = pipe
+        task.standardOutput = outputPipe
+        task.standardError = errorPipe
         task.arguments = ["-c", command]
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
-
-        currentTask = task
-
+        
         do {
             try task.run()
-            task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                reply(output.trimmingCharacters(in: .whitespacesAndNewlines))
-            } else {
-                reply("Error: Could not decode command output")
-            }
+            logger.debug("命令开始执行: \(command, privacy: .public)")
         } catch {
-            reply("Error: \(error.localizedDescription)")
+            let errorMsg = "Error: \(error.localizedDescription)"
+            logger.error("执行失败: \(errorMsg, privacy: .public)")
+            reply(errorMsg)
+            return
         }
-        
-        currentTask = nil
+
+        let outputHandle = outputPipe.fileHandleForReading
+        outputHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            if let output = String(data: data, encoding: .utf8) {
+                let trimmedOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                self.logger.debug("命令输出: \(trimmedOutput, privacy: .public)")
+                reply(trimmedOutput)
+            }
+        }
+
+        let errorHandle = errorPipe.fileHandleForReading
+        errorHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            if let errorOutput = String(data: data, encoding: .utf8), !errorOutput.isEmpty {
+                self.logger.error("命令错误输出: \(errorOutput, privacy: .public)")
+            }
+        }
+
+        task.terminationHandler = { process in
+            self.logger.debug("命令执行完成，退出码: \(process.terminationStatus, privacy: .public)")
+            outputHandle.readabilityHandler = nil
+            errorHandle.readabilityHandler = nil
+        }
     }
-    
+
     func startInstallation(_ command: String, withReply reply: @escaping (String) -> Void) {
-        print("[Adobe Downloader Helper] 收到安装请求: \(command)")
+        logger.notice("收到安装请求: \(command, privacy: .public)")
         
         let task = Process()
         let pipe = Pipe()
         
         task.standardOutput = pipe
         task.standardError = pipe
+        
         task.arguments = ["-c", command]
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        
+        task.terminationHandler = { [weak self] process in
+            guard let self = self else { return }
+            self.logger.notice("Setup 进程终止，退出码: \(process.terminationStatus, privacy: .public)")
+            if let pipe = self.outputPipe {
+                pipe.fileHandleForReading.readabilityHandler = nil
+            }
+            self.currentTask = nil
+            self.outputPipe = nil
+        }
         
         currentTask = task
         outputPipe = pipe
         
         do {
             try task.run()
+            logger.notice("Setup 进程已启动")
             reply("Started")
         } catch {
+            logger.error("启动安装失败: \(error.localizedDescription, privacy: .public)")
             currentTask = nil
             outputPipe = nil
             reply("Error: \(error.localizedDescription)")
@@ -97,6 +125,7 @@ class HelperTool: NSObject, HelperToolProtocol {
         let data = pipe.fileHandleForReading.availableData
         if data.isEmpty {
             if let task = currentTask, !task.isRunning {
+                logger.notice("Setup 进程已结束")
                 currentTask = nil
                 outputPipe = nil
                 reply("Completed")
@@ -111,6 +140,7 @@ class HelperTool: NSObject, HelperToolProtocol {
                 .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
                 .joined(separator: "\n")
             if !lines.isEmpty {
+                logger.notice("Setup 实时输出: \(lines, privacy: .public)")
                 reply(lines)
             } else {
                 reply("")
@@ -119,8 +149,8 @@ class HelperTool: NSObject, HelperToolProtocol {
             reply("")
         }
     }
-    
-    func terminateCurrentTask() {
+
+    func cleanup() {
         if let pipe = outputPipe {
             pipe.fileHandleForReading.readabilityHandler = nil
         }
@@ -134,25 +164,19 @@ extension HelperTool: NSXPCListenerDelegate {
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
         newConnection.exportedInterface = NSXPCInterface(with: HelperToolProtocol.self)
         newConnection.exportedObject = self
-
+        
         newConnection.invalidationHandler = { [weak self] in
             self?.connections.remove(newConnection)
         }
-
+        
         connections.insert(newConnection)
-
         newConnection.resume()
+        
         return true
     }
 }
 
-print("[Adobe Downloader Helper] 开始启动...")
-
 autoreleasepool {
-    print("[Adobe Downloader Helper] 初始化 HelperTool...")
     let helperTool = HelperTool()
-    
-    print("[Adobe Downloader Helper] 运行 Helper 服务...")
     helperTool.run()
 }
-

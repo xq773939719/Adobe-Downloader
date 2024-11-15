@@ -581,12 +581,11 @@ struct HelperStatusRow: View {
     @Binding var helperAlertMessage: String
     @Binding var helperAlertSuccess: Bool
     @State private var isReinstallingHelper = false
-    @State private var installationTask: Task<Void, Error>?
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Helper 安装状态: ")
+                Text("Helper 状态: ")
                 if PrivilegedHelperManager.getHelperStatus {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
@@ -598,15 +597,16 @@ struct HelperStatusRow: View {
                         .foregroundColor(.red)
                 }
                 Spacer()
-
+                
                 if isReinstallingHelper {
                     ProgressView()
                         .scaleEffect(0.7)
                         .frame(width: 16, height: 16)
                 }
-
+                
                 Button(action: {
                     isReinstallingHelper = true
+                    PrivilegedHelperManager.shared.removeInstallHelper()
                     PrivilegedHelperManager.shared.reinstallHelper { success, message in
                         helperAlertSuccess = success
                         helperAlertMessage = message
@@ -617,51 +617,61 @@ struct HelperStatusRow: View {
                     Text("重新安装")
                 }
                 .disabled(isReinstallingHelper)
+                .help("完全卸载并重新安装 Helper")
             }
-
+            
             if !PrivilegedHelperManager.getHelperStatus {
-                Text("Helper未安装将导致无法执行需要管理员权限的操作")
+                Text("Helper 未安装将导致无法执行需要管理员权限的操作")
                     .font(.caption)
                     .foregroundColor(.red)
             }
+            
             Divider()
+
             HStack {
-                Text("Helper 当前状态: ")
+                Text("Helper 连接状态: ")
                 PulsingCircle(color: helperStatusColor)
                     .padding(.horizontal, 4)
                 Text(helperStatusText)
                     .foregroundColor(helperStatusColor)
-
+                
                 Spacer()
-
+                
                 Button(action: {
-                    PrivilegedHelperManager.shared.reconnectHelper { success, message in
-                        helperAlertSuccess = success
-                        helperAlertMessage = message
-                        showHelperAlert = true
+                    if PrivilegedHelperManager.getHelperStatus && 
+                       viewModel.helperConnectionStatus != .connected {
+                        PrivilegedHelperManager.shared.reconnectHelper { success, message in
+                            helperAlertSuccess = success
+                            helperAlertMessage = message
+                            showHelperAlert = true
+                        }
                     }
                 }) {
-                    Text("重新连接Helper")
+                    Text("重新连接")
                 }
-                .disabled(isReinstallingHelper)
+                .disabled(!PrivilegedHelperManager.getHelperStatus || 
+                         viewModel.helperConnectionStatus == .connected ||
+                         isReinstallingHelper)
+                .help("尝试重新连接到已安装的 Helper")
             }
         }
     }
-
+    
     private var helperStatusColor: Color {
         switch viewModel.helperConnectionStatus {
         case .connected: return .green
-        case .connecting, .checking: return .orange
+        case .connecting: return .orange
         case .disconnected: return .red
+        case .checking: return .orange
         }
     }
-
+    
     private var helperStatusText: String {
         switch viewModel.helperConnectionStatus {
         case .connected: return String(localized: "运行正常")
         case .connecting: return String(localized: "正在连接")
-        case .checking: return String(localized: "检查中")
         case .disconnected: return String(localized: "连接断开")
+        case .checking: return String(localized: "检查中")
         }
     }
 }

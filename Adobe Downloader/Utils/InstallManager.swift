@@ -80,6 +80,17 @@ actor InstallManager {
         }
 
         let driverPath = appPath.appendingPathComponent("driver.xml").path
+        guard FileManager.default.fileExists(atPath: driverPath) else {
+            throw InstallError.installationFailed("找不到 driver.xml 文件")
+        }
+        
+        let attributes = try? FileManager.default.attributesOfItem(atPath: driverPath)
+        if let permissions = attributes?[.posixPermissions] as? NSNumber {
+            if permissions.int16Value & 0o444 == 0 {
+                throw InstallError.installationFailed("driver.xml 文件没有读取权限")
+            }
+        }
+
         let installCommand = "sudo \"\(setupPath)\" --install=1 --driverXML=\"\(driverPath)\""
         
         await MainActor.run {
@@ -103,7 +114,7 @@ actor InstallManager {
                                     let errorMessage: String
                                     switch exitCode {
                                     case 107:
-                                        errorMessage = String(localized: "安装失败: 架构或版本不一致 (退出代码: \(exitCode))")
+                                        errorMessage = String(localized: "安装失败: 架构或本不一致 (退出代码: \(exitCode))")
                                     case 103:
                                         errorMessage = String(localized: "安装失败: 权限问题 (退出代码: \(exitCode))")
                                     case 182:
@@ -169,6 +180,19 @@ actor InstallManager {
             at: appPath,
             progressHandler: progressHandler
         )
+    }
+
+    private func executeWithProcess(_ command: String) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["bash", "-c", command]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        
+        try process.run()
+        process.waitUntilExit()
     }
 }
 

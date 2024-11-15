@@ -126,9 +126,11 @@ class HelperTool: NSObject, HelperToolProtocol {
         if data.isEmpty {
             if let task = currentTask, !task.isRunning {
                 logger.notice("Setup 进程已结束")
+                let exitCode = task.terminationStatus
+                reply("Exit Code: \(exitCode)")
                 currentTask = nil
                 outputPipe = nil
-                reply("Completed")
+                return
             } else {
                 reply("")
             }

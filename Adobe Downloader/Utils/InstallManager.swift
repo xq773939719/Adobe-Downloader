@@ -102,7 +102,7 @@ actor InstallManager {
                 do {
                     try await PrivilegedHelperManager.shared.executeInstallation(installCommand) { output in
                         Task { @MainActor in
-                            if let range = output.range(of: "Exit Code: (-?[0-9]+)", options: .regularExpression),
+                            if let range = output.range(of: "Exit Code:\\s*(-?[0-9]+)", options: .regularExpression),
                                let codeStr = output[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
                                let exitCode = Int(codeStr) {
                                 
@@ -110,6 +110,7 @@ actor InstallManager {
                                     progressHandler(1.0, String(localized: "安装完成"))
                                     PrivilegedHelperManager.shared.executeCommand("pkill -f Setup") { _ in }
                                     continuation.resume()
+                                    return
                                 } else {
                                     let errorMessage: String
                                     switch exitCode {
@@ -126,8 +127,8 @@ actor InstallManager {
                                     }
                                     progressHandler(0.0, errorMessage)
                                     continuation.resume(throwing: InstallError.installationFailed(errorMessage))
+                                    return
                                 }
-                                return
                             }
 
                             if let progress = await self.parseProgress(from: output) {
@@ -143,7 +144,19 @@ actor InstallManager {
     }
     
     private func parseProgress(from output: String) -> Double? {
-        if let range = output.range(of: "Progress: ([0-9]{1,3})%", options: .regularExpression),
+        if let range = output.range(of: "Exit Code:\\s*(-?[0-9]+)", options: .regularExpression),
+           let codeStr = output[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
+           let exitCode = Int(codeStr) {
+            if exitCode == 0 {
+                return 1.0
+            }
+        }
+        
+        if output.range(of: "Progress:\\s*[0-9]+/[0-9]+", options: .regularExpression) != nil {
+            return nil
+        }
+        
+        if let range = output.range(of: "Progress:\\s*([0-9]{1,3})%", options: .regularExpression),
            let progressStr = output[range].split(separator: ":").last?.trimmingCharacters(in: .whitespaces),
            let progressValue = Double(progressStr.replacingOccurrences(of: "%", with: "")) {
             return progressValue / 100.0

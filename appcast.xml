@@ -3,6 +3,52 @@
     <channel>
         <title>Adobe Downloader</title>
         <item>
+            <title>1.3.0</title>
+            <pubDate>Sat, 16 Nov 2024 14:42:55 +0800</pubDate>
+            <sparkle:version>130</sparkle:version>
+            <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/X1a0He/Adobe-Downloader/releases/download/1.3.0/Adobe.Downloader.dmg"
+                       length="3235779" type="application/octet-stream"
+                       sparkle:edSignature="K86YrT8TIfZt8nEWQxn33mJSlKtxvpkhk+CR62Oata6zYm9BNHto0Tc4UhcLDr0k3KH6qHTq8nt1+p/4+6KSBQ=="/>
+            <description>
+                <![CDATA[
+                    <style>ul{margin-top: 0;margin-bottom: 7;padding-left: 18;}</style>
+                    <h4>Adobe Downloader 更新日志: </h4>
+                    <ul>
+                        <li>新增可选API版本 (v4, v5, v6)【更老的API意味着更长的等待时间】</li>
+                        <li>引入 Privilege Helper 来处理所有需要权限的操作</li>
+                        <li>修改从 Github 下载 Setup 组件功能，改为从官方下载简化版CC，称为 X1a0He CC</li>
+                        <li>调整 CC 组件备份与处理状态检测，分离二者的检测机制</li>
+                        <li>移除了安装日志显示</li>
+                        <li>调整 Setup 组件版本号的获取方式</li>
+                        <li>修复了当任务下载完成后，AppCardView 仍显示下载中的问题</li>
+                        <li>修复了 Intel 架构下，安装时因架构文件错误出现错误代码 107 的问题</li>
+                        <li>修复了当初次或某种情况下安装会导致进度卡住但事实上已经安装完成的问题</li>
+                        <li>修复了文件包下载不完全或不完整的问题</li>
+                        <li>新增重置程序配置，建议该版本先运行一次重置程序</li>
+                    </ul>
+                    <h4>PS: CC 组件的来源均为 Adobe Creative Cloud 官方提取，可随时下载到最新版，但处理可能会失败</h4>
+                    <hr>
+                    <h4>Adobe Downloader Changes: </h4>
+                    <ul>
+                        <li>Added optional API versions (v4, v5, v6) [Older API means longer waiting time]</li>
+                        <li>Introduced Privilege Helper to handle all operations that require permissions</li>
+                        <li>Modified the function of downloading the Setup component from Github, and changed it to downloading the simplified version of CC from the official website, called X1a0He CC</li>
+                        <li>Adjusted the detection of CC component backup and processing status, and separated the detection mechanism of the two</li>
+                        <li>Removed the installation log display</li>
+                        <li>Adjusted the method of obtaining the version number of the Setup component</li>
+                        <li>Fixed the problem that AppCardView still shows downloading after the task download is completed</li>
+                        <li>Fixed the problem that error code 107 appears during installation due to architecture file errors under Intel architecture</li>
+                        <li>Fixed the problem that the progress is stuck when installing for the first time or under certain circumstances, but in fact the installation has been completed</li>
+                        <li>Fixed the problem of incomplete or incomplete file package download</li>
+                        <li>Added reset program configuration, it is recommended to run the reset program once in this version</li>
+                    </ul>
+                    <h4>PS: CC components are all from Adobe Creative Cloud official extraction, you can download the latest version at any time, but the processing may fail</h4>
+                ]]>
+            </description>
+        </item>
+        <item>
             <title>1.2</title>
             <pubDate>Mon, 11 Nov 2024 21:30:52 +0800</pubDate>
             <sparkle:version>120</sparkle:version>

@@ -16,7 +16,6 @@ class NetworkService {
         guard let url = components?.url else {
             throw NetworkError.invalidURL(NetworkConstants.productsXmlURL)
         }
-        print(url)
         return url
     }
 

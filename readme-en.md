@@ -22,11 +22,37 @@
 > 4. ⚠️⚠️⚠️ **All Adobe apps in Adobe Downloader are from official Adobe channels and are not cracked versions.**
 > 5. ❌❌❌ **Do not use an external hard drive or any USB to store it, as this will cause permission issues, I do not have
      the patience to solve any about permission issues**
-> 6. ❌❌❌ **Due to permission reasons, there may be problems with installation on hackintosh**
 
 ## FAQ
 
 **This section will be updated periodically with meaningful issues that have been raised.**
+
+### **[NEW] About error codes and Helper**
+
+Before version 1.3.0, many operations required users to enter passwords because root permissions or higher permissions
+were not obtained
+
+Therefore, we introduced the Helper mechanism in version 1.3.0. You only need to install the Helper and then the
+subsequent Setup component processing. Product installation no longer requires entering a password
+
+You may see relevant prompts in the upper right corner. Please rest assured that your system is very safe. This is
+because of macOS's Helper mechanism and signed pop-up windows
+
+If you are still worried about problems, please find a professional to check the relevant code, although it is futile
+
+### **Explanation of relevant error codes**
+
+- 2700: It is unlikely to occur unless the Setup component processing fails
+
+- 107: The downloaded file architecture is inconsistent with the system architecture or the installation file is
+  damaged. It is unlikely to occur in version 1.3.0
+
+- 103: There is a permission problem. It is unlikely to occur in version 1.3.0
+
+- 182: The file is incomplete or damaged, version 1.3.0 is unlikely to appear
+- 133: Insufficient system disk space
+- -1: The Setup component was not processed or failed to process, please contact the developer
+- 195: The downloaded product does not support your current system
 
 ### Questions about the Setup Component
 
@@ -40,42 +66,30 @@ Why is this necessary? Without modifications, installation will fail with error 
 No, Adobe Downloader automates the setup component handling, including backup. All you need to do is enter your password
 when prompted.
 
-### About Entering Your Password in the Program
-
-> Why do I need to enter my password when installing the setup component?
-
-Since the setup component is downloaded from GitHub and written to your system, sudo permission is required.
-
-> Is my password sent online when downloading from GitHub?
-
-No, it isn’t. Each time you enter your password, Adobe Downloader uses a system prompt, so your password is securely
-handled by your operating system. Only you know your password and Adobe Downloader doesn’t have access to it.
-
-> Why am I asked for my password multiple times? In what situations will I need to enter it?
-
-1. During the download and installation of the setup component.
-2. When backing up and modifying the setup component.
-3. When installing Adobe apps using the setup component.
-4. Anytime an operation requires elevated permissions (as before, you can safely enter your password).
-
 ## 📔Latest Log
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-11 21:00 Update Log
+- 2024-11-16 14:30 Update Log
 
 ```markdown
-1. Adjust the order of sheet pop-up when the program starts
-2. Added detection of Setup components and version number detection in settings, supporting re-backup and processing in
-   settings
-3. Adjusted detection of Setup components, no longer requiring full installation of Adobe Creative Cloud
-4. Added judgment of whether Setup components have been processed before installation. If Setup components are not
-   processed, the installation function cannot be used
-5. Adjusted the pop-up interface of Setup component detection
-6. Added downloading of Setup components from GitHub. Users who cannot access GitHub may encounter problems with
-   download failure
+1. Added optional API versions (v4, v5, v6) [Older API means longer waiting time]
+2. Introduced Privilege Helper to handle all operations that require permissions
+3. Modified the function of downloading the Setup component from Github, and changed it to downloading the simplified
+   version of CC from the official website, called X1a0He CC
+4. Adjusted the detection of CC component backup and processing status, and separated the detection mechanism of the two
+5. Removed the installation log display
+6. Adjusted the method of obtaining the version number of the Setup component
+7. Fixed the problem that AppCardView still shows downloading after the task download is completed
+8. Fixed the problem that error code 107 appears during installation due to architecture file errors under Intel
+   architecture
+9. Fixed the problem that the progress is stuck when installing for the first time or under certain circumstances, but
+   in fact the installation has been completed
+10. Fixed the problem of incomplete or incomplete file package download
+11. Added reset program configuration, it is recommended to run the reset program once in this version
 
-PS: The sources of Setup components are all extracted from Adobe Creative Cloud, so they may not be updated in time.
+PS: CC components are all from Adobe Creative Cloud official extraction, you can download the latest version at any
+time, but the processing may fail
 ```
 
 ### Language friendly

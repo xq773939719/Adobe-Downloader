@@ -12,3 +12,4 @@ sudo /bin/rm /Library/PrivilegedHelperTools/com.x1a0he.macOS.Adobe-Downloader.he
 sudo /bin/rm -rf ~/Library/Application\ Support/Adobe\ Downloader
 sudo /bin/rm ~/Library/Preferences/com.x1a0he.macOS.Adobe-Downloader.plist
 sudo /usr/bin/killall -u root -9 com.x1a0he.macOS.Adobe-Downloader.helper
+sudo rm "$0"

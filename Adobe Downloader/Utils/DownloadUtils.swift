@@ -1045,11 +1045,6 @@ class DownloadUtils {
                     continue
                 }
                 
-                #if DEBUG
-                if let manifestString = String(data: manifestData, encoding: .utf8) {
-                    print("Manifest内容: \(manifestString)")
-                }
-                #endif
                 let manifestDoc = try XMLDocument(data: manifestData)
                 let assetPathNodes = try manifestDoc.nodes(forXPath: "//asset_path")
                 let sizeNodes = try manifestDoc.nodes(forXPath: "//asset_size")
@@ -1139,7 +1134,7 @@ class DownloadUtils {
                     }
                 }
             }
-
+            try await Task.sleep(nanoseconds: 1_000_000_000)
             try await withCheckedThrowingContinuation { continuation in
                 ModifySetup.backupAndModifySetupFile { success, message in
                     if success {
@@ -1151,7 +1146,6 @@ class DownloadUtils {
             }
 
             ModifySetup.clearVersionCache()
-
             try? FileManager.default.removeItem(at: tempDirectory)
             
             await MainActor.run {

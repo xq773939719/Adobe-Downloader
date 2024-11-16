@@ -405,7 +405,6 @@ class PrivilegedHelperManager: NSObject {
                 }
             }
         }
-
         while true {
             let output = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
                 helper.getInstallationOutput { result in
@@ -413,12 +412,17 @@ class PrivilegedHelperManager: NSObject {
                 }
             }
             
-            if output == "Completed" {
-                break
-            } else if !output.isEmpty {
+            if !output.isEmpty {
                 progress(output)
             }
             
+            if output.contains("Exit Code:") || output.range(of: "Progress: \\d+/\\d+", options: .regularExpression) != nil{
+                if(output.range(of: "Progress: \\d+/\\d+", options: .regularExpression) != nil) {
+                    progress("Exit Code: 0")
+                }
+                break
+            }
+
             try await Task.sleep(nanoseconds: 100_000_000)
         }
     }

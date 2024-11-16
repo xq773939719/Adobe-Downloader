@@ -269,6 +269,7 @@ struct GeneralSettingsView: View {
                             helperAlertSuccess: $helperAlertSuccess)
             CCSettingsView(viewModel: viewModel)
             UpdateSettingsView(viewModel: viewModel)
+            CleanConfigView()
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -433,15 +434,89 @@ struct UpdateSettingsView: View {
     }
 }
 
-#Preview("About Tab") {
-    AboutAppView()
-}
-
-#Preview("General Settings") {
-    let networkManager = NetworkManager()
-    VStack {
-        GeneralSettingsView(updater: PreviewUpdater())
-            .environmentObject(networkManager)
+struct CleanConfigView: View {
+    @State private var showConfirmation = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    
+    var body: some View {
+        GroupBox(label: Text("重置程序").padding(.bottom, 8)) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Button("重置程序") {
+                        showConfirmation = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                }
+            }
+            .padding(8)
+        }
+        .alert("确认重置程序", isPresented: $showConfirmation) {
+            Button("取消", role: .cancel) { }
+            Button("确定", role: .destructive) {
+                cleanConfig()
+            }
+        } message: {
+            Text("这将清空所有配置并结束应用程序，确定要继续吗？")
+        }
+        .alert("操作结果", isPresented: $showAlert) {
+            Button("确定") { }
+        } message: {
+            Text(alertMessage)
+        }
+    }
+    
+    private func cleanConfig() {
+        do {
+            let downloadsURL = try FileManager.default.url(for: .downloadsDirectory, 
+                                                         in: .userDomainMask, 
+                                                         appropriateFor: nil, 
+                                                         create: false)
+            let scriptURL = downloadsURL.appendingPathComponent("clean-config.sh")
+            
+            guard let scriptPath = Bundle.main.path(forResource: "clean-config", ofType: "sh"),
+                  let scriptContent = try? String(contentsOfFile: scriptPath, encoding: .utf8) else {
+                throw NSError(domain: "ScriptError", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法读取脚本文件"])
+            }
+            
+            try scriptContent.write(to: scriptURL, atomically: true, encoding: .utf8)
+            
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], 
+                                                ofItemAtPath: scriptURL.path)
+            
+            if PrivilegedHelperManager.getHelperStatus {
+                PrivilegedHelperManager.shared.executeCommand("open -a Terminal \(scriptURL.path)") { output in
+                    if output.isEmpty {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            exit(0)
+                        }
+                    } else {
+                        alertMessage = "清空配置失败: \(output)"
+                        showAlert = true
+                    }
+                }
+            } else {
+                let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+                NSWorkspace.shared.open([scriptURL], 
+                                        withApplicationAt: terminalURL,
+                                           configuration: NSWorkspace.OpenConfiguration()) { _, error in
+                    if let error = error {
+                        alertMessage = "打开终端失败: \(error.localizedDescription)"
+                        showAlert = true
+                        return
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        exit(0)
+                    }
+                }
+            }
+            
+        } catch {
+            alertMessage = "清空配置失败: \(error.localizedDescription)"
+            showAlert = true
+        }
     }
 }
 
@@ -770,3 +845,16 @@ struct AutoDownloadRow: View {
     }
 }
 
+
+#Preview("About Tab") {
+    AboutAppView()
+}
+
+#Preview("General Settings") {
+    let networkManager = NetworkManager()
+    VStack {
+        GeneralSettingsView(updater: PreviewUpdater())
+            .environmentObject(networkManager)
+    }
+    .fixedSize()
+}

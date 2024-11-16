@@ -188,30 +188,15 @@
         }
       }
     },
-    "Helper 安装状态: " : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Helper installation status:"
-          }
-        }
-      }
-    },
-    "Helper 当前状态: " : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Helper Current status:"
-          }
-        }
-      }
-    },
     "Helper 未安装将导致无法执行需要管理员权限的操作" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper is not installed and cannot perform operations that require administrator privileges"
+          }
+        }
+      }
     },
     "Helper 未安装或未连接，请先在设置中安装并连接 Helper" : {
       "localizations" : {
@@ -224,7 +209,14 @@
       }
     },
     "Helper 状态: " : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper status: "
+          }
+        }
+      }
     },
     "Helper 设置" : {
       "localizations" : {
@@ -237,7 +229,14 @@
       }
     },
     "Helper 连接状态: " : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Helper connection status:"
+          }
+        }
+      }
     },
     "Helper 重新安装成功" : {
       "localizations" : {
@@ -255,17 +254,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Helper reconnected successfully"
-          }
-        }
-      }
-    },
-    "Helper未安装将导致无法执行需要管理员权限的操作" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Helper is not installed and cannot perform operations that require administrator privileges"
           }
         }
       }
@@ -894,7 +882,14 @@
       }
     },
     "完全卸载并重新安装 Helper" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Completely uninstall and reinstall Helper"
+          }
+        }
+      }
     },
     "客户端错误: %d" : {
       "comment" : "Client error",
@@ -928,7 +923,14 @@
       }
     },
     "尝试重新连接到已安装的 Helper" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try to reconnect to the installed Helper"
+          }
+        }
+      }
     },
     "已处理" : {
       "localizations" : {
@@ -1145,6 +1147,16 @@
         }
       }
     },
+    "操作结果" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operation results"
+          }
+        }
+      }
+    },
     "数据无效: %@" : {
       "comment" : "Invalid data",
       "localizations" : {
@@ -1205,8 +1217,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "文件系统错误(%1$@): %2$@"
+            "state" : "translated",
+            "value" : "File system error (%1$@): %2$@"
           }
         }
       }
@@ -1716,6 +1728,16 @@
         }
       }
     },
+    "确认重置程序" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm reset"
+          }
+        }
+      }
+    },
     "移除" : {
       "localizations" : {
         "en" : {
@@ -1934,6 +1956,16 @@
         }
       }
     },
+    "这将清空所有配置并结束应用程序，确定要继续吗？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will clear all configuration and end the application. Are you sure you want to continue?"
+          }
+        }
+      }
+    },
     "连接出现错误: %@" : {
       "localizations" : {
         "en" : {
@@ -2046,15 +2078,21 @@
       }
     },
     "重新连接" : {
-
-    },
-    "重新连接Helper" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reconnect to Helper"
+            "value" : "Reconnect"
+          }
+        }
+      }
+    },
+    "重置程序" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset Program"
           }
         }
       }

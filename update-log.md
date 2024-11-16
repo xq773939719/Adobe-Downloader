@@ -1,6 +1,8 @@
 # Change Log
 
-## 2024-11-14 15:30 更新日志
+## 2024-11-16 14:30 更新日志
+
+[//]: # (1.3.0)
 
 ```markdown
 1. 新增可选API版本 (v4, v5, v6)【更老的API意味着更长的等待时间】
@@ -11,17 +13,27 @@
 6. 调整 Setup 组件版本号的获取方式
 7. 修复了当任务下载完成后，AppCardView 仍显示下载中的问题
 8. 修复了 Intel 架构下，安装时因架构文件错误出现错误代码 107 的问题
+9. 修复了当初次或某种情况下安装会导致进度卡住但事实上已经安装完成的问题
+10. 修复了文件包下载不完全或不完整的问题
+11. 新增重置程序配置，建议该版本先运行一次重置程序
 
 PS: CC 组件的来源均为 Adobe Creative Cloud 官方提取，可随时下载到最新版，但处理可能会失败
 ====================
 
-1. Added optional API versions (v4, v5, v6) (Older API means longer waiting time)
+1. Added optional API versions (v4, v5, v6) [Older API means longer waiting time]
 2. Introduced Privilege Helper to handle all operations that require permissions
-3. Modified the function of downloading the Setup component from Github to downloading a simplified version of CC from
-   the official website, called X1a0He CC
+3. Modified the function of downloading the Setup component from Github, and changed it to downloading the simplified
+   version of CC from the official website, called X1a0He CC
 4. Adjusted the detection of CC component backup and processing status, and separated the detection mechanism of the two
 5. Removed the installation log display
-6. Adjusted the way to obtain the version number of the Setup component
+6. Adjusted the method of obtaining the version number of the Setup component
+7. Fixed the problem that AppCardView still shows downloading after the task download is completed
+8. Fixed the problem that error code 107 appears during installation due to architecture file errors under Intel
+   architecture
+9. Fixed the problem that the progress is stuck when installing for the first time or under certain circumstances, but
+   in fact the installation has been completed
+10. Fixed the problem of incomplete or incomplete file package download
+11. Added reset program configuration, it is recommended to run the reset program once in this version
 
 PS: CC components are all from Adobe Creative Cloud official extraction, you can download the latest version at any
 time, but the processing may fail

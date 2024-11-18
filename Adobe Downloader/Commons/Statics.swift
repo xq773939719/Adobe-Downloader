@@ -4,6 +4,9 @@
 //  Created by X1a0He on 2024/10/30.
 //
 import Foundation
+import SwiftUI
+import AppKit
+
 
 struct AppStatics {
     static let supportedLanguages: [(code: String, name: String)] = [
@@ -50,4 +53,14 @@ struct AppStatics {
             return false
         #endif
     }()
-} 
+
+    static let architectureSymbol: String = {
+        #if arch(arm64)
+            return "arm64"
+        #elseif arch(x86_64)
+            return "x64"
+        #else
+            return "Unknown Architecture"
+        #endif
+    }()
+}

@@ -658,6 +658,7 @@ class DownloadUtils {
 
         for dependency in productInfo.dependencies {
             if let dependencyVersions = saps[dependency.sapCode]?.versions {
+                var processedVersions = Set<String>()
                 var firstGuid: String?
                 var buildGuid: String?
 
@@ -674,10 +675,15 @@ class DownloadUtils {
                 }
 
                 for version in sortedVersions {
+                    if buildGuid != nil { break }
+                    
+                    if processedVersions.contains(version.key) { continue }
+                    processedVersions.insert(version.key)
+
                     if version.value.baseVersion == dependency.version {
                         if firstGuid == nil { firstGuid = version.value.buildGuid }
 
-                        // print("\(version.value.sapCode), \(version.key), \(allowedPlatform), \(version.value.apPlatform), \(allowedPlatform.contains(version.value.apPlatform))")
+                        print("\(version.value.sapCode), \(version.key), \(allowedPlatform), \(version.value.apPlatform), \(allowedPlatform.contains(version.value.apPlatform))")
 
                         if allowedPlatform.contains(version.value.apPlatform) {
                             buildGuid = version.value.buildGuid
@@ -688,18 +694,25 @@ class DownloadUtils {
 
                 if buildGuid == nil { buildGuid = firstGuid }
                 if let finalBuildGuid = buildGuid {
-                    productsToDownload.append(ProductsToDownload(
-                        sapCode: dependency.sapCode,
-                        version: dependency.version,
-                        buildGuid: finalBuildGuid
-                    ))
+                    let alreadyAdded = productsToDownload.contains { product in 
+                        product.sapCode == dependency.sapCode && 
+                        product.version == dependency.version
+                    }
+                    
+                    if !alreadyAdded {
+                        productsToDownload.append(ProductsToDownload(
+                            sapCode: dependency.sapCode,
+                            version: dependency.version,
+                            buildGuid: finalBuildGuid
+                        ))
+                    }
                 }
             }
         }
 
-//        for product in productsToDownload {
-//            print("\(product.sapCode), \(product.version), \(product.buildGuid)")
-//        }
+        for product in productsToDownload {
+            print("\(product.sapCode), \(product.version), \(product.buildGuid)")
+        }
 
         for product in productsToDownload {
             await MainActor.run {
@@ -727,8 +740,24 @@ class DownloadUtils {
 
             var corePackageCount = 0
             var nonCorePackageCount = 0
-            
+
+            /*
+             这里是对包的过滤，一般规则在
+             1. 如果没有Condition，那么就视为需要下载的包
+             2. 如果存在Condition，那么按照以下规则下载
+                [OSVersion]>=10.15 : 系统版本大于等于10.15就下载，所以需要一个函数来获取系统版本号
+                [OSArchitecture]==arm64 : 系统架构为arm64的就下载，官方并没有下载另外一个架构的包
+                [OSArchitecture]==x64 : 同上
+                [installLanguage]==zh_CN : 目标安装语言为 zh_CN 的就下载
+
+             PS: 下面是留给看源码的人的
+             哪怕是官方的ACC下载任何一款App，都是这个逻辑，不信自己去翻，你可能会说，为什么官方能下通用的，你问这个问题之前，可以自己去拿正版的看看他是怎么下载的，他下载的包数量跟我的是不是一致的，他也只是下载了对应架构的包
+
+             其实要下载通用的也很简单，不是判断架构吗，那下载通用的时候，两个架构同时成立不就好了，但我并没有在官方的下载逻辑中看到，也没尝试过，如果你尝试之后发现可以，请你告诉我
+             */
+
             for package in packageArray {
+                var shouldDownload = false
                 let packageType = package["Type"] as? String ?? "non-core"
                 let isCore = packageType == "core"
 
@@ -750,9 +779,62 @@ class DownloadUtils {
                 } else if let sizeInt = package["DownloadSize"] as? Int {
                     downloadSize = Int64(sizeInt)
                 } else { continue }
-                
+
+                let installLanguage = "[installLanguage]==\(task.language)"
+                if let condition = package["Condition"] as? String {
+                    if condition.isEmpty {
+                        shouldDownload = true
+                    } else {
+                        if condition.contains("[OSVersion]") {
+                            let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+                            let currentVersion = Double("\(osVersion.majorVersion).\(osVersion.minorVersion)") ?? 0.0
+                            
+                            let versionPattern = #"\[OSVersion\](>=|<=|<|>|==)([\d.]+)"#
+                            let regex = try? NSRegularExpression(pattern: versionPattern)
+                            let range = NSRange(condition.startIndex..<condition.endIndex, in: condition)
+                            
+                            if let matches = regex?.matches(in: condition, range: range) {
+                                var meetsAllConditions = true
+                                
+                                for match in matches {
+                                    guard let operatorRange = Range(match.range(at: 1), in: condition),
+                                          let versionRange = Range(match.range(at: 2), in: condition),
+                                          let requiredVersion = Double(condition[versionRange]) else {
+                                        continue
+                                    }
+                                    
+                                    let operatorSymbol = String(condition[operatorRange])
+                                    let meets = compareVersions(current: currentVersion, required: requiredVersion, operator: operatorSymbol)
+
+                                    if !meets {
+                                        meetsAllConditions = false
+                                        break
+                                    }
+                                }
+                                
+                                if meetsAllConditions {
+                                    shouldDownload = true
+                                }
+                            }
+                        }
+                        if condition.contains("[OSArchitecture]==\(AppStatics.architectureSymbol)") {
+                            shouldDownload = true
+                        }
+                        if condition.contains(installLanguage) || task.language == "ALL" {
+                            shouldDownload = true
+                        }
+                    }
+                } else {
+                    shouldDownload = true
+                }
+
                 if isCore {
                     corePackageCount += 1
+                } else {
+                    nonCorePackageCount += 1
+                }
+
+                if shouldDownload {
                     let newPackage = Package(
                         type: packageType,
                         fullPackageName: fullPackageName,
@@ -760,31 +842,6 @@ class DownloadUtils {
                         downloadURL: downloadURL
                     )
                     product.packages.append(newPackage)
-                } else {
-                    let languageIsSuitable: Bool
-                    if task.language == "ALL" {
-                        languageIsSuitable = true
-                    } else if !package.keys.contains("Condition") {
-                        languageIsSuitable = true
-                    } else if let condition = package["Condition"] as? String {
-                        let matchesTaskLang = condition.contains("[installLanguage]==\(task.language)")
-                        let matchesOSLang = condition.contains("[installLanguage]==en_US")
-                        languageIsSuitable = matchesTaskLang || matchesOSLang
-                    } else {
-                        languageIsSuitable = false
-                    }
-                    
-                    if languageIsSuitable {
-                        nonCorePackageCount += 1
-                        let newPackage = Package(
-                            type: packageType,
-                            fullPackageName: fullPackageName,
-                            downloadSize: downloadSize,
-                            downloadURL: downloadURL
-                        )
-                        product.packages.append(newPackage)
-                    } else {
-                    }
                 }
             }
         }
@@ -1115,6 +1172,7 @@ class DownloadUtils {
             for package in packagesToDownload {
                 let packageDir = "\(targetDirectory)/\(package.name)"
                 let packageCommands = [
+                    "rm -rf '\(packageDir)'",
                     "mkdir -p '\(packageDir)'",
                     "unzip -o '\(tempDirectory.path)/\(package.name).zip' -d '\(packageDir)/'",
                     "chmod -R 755 '\(packageDir)'",
@@ -1217,6 +1275,23 @@ class DownloadUtils {
             return session.downloadTask(with: request)
         } else {
             throw NetworkError.invalidData("Neither URL nor resume data provided")
+        }
+    }
+
+    private func compareVersions(current: Double, required: Double, operator: String) -> Bool {
+        switch `operator` {
+        case ">=":
+            return current >= required
+        case "<=":
+            return current <= required
+        case ">":
+            return current > required
+        case "<":
+            return current < required
+        case "==":
+            return current == required
+        default:
+            return false
         }
     }
 }

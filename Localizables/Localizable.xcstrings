@@ -1903,6 +1903,16 @@
         }
       }
     },
+    "获取到 %lld 款产品" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld products obtained"
+          }
+        }
+      }
+    },
     "获取授权失败" : {
       "localizations" : {
         "en" : {

@@ -134,12 +134,12 @@ struct ContentView: View {
             .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor))
 
-            HStack() {
+            HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
                 Text("Adobe Downloader 完全开源免费: https://github.com/X1a0He/Adobe-Downloader")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal)
             .padding(.bottom, 5)
             .background(Color(NSColor.windowBackgroundColor))
@@ -207,6 +207,16 @@ struct ContentView: View {
                                 }
                             }
                             .padding()
+                            
+                            HStack(spacing: 8) {
+                                Capsule()
+                                    .fill(Color.secondary.opacity(0.2))
+                                    .frame(width: 6, height: 6)
+                                Text("获取到 \(filteredProducts.count) 款产品")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.bottom, 16)
                         }
                     }
                 }

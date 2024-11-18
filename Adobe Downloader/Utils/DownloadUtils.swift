@@ -147,7 +147,31 @@ class DownloadUtils {
 
     func resumeDownloadTask(taskId: UUID) async {
         if let task = await networkManager?.downloadTasks.first(where: { $0.id == taskId }) {
-            await startDownloadProcess(task: task)
+            await MainActor.run {
+                task.setStatus(.downloading(DownloadStatus.DownloadInfo(
+                    fileName: task.currentPackage?.fullPackageName ?? "",
+                    currentPackageIndex: 0,
+                    totalPackages: task.productsToDownload.reduce(0) { $0 + $1.packages.count },
+                    startTime: Date(),
+                    estimatedTimeRemaining: nil
+                )))
+                networkManager?.saveTask(task)
+            }
+            
+            if task.sapCode == "APRO" {
+                if let resumeData = await cancelTracker.getResumeData(taskId),
+                   let currentPackage = task.currentPackage,
+                   let product = task.productsToDownload.first {
+                    try? await downloadPackage(
+                        package: currentPackage,
+                        task: task,
+                        product: product,
+                        resumeData: resumeData
+                    )
+                }
+            } else {
+                await startDownloadProcess(task: task)
+            }
         }
     }
 
@@ -507,6 +531,10 @@ class DownloadUtils {
             throw NetworkError.invalidData("无法从manifest中获取下载信息")
         }
 
+        guard let downloadURL = URL(string: downloadPath) else {
+            throw NetworkError.invalidURL(downloadPath)
+        }
+
         let aproPackage = Package(
             type: "dmg",
             fullPackageName: "Adobe Downloader \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform).dmg",
@@ -535,103 +563,104 @@ class DownloadUtils {
         }
 
         let tempDownloadDir = task.directory.deletingLastPathComponent()
-
         var lastUpdateTime = Date()
         var lastBytes: Int64 = 0
 
-        let delegate = DownloadDelegate(
-            destinationDirectory: tempDownloadDir,
-            fileName: aproPackage.fullPackageName,
-            completionHandler: { [weak networkManager] (localURL: URL?, response: URLResponse?, error: Error?) in
-                if let error = error {
-                    print("Download error:", error)
-                    return
-                }
-                Task { @MainActor in
-                    aproPackage.downloadedSize = aproPackage.downloadSize
-                    aproPackage.progress = 1.0
-                    aproPackage.status = .completed
-                    aproPackage.downloaded = true
-
-                    var totalDownloaded: Int64 = 0
-                    var totalSize: Int64 = 0
-
-                    totalSize += aproPackage.downloadSize
-                    if aproPackage.downloaded {
-                        totalDownloaded += aproPackage.downloadSize
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let delegate = DownloadDelegate(
+                destinationDirectory: tempDownloadDir,
+                fileName: aproPackage.fullPackageName,
+                completionHandler: { [weak networkManager] (localURL: URL?, response: URLResponse?, error: Error?) in
+                    if let error = error {
+                        if (error as NSError).code == NSURLErrorCancelled {
+                            continuation.resume(throwing: NetworkError.cancelled)
+                            return
+                        }
+                        print("Download error:", error)
+                        continuation.resume(throwing: error)
+                        return
                     }
+                    
+                    Task { @MainActor in
+                        aproPackage.downloadedSize = aproPackage.downloadSize
+                        aproPackage.progress = 1.0
+                        aproPackage.status = .completed
+                        aproPackage.downloaded = true
 
-                    task.totalSize = totalSize
-                    task.totalDownloadedSize = totalDownloaded
-                    task.totalProgress = Double(totalDownloaded) / Double(totalSize)
-                    task.totalSpeed = 0
+                        var totalDownloaded: Int64 = 0
+                        var totalSize: Int64 = 0
 
-                    let allCompleted = task.productsToDownload.allSatisfy { product in
-                        product.packages.allSatisfy { $0.downloaded }
-                    }
+                        totalSize += aproPackage.downloadSize
+                        if aproPackage.downloaded {
+                            totalDownloaded += aproPackage.downloadSize
+                        }
 
-                    if allCompleted {
-                        task.setStatus(.completed(DownloadStatus.CompletionInfo(
-                            timestamp: Date(),
-                            totalTime: Date().timeIntervalSince(task.createAt),
-                            totalSize: totalSize
-                        )))
-                    }
+                        task.totalSize = totalSize
+                        task.totalDownloadedSize = totalDownloaded
+                        task.totalProgress = Double(totalDownloaded) / Double(totalSize)
+                        task.totalSpeed = 0
 
-                    task.objectWillChange.send()
-                    networkManager?.objectWillChange.send()
-                }
-            },
-            progressHandler: { [weak networkManager] (bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) in
-                Task { @MainActor in
-                    let now = Date()
-                    let timeDiff = now.timeIntervalSince(lastUpdateTime)
+                        let allCompleted = task.productsToDownload.allSatisfy { product in
+                            product.packages.allSatisfy { $0.downloaded }
+                        }
 
-                    if timeDiff >= 1.0 {
-                        let bytesDiff = totalBytesWritten - lastBytes
-                        let speed = Double(bytesDiff) / timeDiff
-
-                        aproPackage.updateProgress(
-                            downloadedSize: totalBytesWritten,
-                            speed: speed
-                        )
-
-                        task.totalDownloadedSize = totalBytesWritten
-                        task.totalProgress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-                        task.totalSpeed = speed
-
-                        lastUpdateTime = now
-                        lastBytes = totalBytesWritten
+                        if allCompleted {
+                            task.setStatus(.completed(DownloadStatus.CompletionInfo(
+                                timestamp: Date(),
+                                totalTime: Date().timeIntervalSince(task.createAt),
+                                totalSize: totalSize
+                            )))
+                        }
 
                         task.objectWillChange.send()
                         networkManager?.objectWillChange.send()
+                        continuation.resume()
+                    }
+                },
+                progressHandler: { [weak networkManager] (bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) in
+                    Task { @MainActor in
+                        let now = Date()
+                        let timeDiff = now.timeIntervalSince(lastUpdateTime)
+
+                        if timeDiff >= 1.0 {
+                            let bytesDiff = totalBytesWritten - lastBytes
+                            let speed = Double(bytesDiff) / timeDiff
+
+                            aproPackage.updateProgress(
+                                downloadedSize: totalBytesWritten,
+                                speed: speed
+                            )
+
+                            task.totalDownloadedSize = totalBytesWritten
+                            task.totalProgress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+                            task.totalSpeed = speed
+
+                            lastUpdateTime = now
+                            lastBytes = totalBytesWritten
+
+                            task.objectWillChange.send()
+                            networkManager?.objectWillChange.send()
+                        }
                     }
                 }
-            }
-        )
+            )
 
-        guard let fullURL = URL(string: downloadPath) else {
-            throw NetworkError.invalidURL(downloadPath)
-        }
-
-        var request2 = URLRequest(url: fullURL)
-        NetworkConstants.downloadHeaders.forEach { request2.setValue($0.value, forHTTPHeaderField: $0.key) }
-
-        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
-        let downloadTask = session.downloadTask(with: request2)
-        downloadTask.resume()
-
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let originalCompletionHandler = delegate.completionHandler
-
-            delegate.completionHandler = { (url: URL?, response: URLResponse?, error: Error?) in
-                originalCompletionHandler(url, response, error)
-
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            
+            var downloadRequest = URLRequest(url: downloadURL)
+            NetworkConstants.downloadHeaders.forEach { downloadRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
+            
+            let downloadTask = session.downloadTask(with: downloadRequest)
+            
+            Task {
+                await self.cancelTracker.registerTask(task.id, task: downloadTask, session: session)
+                
+                if await self.cancelTracker.isCancelled(task.id) {
+                    continuation.resume(throwing: NetworkError.cancelled)
+                    return
                 }
+                
+                downloadTask.resume()
             }
         }
     }

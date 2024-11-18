@@ -1,6 +1,6 @@
 # Change Log
 
-## 2024-11-19 14:30 更新日志
+## 2024-11-19 00:55 更新日志
 
 [//]: # (1.3.1)
 
@@ -13,6 +13,22 @@
 6. 增加部分语言选择
 7. 优化了版本选择页面的排序展示
 8. 优化了产品处理和解析速度，弃用 xml 处理和解析，采用 json 的形式处理
+
+PS: M1 Max上已测试大部份产品正常下载并安装，Intel未测试，有问题请提issues
+====================
+
+1. Simulate the package dependency download logic of the official Adobe Creative Cloud
+2. Due to the above updates, the problem of insufficient download quantity of some packages has been fixed
+3. Fixed when HDBox and IPCBox already exist, the problem that the original components will not be replaced after
+   downloading X1a0He CC components
+4. Fixed the problem that Acrobat products are still in downloading status when paused and canceled
+5. Add product quantity display at the bottom and display warning slogan in the center
+6. Add some language selections
+7. Optimize the sorting display of the version selection page
+8. Optimize product processing and parsing speed, abandon xml processing and parsing, and use json processing
+
+PS: Most products have been tested on M1 Max and downloaded and installed normally, but Intel has not been tested. If
+you have any questions, please raise issues
 ```
 
 ## 2024-11-16 14:30 更新日志

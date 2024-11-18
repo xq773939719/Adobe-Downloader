@@ -70,26 +70,21 @@ when prompted.
 
 - For historical update logs, please go to [Update Log](update-log.md)
 
-- 2024-11-16 14:30 Update Log
+- 2024-11-19 00:55 Update Log
 
 ```markdown
-1. Added optional API versions (v4, v5, v6) [Older API means longer waiting time]
-2. Introduced Privilege Helper to handle all operations that require permissions
-3. Modified the function of downloading the Setup component from Github, and changed it to downloading the simplified
-   version of CC from the official website, called X1a0He CC
-4. Adjusted the detection of CC component backup and processing status, and separated the detection mechanism of the two
-5. Removed the installation log display
-6. Adjusted the method of obtaining the version number of the Setup component
-7. Fixed the problem that AppCardView still shows downloading after the task download is completed
-8. Fixed the problem that error code 107 appears during installation due to architecture file errors under Intel
-   architecture
-9. Fixed the problem that the progress is stuck when installing for the first time or under certain circumstances, but
-   in fact the installation has been completed
-10. Fixed the problem of incomplete or incomplete file package download
-11. Added reset program configuration, it is recommended to run the reset program once in this version
+1. Simulate the package dependency download logic of the official Adobe Creative Cloud
+2. Due to the above updates, the problem of insufficient download quantity of some packages has been fixed
+3. Fixed when HDBox and IPCBox already exist, the problem that the original components will not be replaced after
+   downloading X1a0He CC components
+4. Fixed the problem that Acrobat products are still in downloading status when paused and canceled
+5. Add product quantity display at the bottom and display warning slogan in the center
+6. Add some language selections
+7. Optimize the sorting display of the version selection page
+8. Optimize product processing and parsing speed, abandon xml processing and parsing, and use json processing
 
-PS: CC components are all from Adobe Creative Cloud official extraction, you can download the latest version at any
-time, but the processing may fail
+PS: Most products have been tested on M1 Max and downloaded and installed normally, but Intel has not been tested. If
+you have any questions, please raise issues
 ```
 
 ### Language friendly

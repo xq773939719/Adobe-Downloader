@@ -77,16 +77,20 @@ class NewDownloadTask: Identifiable, ObservableObject, Equatable  {
     @Published var totalPackages: Int = 0
 
     func setStatus(_ newStatus: DownloadStatus) {
-        totalStatus = newStatus
-        objectWillChange.send()
+        DispatchQueue.main.async {
+            self.totalStatus = newStatus
+            self.objectWillChange.send()
+        }
     }
 
     func updateProgress(downloaded: Int64, total: Int64, speed: Double) {
-        totalDownloadedSize = downloaded
-        totalSize = total
-        totalSpeed = speed
-        totalProgress = total > 0 ? Double(downloaded) / Double(total) : 0
-        objectWillChange.send()
+        DispatchQueue.main.async {
+            self.totalDownloadedSize = downloaded
+            self.totalSize = total
+            self.totalSpeed = speed
+            self.totalProgress = total > 0 ? Double(downloaded) / Double(total) : 0
+            self.objectWillChange.send()
+        }
     }
 
     init(sapCode: String, version: String, language: String, displayName: String, directory: URL, productsToDownload: [ProductsToDownload] = [], retryCount: Int = 0, createAt: Date, totalStatus: DownloadStatus? = nil, totalProgress: Double, totalDownloadedSize: Int64 = 0, totalSize: Int64 = 0, totalSpeed: Double = 0, currentPackage: Package? = nil, platform: String) {

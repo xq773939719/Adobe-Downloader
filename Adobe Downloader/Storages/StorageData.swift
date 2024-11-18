@@ -82,6 +82,14 @@ final class StorageData: ObservableObject {
         }
     }
     
+    var allowedPlatform: [String] {
+        if downloadAppleSilicon {
+            return ["macuniversal", "macarm64"]
+        } else {
+            return ["macuniversal", "osx10-64", "osx10"]
+        }
+    }
+    
     private init() {
         let isFirstLaunchKey = "isFirstLaunch"
         if !UserDefaults.standard.contains(key: isFirstLaunchKey) {

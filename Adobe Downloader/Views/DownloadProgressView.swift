@@ -19,8 +19,8 @@ struct DownloadProgressView: View {
     @State private var isPackageListExpanded: Bool = false
     @State private var expandedProducts: Set<String> = []
     @State private var iconImage: NSImage? = nil
-    @State private var showSetupBackupAlert = false
-    
+    @State private var showSetupProcessAlert = false
+
     private var statusLabel: some View {
         Text(task.status.description)
             .font(.caption)
@@ -117,8 +117,8 @@ struct DownloadProgressView: View {
                 HStack(spacing: 8) {
                     if task.displayInstallButton {
                         Button(action: { 
-                            if !ModifySetup.isSetupBackup() {
-                                showSetupBackupAlert = true
+                            if !ModifySetup.isSetupModified() {
+                                showSetupProcessAlert = true
                             } else {
                                 do {
                                     _ = try PrivilegedHelperManager.shared.getHelperProxy()
@@ -128,7 +128,7 @@ struct DownloadProgressView: View {
                                         await networkManager.installProduct(at: task.directory)
                                     }
                                 } catch {
-                                    showSetupBackupAlert = true
+                                    showSetupProcessAlert = true
                                 }
                             }
                         }) {
@@ -136,11 +136,11 @@ struct DownloadProgressView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.green)
-                        .alert("Setup 组件未处理", isPresented: $showSetupBackupAlert) {
+                        .alert("Setup 组件未处理", isPresented: $showSetupProcessAlert) {
                             Button("确定") { }
                         } message: {
-                            if !ModifySetup.isSetupBackup() {
-                                Text("未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理")
+                            if !ModifySetup.isSetupModified() {
+                                Text("未对 Setup 组件进行处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行处理")
                                     .font(.system(size: 18))
                             } else {
                                 Text("Helper 未安装或未连接，请先在设置中安装并连接 Helper")
@@ -478,7 +478,7 @@ struct ProductRow: View {
                 HStack {
                     Image(systemName: "cube.box")
                         .foregroundColor(.blue)
-                    Text("\(product.sapCode) (\(product.version))")
+                    Text("\(product.sapCode) \(product.version)\(product.sapCode != "APRO" ? " - (\(product.buildGuid))" : "")")
                         .font(.caption)
                         .fontWeight(.medium)
                     
@@ -556,7 +556,7 @@ struct PackageRow: View {
     var body: some View {
         VStack(spacing: 6) {
             HStack {
-                Text(package.fullPackageName)
+                Text("\(package.fullPackageName) (\(package.packageVersion))")
                     .font(.caption)
                     .foregroundColor(.primary)
                 

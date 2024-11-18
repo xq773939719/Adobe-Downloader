@@ -64,7 +64,8 @@ class TaskPersistenceManager {
                             progress: package.progress,
                             speed: package.speed,
                             status: package.status,
-                            downloaded: package.downloaded
+                            downloaded: package.downloaded,
+                            packageVersion: package.packageVersion
                         )
                     }
                 )
@@ -128,7 +129,8 @@ class TaskPersistenceManager {
                         type: packageData.type,
                         fullPackageName: packageData.fullPackageName,
                         downloadSize: packageData.downloadSize,
-                        downloadURL: packageData.downloadURL
+                        downloadURL: packageData.downloadURL,
+                        packageVersion: packageData.packageVersion
                     )
                     package.downloadedSize = packageData.downloadedSize
                     package.progress = packageData.progress
@@ -251,4 +253,5 @@ private struct PackageData: Codable {
     let speed: Double
     let status: PackageStatus
     let downloaded: Bool
+    let packageVersion: String
 } 

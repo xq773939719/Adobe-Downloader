@@ -79,7 +79,7 @@ private struct HeaderView: View {
     }
     
     private var platformText: String {
-        networkManager.allowedPlatform.joined(separator: ", ")
+        StorageData.shared.allowedPlatform.joined(separator: ", ")
     }
 }
 
@@ -111,7 +111,7 @@ private struct VersionListView: View {
     
     private var filteredVersions: [(key: String, value: Sap.Versions)] {
         sap.versions
-            .filter { networkManager.allowedPlatform.contains($0.value.apPlatform) }
+            .filter { StorageData.shared.allowedPlatform.contains($0.value.apPlatform) }
             .sorted { $0.key > $1.key }
     }
     
@@ -314,7 +314,6 @@ private struct DownloadButton: View {
 struct VersionPickerView_Previews: PreviewProvider {
     static var previews: some View {
         let networkManager = NetworkManager()
-        networkManager.allowedPlatform = ["macuniversal", "macarm64"]
         networkManager.cdn = "https://example.cdn.adobe.com"
         
         let previewSap = Sap(

@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showDownloadManager = false
     @State private var searchText = ""
     @State private var currentApiVersion = StorageData.shared.apiVersion
+    @State private var cachedProducts: [Sap] = []
     
     private var apiVersion: String {
         get { StorageData.shared.apiVersion }
@@ -17,15 +18,11 @@ struct ContentView: View {
     }
     
     private var filteredProducts: [Sap] {
-        let products = networkManager.saps.values
-            .filter { !$0.hidden && !$0.versions.isEmpty }
-            .sorted { $0.displayName < $1.displayName }
-        
         if searchText.isEmpty {
-            return Array(products)
+            return cachedProducts
         }
         
-        return products.filter {
+        return cachedProducts.filter {
             $0.displayName.localizedCaseInsensitiveContains(searchText) ||
             $0.sapCode.localizedCaseInsensitiveContains(searchText)
         }
@@ -33,6 +30,13 @@ struct ContentView: View {
     
     private func openSettings() {
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+    
+    private func updateProductsCache() {
+        let products = networkManager.saps.values
+            .filter { $0.hasValidVersions(allowedPlatform: StorageData.shared.allowedPlatform) }
+            .sorted { $0.displayName < $1.displayName }
+        cachedProducts = products
     }
     
     var body: some View {
@@ -50,7 +54,6 @@ struct ContentView: View {
                         get: { StorageData.shared.downloadAppleSilicon },
                         set: { newValue in
                             StorageData.shared.downloadAppleSilicon = newValue
-                            networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
                             Task {
                                 await networkManager.fetchProducts()
                             }
@@ -216,7 +219,12 @@ struct ContentView: View {
         .onAppear {
             if networkManager.saps.isEmpty {
                 refreshData()
+            } else {
+                updateProductsCache()
             }
+        }
+        .onChange(of: networkManager.saps) { _ in
+            updateProductsCache()
         }
     }
     
@@ -227,6 +235,7 @@ struct ContentView: View {
         Task {
             await networkManager.fetchProducts()
             await MainActor.run {
+                updateProductsCache()
                 isRefreshing = false
             }
         }

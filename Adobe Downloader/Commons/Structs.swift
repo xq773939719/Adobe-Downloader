@@ -5,13 +5,14 @@
 //
 import Foundation
 
-class Package: Identifiable, ObservableObject {
-    let id = UUID()
+class Package: Identifiable, ObservableObject, Codable {
+    var id = UUID()
     var type: String
     var fullPackageName: String
     var downloadSize: Int64
     var downloadURL: String
-    
+    var packageVersion: String
+
     @Published var downloadedSize: Int64 = 0 {
         didSet {
             if downloadSize > 0 {
@@ -55,11 +56,12 @@ class Package: Identifiable, ObservableObject {
         }
     }
 
-    init(type: String, fullPackageName: String, downloadSize: Int64, downloadURL: String) {
+    init(type: String, fullPackageName: String, downloadSize: Int64, downloadURL: String, packageVersion: String) {
         self.type = type
         self.fullPackageName = fullPackageName
         self.downloadSize = downloadSize
         self.downloadURL = downloadURL
+        self.packageVersion = packageVersion
     }
 
     func updateProgress(downloadedSize: Int64, speed: Double) {
@@ -104,8 +106,32 @@ class Package: Identifiable, ObservableObject {
             objectWillChange.send()
         }
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, fullPackageName, downloadSize, downloadURL, packageVersion
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(type, forKey: .type)
+        try container.encode(fullPackageName, forKey: .fullPackageName)
+        try container.encode(downloadSize, forKey: .downloadSize)
+        try container.encode(downloadURL, forKey: .downloadURL)
+    }
+
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        type = try container.decode(String.self, forKey: .type)
+        fullPackageName = try container.decode(String.self, forKey: .fullPackageName)
+        downloadSize = try container.decode(Int64.self, forKey: .downloadSize)
+        downloadURL = try container.decode(String.self, forKey: .downloadURL)
+        packageVersion = try container.decode(String.self, forKey: .packageVersion)
+    }
 }
-class ProductsToDownload: ObservableObject {
+
+class ProductsToDownload: ObservableObject, Codable {
     var sapCode: String
     var version: String
     var buildGuid: String
@@ -130,6 +156,29 @@ class ProductsToDownload: ObservableObject {
             objectWillChange.send()
         }
     }
+
+    enum CodingKeys: String, CodingKey {
+        case sapCode, version, buildGuid, applicationJson, packages
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sapCode, forKey: .sapCode)
+        try container.encode(version, forKey: .version)
+        try container.encode(buildGuid, forKey: .buildGuid)
+        try container.encodeIfPresent(applicationJson, forKey: .applicationJson)
+        try container.encode(packages, forKey: .packages)
+    }
+
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sapCode = try container.decode(String.self, forKey: .sapCode)
+        version = try container.decode(String.self, forKey: .version)
+        buildGuid = try container.decode(String.self, forKey: .buildGuid)
+        applicationJson = try container.decodeIfPresent(String.self, forKey: .applicationJson)
+        packages = try container.decode([Package].self, forKey: .packages)
+        completedPackages = 0
+    }
 }
 
 struct SapCodes: Identifiable {
@@ -138,7 +187,7 @@ struct SapCodes: Identifiable {
     var displayName: String
 }
 
-struct Sap: Identifiable {
+struct Sap: Codable, Equatable {
     var id: String { sapCode }
     var hidden: Bool
     var displayName: String
@@ -147,8 +196,19 @@ struct Sap: Identifiable {
     var icons: [ProductIcon]
     var productsToDownload: [ProductsToDownload]? = nil
 
+    enum CodingKeys: String, CodingKey {
+        case hidden, displayName, sapCode, versions, icons
+    }
 
-    struct Versions {
+    static func == (lhs: Sap, rhs: Sap) -> Bool {
+        return lhs.sapCode == rhs.sapCode &&
+               lhs.hidden == rhs.hidden &&
+               lhs.displayName == rhs.displayName &&
+               lhs.versions == rhs.versions &&
+               lhs.icons == rhs.icons
+    }
+
+    struct Versions: Codable, Equatable {
         var sapCode: String
         var baseVersion: String
         var productVersion: String
@@ -156,13 +216,13 @@ struct Sap: Identifiable {
         var dependencies: [Dependencies]
         var buildGuid: String
         
-        struct Dependencies {
+        struct Dependencies: Codable, Equatable {
             var sapCode: String
             var version: String
         }
     }
     
-    struct ProductIcon {
+    struct ProductIcon: Codable, Equatable {
         let size: String
         let url: String
         
@@ -184,6 +244,19 @@ struct Sap: Identifiable {
         }
         return icons.max(by: { $0.dimension < $1.dimension })
     }
+
+    func hasValidVersions(allowedPlatform: [String]) -> Bool {
+        if hidden { return false }
+        
+        for version in Array(versions.values).reversed() {
+            if !version.buildGuid.isEmpty && 
+               (!version.buildGuid.contains("/") || sapCode == "APRO") &&
+               allowedPlatform.contains(version.apPlatform) {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 struct NetworkConstants {
@@ -194,20 +267,33 @@ struct NetworkConstants {
     static let maxConcurrentDownloads = 3
     static let progressUpdateInterval: TimeInterval = 1
 
+    static func generateCookie() -> String {
+        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        let randomString = (0..<26).map { _ in chars.randomElement()! }
+        return "fg=\(String(randomString))======"
+    }
+
     static var productsXmlURL: String {
         "https://prod-rel-ffc-ccm.oobesaas.adobe.com/adobe-ffc-external/core/v\(UserDefaults.standard.string(forKey: "apiVersion") ?? "6")/products/all"
     }
 
     static let applicationJsonURL = "https://cdn-ffc.oobesaas.adobe.com/core/v3/applications"
 
-    static let adobeRequestHeaders = [
-        "X-Adobe-App-Id": "accc-apps-panel-desktop",
-        "User-Agent": "Adobe Application Manager 2.0",
-        "X-Api-Key": "CC_HD_ESD_1_0",
-        "Cookie": "fg=QZ6PFIT595NDL6186O9FNYYQOQ======"
-    ]
+    static var adobeRequestHeaders: [String: String] {
+        [
+            "x-adobe-app-id": "accc-apps-panel-desktop",
+            "x-api-key": "Creative Cloud_v\(UserDefaults.standard.string(forKey: "apiVersion") ?? "6")_4",
+            "User-Agent": "Creative Cloud/6.4.0.361/Mac-15.1",
+            "Cookie": generateCookie()
+        ]
+    }
     
     static let downloadHeaders = [
         "User-Agent": "Creative Cloud"
     ]
+}
+
+struct ProductsResponse: Codable {
+    let products: [String: Sap]
+    let cdn: String
 }

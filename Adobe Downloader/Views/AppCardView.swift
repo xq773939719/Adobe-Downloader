@@ -277,7 +277,7 @@ final class AppCardViewModel: ObservableObject {
                 
                 var buildGuid = ""
                 for (_, versionInfo) in sortedVersions where versionInfo.baseVersion == dependency.version {
-                    if networkManager.allowedPlatform.contains(versionInfo.apPlatform) {
+                    if StorageData.shared.allowedPlatform.contains(versionInfo.apPlatform) {
                         buildGuid = versionInfo.buildGuid
                         break
                     }

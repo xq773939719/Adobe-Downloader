@@ -173,13 +173,6 @@ class DownloadUtils {
         }
     }
 
-    func signApp(at url: URL) async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        process.arguments = ["--force", "--deep", "--sign", "-", url.path]
-        try process.run()
-        process.waitUntilExit()
-    }
 
     func generateDriverXML(sapCode: String, version: String, language: String, productInfo: Sap.Versions, displayName: String) -> String {
         let dependencies = productInfo.dependencies.map { dependency in
@@ -518,7 +511,8 @@ class DownloadUtils {
             type: "dmg",
             fullPackageName: "Adobe Downloader \(task.sapCode)_\(productInfo.productVersion)_\(productInfo.apPlatform).dmg",
             downloadSize: assetSize,
-            downloadURL: downloadPath
+            downloadURL: downloadPath,
+            packageVersion: ""
         )
 
         await MainActor.run {
@@ -764,11 +758,16 @@ class DownloadUtils {
                 guard let downloadURL = package["Path"] as? String, !downloadURL.isEmpty else { continue }
 
                 let fullPackageName: String
+                let packageVersion: String
                 if let name = package["fullPackageName"] as? String, !name.isEmpty {
                     fullPackageName = name
+                    packageVersion = package["PackageVersion"] as? String ?? ""
                 } else if let name = package["PackageName"] as? String, !name.isEmpty {
                     fullPackageName = "\(name).zip"
-                } else { continue }
+                    packageVersion = package["PackageVersion"] as? String ?? ""
+                } else {
+                    continue
+                }
 
                 let downloadSize: Int64
                 if let sizeNumber = package["DownloadSize"] as? NSNumber {
@@ -839,7 +838,8 @@ class DownloadUtils {
                         type: packageType,
                         fullPackageName: fullPackageName,
                         downloadSize: downloadSize,
-                        downloadURL: downloadURL
+                        downloadURL: downloadURL,
+                        packageVersion: packageVersion
                     )
                     product.packages.append(newPackage)
                 }
@@ -871,7 +871,6 @@ class DownloadUtils {
 
         var headers = NetworkConstants.adobeRequestHeaders
         headers["x-adobe-build-guid"] = buildGuid
-        headers["Cookie"] = await networkManager?.generateCookie() ?? ""
 
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
 

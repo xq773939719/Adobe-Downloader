@@ -57,6 +57,16 @@
         }
       }
     },
+    "%@ %@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@%3$@"
+          }
+        }
+      }
+    },
     "%@ 安装失败" : {
       "localizations" : {
         "en" : {
@@ -1409,12 +1419,12 @@
         }
       }
     },
-    "未对 Setup 组件进行备份处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行备份处理" : {
+    "未对 Setup 组件进行处理或者 Setup 组件不存在，无法使用安装功能\n你可以通过设置页面再次对 Setup 组件进行处理" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The Setup component has not been backed up or does not exist, so the installation function cannot be used. You can back up the Setup component again through the settings."
+            "value" : "The Setup component has not been processed or does not exist, so the installation function cannot be used. You can process the Setup component again through the settings page."
           }
         }
       }

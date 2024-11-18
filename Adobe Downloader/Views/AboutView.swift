@@ -361,7 +361,6 @@ struct GeneralSettingsView: View {
         }
         .task {
             viewModel.setupVersion = ModifySetup.checkComponentVersion()
-            networkManager.updateAllowedPlatform(useAppleSilicon: viewModel.downloadAppleSilicon)
         }
         .onReceive(NotificationCenter.default.publisher(for: .storageDidChange)) { _ in
             viewModel.objectWillChange.send()
@@ -642,7 +641,6 @@ struct ArchitectureSettingRow: View {
                 .truncationMode(.middle)
         }
         .onChange(of: viewModel.downloadAppleSilicon) { newValue in
-            networkManager.updateAllowedPlatform(useAppleSilicon: newValue)
             Task {
                 await networkManager.fetchProducts()
             }

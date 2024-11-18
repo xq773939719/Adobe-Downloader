@@ -53,10 +53,4 @@ extension NetworkManager {
             }
         }
     }
-    
-    func generateCookie() -> String {
-        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        let randomString = (0..<26).map { _ in chars.randomElement()! }
-        return "fg=\(String(randomString))======"
-    }
 } 

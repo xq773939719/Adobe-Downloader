@@ -10,7 +10,6 @@ class NetworkManager: ObservableObject {
     @Published var isConnected = false
     @Published var saps: [String: Sap] = [:]
     @Published var cdn: String = ""
-    @Published var allowedPlatform: [String]
     @Published var sapCodes: [SapCodes] = []
     @Published var loadingState: LoadingState = .idle
     @Published var downloadTasks: [NewDownloadTask] = []
@@ -50,9 +49,6 @@ class NetworkManager: ObservableObject {
 
     init(networkService: NetworkService = NetworkService(),
          downloadUtils: DownloadUtils? = nil) {
-        self.allowedPlatform = StorageData.shared.downloadAppleSilicon ? 
-            ["macuniversal", "macarm64"] : 
-            ["macuniversal", "osx10-64", "osx10"]
         
         self.networkService = networkService
         self.downloadUtils = downloadUtils ?? DownloadUtils(networkManager: self, cancelTracker: cancelTracker)
@@ -64,9 +60,7 @@ class NetworkManager: ObservableObject {
     func fetchProducts() async {
         loadingState = .loading
         do {
-            let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(
-                platform: allowedPlatform.joined(separator: ",")
-            )
+            let (saps, cdn, sapCodes) = try await networkService.fetchProductsData()
             await MainActor.run {
                 self.saps = saps
                 self.cdn = cdn
@@ -83,7 +77,6 @@ class NetworkManager: ObservableObject {
         guard let productInfo = self.saps[sap.sapCode]?.versions[selectedVersion] else { 
             throw NetworkError.invalidData("无法获取产品信息") 
         }
-        print(productInfo.apPlatform)
         let task = NewDownloadTask(
             sapCode: sap.sapCode,
             version: selectedVersion,
@@ -109,7 +102,7 @@ class NetworkManager: ObservableObject {
         saveTask(task)
         
         do {
-            try await downloadUtils.handleDownload(task: task, productInfo: productInfo, allowedPlatform: allowedPlatform, saps: saps)
+            try await downloadUtils.handleDownload(task: task, productInfo: productInfo, allowedPlatform: StorageData.shared.allowedPlatform, saps: saps)
         } catch {
             await MainActor.run {
                 task.setStatus(.failed(DownloadStatus.FailureInfo(
@@ -172,8 +165,7 @@ class NetworkManager: ObservableObject {
         
         while retryCount < maxRetries {
             do {
-                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData(platform: allowedPlatform.joined(separator: ","))
-
+                let (saps, cdn, sapCodes) = try await networkService.fetchProductsData()
                 await MainActor.run {
                     self.saps = saps
                     self.cdn = cdn
@@ -181,6 +173,7 @@ class NetworkManager: ObservableObject {
                     self.loadingState = .success
                     self.isFetchingProducts = false
                 }
+
                 return
             } catch {
                 retryCount += 1
@@ -357,12 +350,6 @@ class NetworkManager: ObservableObject {
             loadingState = .idle
             await fetchProducts()
         }
-    }
-
-    func updateAllowedPlatform(useAppleSilicon: Bool) {
-        allowedPlatform = useAppleSilicon ? 
-            ["macuniversal", "macarm64"] : 
-            ["macuniversal", "osx10-64", "osx10"]
     }
 
     func saveTask(_ task: NewDownloadTask) {

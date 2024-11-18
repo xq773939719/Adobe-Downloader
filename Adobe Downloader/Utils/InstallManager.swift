@@ -194,18 +194,5 @@ actor InstallManager {
             progressHandler: progressHandler
         )
     }
-
-    private func executeWithProcess(_ command: String) throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["bash", "-c", command]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        
-        try process.run()
-        process.waitUntilExit()
-    }
 }
 
